@@ -271,6 +271,7 @@
             "group": "Finance & records",
             "icon": "book",
             "pages": [
+              "dashboard/entities",
               "dashboard/organizations",
               "dashboard/ledger-audit",
               "dashboard/finance-reports"
