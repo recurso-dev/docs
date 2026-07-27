@@ -11,6 +11,13 @@ app, linked to a subscription, and then debited each cycle — with RBI-required
 pre-debit notifications.
 
 <Info>
+UPI AutoPay is the INR rail of the same mandate system: create a mandate with
+`currency: "EUR"` or `"GBP"` and it becomes a SEPA/Bacs **bank-debit** mandate
+via GoCardless instead — see
+[bank-debit mandates](/setup/payment-gateway#bank-debit-mandates-gocardless).
+</Info>
+
+<Info>
 Full lifecycle, frequencies, and webhooks: [UPI Mandates](/compliance/upi-mandates).
 Requires Razorpay — see [payment gateways](/setup/payment-gateway).
 </Info>
