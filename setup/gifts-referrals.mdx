@@ -24,6 +24,15 @@ Turn on gift purchases so a buyer can pay for a plan on behalf of a recipient.
 The recipient redeems the gift to start their subscription; the buyer is charged,
 the recipient isn't.
 
+### Canceling an unredeemed gift
+
+A purchased gift can be canceled any time before the recipient redeems it
+(`POST /v1/gifts/{id}/cancel`, or the **Cancel** action on the Gifts page). The
+buyer is made whole automatically: if the purchase invoice was paid, the full
+amount is issued back as an **account credit**; if it was still unpaid, the
+invoice is voided. Redeemed gifts can't be canceled — the recipient's
+subscription is never clawed back.
+
 ## Step 3: Watch redemptions and rewards
 
 Track referral sign-ups and the credit granted, and gift purchases and
