@@ -43,6 +43,12 @@ When usage crosses the threshold, Recurso sends a webhook so your app can react
 An alert fires a single time per billing period. It resets at the period
 boundary, so the customer isn't re-notified for continued usage in the same cycle.
 
+To re-aim an alert, edit its threshold (`PUT /v1/usage-alerts/{id}`, or the
+pencil action in the dashboard's Metering page). Editing resets the
+once-per-period lock, so the new threshold can fire in the current period. The
+subscription and metric are the alert's identity — to change those, delete and
+re-create.
+
 ## Verify your setup
 
 <Steps>
