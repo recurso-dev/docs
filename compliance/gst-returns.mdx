@@ -15,6 +15,13 @@ Recurso generates **return-ready exports** — it does not file on your behalf.
 You (or your CA) review and file through your usual channel.
 </Info>
 
+**Multi-entity workspaces file per GSTIN.** Each
+[legal entity](/dashboard/entities) can carry its own GST registration; pass
+`entity_id` (or pick the entity in the dashboard's GST Returns page) and the
+return contains only that entity's invoices and credit notes, with the
+entity's own GSTIN in the `gov_schema` header. Omitting `entity_id` keeps the
+whole-workspace behavior — right for single-entity setups.
+
 ## GSTR-1 — outward supplies, in detail
 
 ```bash

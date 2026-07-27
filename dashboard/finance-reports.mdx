@@ -50,6 +50,10 @@ The floating-bar chart and the **Breakdown** list decompose the change into
 **Contraction** and **Churned** (reductions, red), bridging starting to ending
 MRR.
 
+Multi-entity workspaces can scope the waterfall to a single
+[legal entity](/dashboard/entities); the Entities page and the Executive
+Summary's *MRR by entity* card carry the per-entity breakdown.
+
 <Warning>
 If snapshots don't reach back to the start of your range, a banner notes that
 everything present at the end is counted as **New**. Movement gets more accurate
@@ -125,6 +129,11 @@ whose balance sits on the wrong side is flagged **abnormal** in red.
 
 Use **Export GL (CSV)** in the header to download the full general ledger.
 
+Multi-entity workspaces get a **scope selector**: *All entities* (per-entity
+breakdown with an Entity column), *Consolidated* (rolled up by account code),
+or a single [legal entity's](/dashboard/entities) ledger. The GL export scopes
+the same way. Single-entity workspaces don't see the selector.
+
 <Warning>
 An **Out of balance** banner (debits ≠ credits) or an abnormal-balance flag
 means the ledger needs investigating — start with
@@ -164,6 +173,9 @@ date), and **Current** (not yet due).
 The **By age** bar chart breaks the total into buckets — **Current**, **1–30**,
 **31–60**, **61–90**, and **90+ days** — coloured from healthy green to deep
 red as they age, each with its amount and invoice count.
+
+Multi-entity workspaces can scope aging to a single
+[legal entity](/dashboard/entities) with the selector in the header.
 
 ## Unit economics
 
