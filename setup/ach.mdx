@@ -1,0 +1,107 @@
+---
+title: "Set Up ACH Bank Debits (US)"
+description: "Collect US payments by bank debit — lower fees than cards, with instant bank verification and automatic handling of returns."
+---
+
+## Overview
+
+**ACH debits** pull payment directly from a US customer's bank account. Fees are a
+fraction of card fees, which matters at B2B invoice sizes — the trade-off is that
+ACH settles asynchronously (typically ~4 business days) and a debit can
+occasionally be **returned** by the bank days after it appeared to succeed.
+Recurso handles the whole lifecycle: instant bank verification, in-flight
+tracking while a debit settles, and automatic clean-up when a return arrives.
+
+<Info>
+ACH requires a **United States Stripe account**. A Stripe account registered in
+another country (e.g. India) will reject `us_bank_account` payment methods —
+see [payment gateways](/setup/payment-gateway) for connecting Stripe.
+</Info>
+
+## Step 1: Connect a US Stripe account
+
+Set your Stripe secret key, publishable key, and webhook secret from a
+**US-registered** Stripe account. ACH uses Stripe Financial Connections for
+bank verification, which is only available on US accounts.
+
+<Warning>
+Test first with `sk_test_...` keys. Stripe test mode includes test bank
+accounts that let you exercise the full flow — including simulated returns —
+without moving real money.
+</Warning>
+
+## Step 2: Customers add a bank account in the portal
+
+In the [customer portal](/portal/self-service), the payment-method page offers
+**Card** or **US bank account (ACH)**. Choosing the bank option launches
+Stripe Financial Connections: the customer logs into their bank and the account
+is verified **instantly** — no micro-deposit waiting period. The verified
+account is saved for off-session charges, like a saved card.
+
+## Step 3: Invoices collect by bank debit
+
+Once a bank account is the customer's saved payment method, invoices charge it
+automatically. Because ACH is asynchronous, the lifecycle differs from cards:
+
+1. The debit is initiated and the payment attempt is tracked as **processing**.
+   The invoice stays `open` — nothing is booked until the money is real.
+2. While an attempt is in flight, **dunning leaves the invoice alone**: no
+   retry charges, no "payment failed" emails for a debit that is simply still
+   settling.
+3. When the bank confirms (typically ~4 business days), the invoice settles:
+   it's marked `paid` and the cash is posted to the ledger.
+4. If the debit fails (e.g. insufficient funds), the attempt records the ACH
+   failure code and normal [dunning](/setup/dunning) takes over.
+
+## Late returns — handled automatically
+
+An ACH debit can clear, settle the invoice, and then be **returned by the bank
+days later** (account closed, debit disputed, funds reversed). When that
+happens, Recurso automatically:
+
+- marks the payment attempt **returned** with its ACH return code,
+- reopens the invoice (`paid` → `past_due`) so it's collectible again,
+- reverses the settlement in the ledger — the books never show cash the bank
+  clawed back,
+- lets dunning re-collect on its normal schedule. A re-collection posts its own
+  fresh ledger entries; the accounting stays balanced through any number of
+  return/retry cycles.
+
+<Info>
+Refunds you issue through Recurso are never mistaken for bank returns — they
+carry a credit note. If you refund an ACH payment **directly in the Stripe
+Dashboard**, always set a refund reason there; Recurso uses it to tell your
+refund apart from an involuntary bank return. Best practice: issue refunds
+through Recurso so the credit note and ledger entries are created for you.
+</Info>
+
+## Monitoring collection
+
+The [Collections page](/dashboard/collections) shows every invoice mid-recovery,
+including ACH state: a **settling** chip while a debit is in flight and a
+**returned** chip when a bank claw-back reopened the invoice, with the ACH
+failure code (e.g. `R01` insufficient funds) as the failure reason.
+
+## Verify your setup
+
+<Steps>
+  <Step title="A bank account connects">
+    In the portal (test mode), choose "US bank account", pick Stripe's test
+    bank, and confirm the account appears as the saved payment method with its
+    bank name and last-4.
+  </Step>
+  <Step title="An invoice settles asynchronously">
+    Charge an invoice against the bank account: it stays open while
+    processing, then flips to paid when the test debit clears.
+  </Step>
+  <Step title="A simulated return reopens the invoice">
+    Use Stripe's test return flow: the paid invoice returns to past_due, the
+    Collections page shows the returned chip, and dunning resumes.
+  </Step>
+</Steps>
+
+## Next steps
+
+- [Dunning & smart retries](/setup/dunning) — what happens when a debit fails
+- [Collections dashboard](/dashboard/collections) — the recovery worklist
+- [Customer portal](/setup/customer-portal) — where customers manage payment methods

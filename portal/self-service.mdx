@@ -47,6 +47,12 @@ curl -X POST https://billing.example.com/portal/api/payment-method/confirm \
 The confirm call returns `status: "saved"` with the new card's brand and
 last four, or `status: "processing"` for methods that settle asynchronously.
 
+For **US customers**, the payment-method page also offers a bank account
+(ACH): start with `POST /portal/api/payment-method/bank-setup-intent`, run
+Stripe Financial Connections in the browser for instant verification, then
+finalize with the same confirm call — the saved method shows the bank name and
+last four. See [Set up ACH bank debits](/setup/ach).
+
 <Note>
 If the deployment isn't configured for self-serve card updates, these
 endpoints return a clear "not available on this deployment" error rather
