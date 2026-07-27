@@ -19,6 +19,12 @@ tax (`tax_type: export`).
 
 ## Step 1: Set your seller jurisdiction and connect TaxJar
 
+Your seller jurisdiction is your primary legal entity's country. The easiest
+way to set it is at signup — pass `"country": "US"` to `POST /auth/register`
+(or pick **United States** in the signup form) and invoices present US sales
+tax from day one. Already registered? Update the primary entity's country in
+**Settings**. The env defaults below are the fallback when neither is set.
+
 US rates depend on the buyer's state, county, city, and special districts, so
 accurate rates come from a provider. Recurso integrates **TaxJar**.
 
