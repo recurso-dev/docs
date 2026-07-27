@@ -178,6 +178,7 @@
             "group": "Payments & recovery",
             "pages": [
               "setup/payment-gateway",
+              "setup/ach",
               "setup/dunning"
             ]
           },
@@ -259,6 +260,7 @@
             "group": "Retention & risk",
             "icon": "shield-halved",
             "pages": [
+              "dashboard/collections",
               "dashboard/dunning",
               "dashboard/churn",
               "dashboard/cancel-flows",
