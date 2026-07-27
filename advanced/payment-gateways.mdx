@@ -320,18 +320,22 @@ While Recurso does not automatically fail over between gateways (a Razorpay subs
 Never expose your gateway secret keys (`RAZORPAY_KEY_SECRET`, `STRIPE_SECRET_KEY`) in client-side code or API responses. Use server-side calls only for payment operations.
 </Warning>
 
-## GoCardless & Adyen (experimental)
+## GoCardless & Adyen
 
-Two additional gateways ship as **experimental** (API-verified against
-their documented request shapes; sandbox certification in progress):
-
-- **GoCardless** — mandate-first bank debit (SEPA, BACS, ACH): the
-  European/UK analog of UPI AutoPay. Configure
-  `GOCARDLESS_ACCESS_TOKEN` (+ `GOCARDLESS_ENV=sandbox` for testing).
-- **Adyen** — global card & wallet processing via Checkout Sessions, with
-  off-session charges on stored payment methods. Configure
-  `ADYEN_API_KEY`, `ADYEN_MERCHANT_ACCOUNT` (+ `ADYEN_ENV=test`, or
-  `ADYEN_LIVE_URL_PREFIX` for live).
+- **GoCardless** — mandate-first bank debit (SEPA, Bacs): the European/UK
+  analog of UPI AutoPay, **sandbox-verified end to end** (billing request →
+  hosted authorization → mandate activation via webhook → debit →
+  asynchronous settlement via webhook). Configure `GOCARDLESS_ACCESS_TOKEN`
+  (+ `GOCARDLESS_ENV=sandbox` for testing) and `GOCARDLESS_WEBHOOK_SECRET`,
+  or let tenants connect their own account from **Integrations → Payment
+  gateways** (token-only; test mode pairs with sandbox tokens). See the
+  [setup guide](/setup/payment-gateway#bank-debit-mandates-gocardless).
+- **Adyen** — **experimental** (API-verified against documented request
+  shapes; sandbox certification in progress).
+  Global card & wallet processing via Checkout Sessions, with off-session
+  charges on stored payment methods. Configure `ADYEN_API_KEY`,
+  `ADYEN_MERCHANT_ACCOUNT` (+ `ADYEN_ENV=test`, or `ADYEN_LIVE_URL_PREFIX`
+  for live).
 
 Route currencies to them explicitly — the built-in INR→Razorpay /
 default→Stripe rule is unchanged unless you say otherwise:

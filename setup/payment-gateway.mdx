@@ -1,14 +1,15 @@
 ---
 title: "Set Up Payment Gateways"
-description: "Configure a platform gateway (Stripe/Razorpay) via environment, or let each tenant bring their own account for autopay."
+description: "Configure a platform gateway (Stripe/Razorpay/GoCardless) via environment, or let each tenant bring their own account for autopay and bank debit."
 ---
 
 ## Overview
 
 Recurso charges through a **payment gateway**. You can run one gateway for the
 whole deployment (via environment variables), or let **each tenant bring their
-own** Stripe/Razorpay account so funds settle directly to them. Currency decides
-routing — INR → Razorpay, USD → Stripe. Without any gateway configured, a
+own** Stripe, Razorpay or GoCardless account so funds settle directly to them.
+Currency decides routing — INR → Razorpay, USD → Stripe, and for mandates
+EUR/GBP → GoCardless (SEPA/Bacs bank debit). Without any gateway configured, a
 built-in mock gateway is used (dev/testing only).
 
 <Info>
@@ -31,6 +32,12 @@ STRIPE_PUBLISHABLE_KEY=pk_live_...   # handed to the browser for checkout
 RAZORPAY_KEY_ID=rzp_live_...
 RAZORPAY_KEY_SECRET=...
 RAZORPAY_WEBHOOK_SECRET=...
+
+# GoCardless (EUR/GBP bank debit — optional)
+GOCARDLESS_ACCESS_TOKEN=live_...        # sandbox_... with GOCARDLESS_ENV=sandbox
+GOCARDLESS_ENV=live
+GOCARDLESS_WEBHOOK_SECRET=...
+GATEWAY_CURRENCY_OVERRIDES=EUR=gocardless,GBP=gocardless
 ```
 
 Point each gateway's webhook at Recurso so payment outcomes flow back as events.
@@ -61,16 +68,43 @@ inject it as an env var — never commit it.
 
 ### Step 2: Connect the tenant's gateway
 
-In the dashboard, go to **Integrations → Payment gateways** and connect Stripe or
-Razorpay with the tenant's own API keys, then set the gateway's **webhook secret**
-so payment outcomes are verified. Each tenant's credentials are encrypted and
-used only for that tenant.
+In the dashboard, go to **Integrations → Payment gateways** and connect Stripe,
+Razorpay or GoCardless with the tenant's own credentials, then set the gateway's
+**webhook secret** so payment outcomes are verified. Each tenant's credentials
+are encrypted and used only for that tenant.
+
+<Note>
+GoCardless needs only a **read-write access token** (no publishable key).
+Sandbox and live are **separate accounts**: sandbox tokens (`sandbox_...`) come
+from [manage-sandbox.gocardless.com](https://manage-sandbox.gocardless.com) and
+pair with Test mode; live tokens (`live_...`) from
+[manage.gocardless.com](https://manage.gocardless.com) pair with Live mode —
+Recurso rejects a mismatched pair at connect time. Once connected, EUR (SEPA)
+and GBP (Bacs) mandates and debits route through the tenant's GoCardless.
+</Note>
 
 ### Step 3: Confirm autopay routes to it
 
 Once connected, saved cards, renewals, dunning retries, and wallet auto-recharge
 for that tenant charge on **their** gateway — routed to the account where the card
 was saved.
+
+## Bank-debit mandates (GoCardless)
+
+Bank debit is **mandate-first and asynchronous** — three things must be true:
+
+1. **Webhook endpoint registered.** In the GoCardless dashboard add a webhook
+   endpoint pointing at `https://<your-api>/webhooks/gocardless` (platform) or
+   the per-connection URL shown on the Payment Gateways card (BYO), and set the
+   same secret in `GOCARDLESS_WEBHOOK_SECRET` / the connection's webhook secret.
+   Without it, authorized mandates stay `created` and never debit.
+2. **Mandate authorized by the customer.** Create a EUR/GBP mandate from the
+   Mandates page (or API) and send the customer the returned authorization
+   link — they confirm on GoCardless's hosted page. The
+   `billing_requests.fulfilled` webhook then activates the mandate.
+3. **Settlement lands later.** Debits are created immediately but settle in
+   days: the invoice stays open until the `payments.confirmed` webhook marks it
+   paid. Failed debits leave the invoice open for dunning automatically.
 
 ## Verify your setup
 

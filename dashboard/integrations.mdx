@@ -125,7 +125,7 @@ variables at server boot, not in the dashboard:
 | Tax — **Avalara AvaTax** | `AVALARA_ACCOUNT_ID` / `AVALARA_LICENSE_KEY` |
 | CRM — **HubSpot** (contact sync) | `HUBSPOT_ACCESS_TOKEN` |
 | Storage — **Amazon S3 / MinIO / R2** (GL export) | `S3_EXPORT_BUCKET` (+ region/keys) |
-| Payments — **GoCardless**, **Adyen** (experimental) | provider env vars + [currency overrides](/advanced/payment-gateways) |
+| Payments — **GoCardless** (bank debit, BYO-connectable), **Adyen** (experimental) | connect from this page, or provider env vars + [currency overrides](/advanced/payment-gateways) |
 
 Some matrix entries aren't credentials you configure at all: **Zapier / n8n /
 Make** consume Recurso's [signed webhooks](/advanced/automation);
