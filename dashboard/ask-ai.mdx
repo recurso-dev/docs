@@ -35,8 +35,16 @@ it never changes anything.
     - *How many invoices are overdue, and for how much?*
   </Step>
   <Step title="Read the result">
-    Row-shaped answers render as a table; single values render as text. Expand
+    Row-shaped answers render as a **table** — and when the shape fits (a
+    time series or a small categorical breakdown), Recurso also draws a
+    **chart**, with a Chart/Table toggle. Single values render as text. Expand
     **Show the SQL it ran** to see the exact query Recurso executed.
+  </Step>
+  <Step title="Keep, re-run, or export">
+    Every answer is kept as a **running history** on the page (stored in your
+    browser), so a reload or a return visit keeps your results. Each answer can
+    be **re-run**, **downloaded as CSV**, or removed; **Clear history** empties
+    the thread.
   </Step>
 </Steps>
 
@@ -44,6 +52,7 @@ it never changes anything.
 
 - Questions run as **read-only, tenant-scoped** queries — results only ever cover
   your own account's data.
+- History is stored **locally in your browser**, not on the server.
 - If a question can't be answered, you'll be asked to rephrase it.
 - Ask AI depends on a GenAI provider being configured for the deployment. If it
   isn't enabled, the page tells you so instead of returning a result.

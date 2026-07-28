@@ -59,6 +59,18 @@ Click a row to open the detail sheet. It shows the **Total amount** alongside th
 **Reason**, an optional **Reference**, the **Refund status** (when the credit was
 paid out as a refund), and the **Created** date.
 
+From the panel you can:
+
+- **Download document** — a print-ready credit note on the same letterhead as
+  your invoices (buyer block, amount, reason, and the original invoice number
+  when the note is linked to one).
+- **Copy ID** — copy the credit note's id for support or reconciliation.
+- **Void** — for an **issued account-credit** with an unspent balance, cancel it
+  and write off the remaining balance (the ledger reversal posts automatically).
+  Any already-applied portion stays intact. Refund notes can't be voided — the
+  money already left through the payment gateway. Admins/owners only, behind a
+  confirmation.
+
 ## Related
 
 <CardGroup cols={2}>

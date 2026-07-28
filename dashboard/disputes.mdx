@@ -11,13 +11,15 @@ description: "Review and resolve invoice disputes raised by customers from the p
 
 **Disputes** (in the left nav) is the queue of invoice queries your customers
 raise from the [customer portal](/dashboard/customer-portal). Each dispute ties
-a customer's objection to a specific invoice, and your team resolves it with an
-optional note.
+a customer's objection to a specific invoice, and your team **reviews** it —
+accepting it (optionally issuing a credit note in the same step) or rejecting it.
 
 <Info>
-Disputes here are **customer-raised invoice queries**. Resolving a dispute is a
-triage action on the record — it doesn't itself move money. Use a
-[credit note](/dashboard/credit-notes) or refund if an adjustment is warranted.
+Disputes here are **customer-raised invoice queries**, distinct from
+payment-gateway chargebacks (card/ACH/bank-debit), which are handled
+automatically with a ledger reversal. Accepting a dispute can optionally issue a
+[credit note](/dashboard/credit-notes) for the disputed invoice; rejecting it
+just closes the record.
 </Info>
 
 ## The disputes list
@@ -29,35 +31,42 @@ The table shows one row per dispute:
 | Invoice | The disputed invoice (short id) |
 | Customer | Who raised it (short id) |
 | Reason | The customer's stated reason |
-| Status | **open** (amber) or **resolved** (green), with the resolution note if any |
+| Status | **open** (amber), **resolved** (green), or **rejected** (red), with the note if any |
 | Raised | When the dispute was created |
 
 Use the **status filter** in the toolbar to switch between **Open**,
-**Resolved**, and **All**. The page opens filtered to **Open** so the
-outstanding queue is front and center.
+**Resolved**, **Rejected**, and **All**. The page opens filtered to **Open** so
+the outstanding queue is front and center.
 
-## Resolve a dispute
+## Review a dispute
 
-Open disputes show a **Resolve** button.
+Open disputes show a **Review** button. The dialog shows the invoice and the
+customer's reason, then lets you decide:
 
 <Steps>
-  <Step title="Click Resolve">
-    A dialog opens showing the invoice and the customer's reason.
+  <Step title="Optionally, tick “Issue a credit note on accept”">
+    When accepting, this issues an **account credit** for the invoice's
+    outstanding amount against the customer — using the same
+    [credit note](/dashboard/credit-notes) flow (and ledger postings) as issuing
+    one by hand. For a **partial** credit, leave the box unticked and create the
+    credit note manually instead.
   </Step>
-  <Step title="Add a resolution note (optional)">
-    Record what was done about it — the note is **visible to your team** and
-    shows against the resolved dispute.
+  <Step title="Add a note (optional)">
+    Record what was decided — the note is **visible to your team** and shows
+    against the closed dispute.
   </Step>
-  <Step title="Click Mark resolved">
-    The dispute moves to **resolved** and drops out of the open queue.
+  <Step title="Accept or Reject">
+    **Accept** closes the dispute as **resolved** (and issues the credit if you
+    ticked the box). **Reject** closes it as **rejected**. Either way it drops
+    out of the open queue.
   </Step>
 </Steps>
 
-<Warning>
-Resolving only records the outcome. If the customer is owed money or an invoice
-correction, issue a [credit note](/dashboard/credit-notes) or refund
-separately.
-</Warning>
+<Note>
+The credit is issued **before** the dispute is marked resolved, so if credit
+creation fails the dispute stays **open** for a clean retry — never a resolved
+dispute with no credit behind it.
+</Note>
 
 ## Related
 
