@@ -51,6 +51,7 @@
               "core/plans",
               "core/customers",
               "core/subscriptions",
+              "core/proration",
               "core/invoices",
               "core/payments"
             ],
