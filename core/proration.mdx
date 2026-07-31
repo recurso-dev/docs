@@ -1,6 +1,6 @@
 ---
 title: "Proration"
-description: "How Recurso credits unused time and charges the remainder when a subscription changes plans mid-cycle — with a live calculator that runs the exact billing math."
+description: "How Recurso credits unused time and charges the remainder when a subscription changes plans mid-cycle — the exact billing math, worked through."
 ---
 
 ## What proration does
@@ -12,15 +12,12 @@ renewal to make things fair. It settles the difference immediately:
 - **Charges** the new plan, prorated for the time left in the cycle.
 
 The difference between the two is the **net** amount — a charge on an upgrade, a
-credit on a downgrade. The calculator below runs the *same* function the API
-uses, so you can see the exact number a plan change will produce before you make
-one.
+credit on a downgrade.
 
 <Info>
 Every amount is in the currency's **smallest unit** (cents, paise) and the
 proration is time-based — computed from the seconds remaining in the cycle, not
-whole days. The calculator mirrors this to the last unit, including how Recurso
-**truncates** (never rounds up) each side.
+whole days. Each side is **truncated** (never rounded up) to a whole minor unit.
 </Info>
 
 ## The formula
@@ -28,8 +25,8 @@ whole days. The calculator mirrors this to the last unit, including how Recurso
 For a plan change at time `t` inside a cycle running `[start, end]`:
 
 ```
-total      = end − start                         (cycle length)
-remaining  = max(0, end − t)                      (time left)
+total      = end − start                          (cycle length)
+remaining  = max(0, end − t)                       (time left)
 
 credit     = trunc( current_price × remaining / total )
 charge     = trunc( new_price     × remaining / total )
@@ -40,131 +37,33 @@ Both sides use the *same* `remaining / total` fraction — the unused time you'r
 crediting is exactly the remaining time you're charging for. A positive `net` is
 billed now; a negative `net` becomes a credit note.
 
-## Live calculator
+## Worked example
 
-export const ProrationCalculator = () => {
-  const [currentPrice, setCurrentPrice] = useState("20.00")
-  const [newPrice, setNewPrice] = useState("50.00")
-  const [cycleDays, setCycleDays] = useState("30")
-  const [elapsedDays, setElapsedDays] = useState("10")
+A customer on **$20/mo** upgrades to **$50/mo** on **day 10 of a 30-day cycle**.
+Prices are stored in minor units: `$20.00 → 2000`, `$50.00 → 5000`.
 
-  // Parse a major-unit money string ("20.00") into integer minor units (2000).
-  // Mirrors how prices are stored — int64 minor units — so truncation matches.
-  const toMinor = (s) => {
-    const n = parseFloat(s)
-    if (!isFinite(n) || n < 0) return 0
-    return Math.round(n * 100)
-  }
-  const days = (s) => {
-    const n = parseFloat(s)
-    return isFinite(n) && n >= 0 ? n : 0
-  }
+```
+remaining / total = 20 / 30  =  0.6667   (⅔ of the cycle left)
 
-  const curMinor = toMinor(currentPrice)
-  const newMinor = toMinor(newPrice)
-  const total = days(cycleDays)
-  const elapsed = Math.min(days(elapsedDays), total)
-  const remaining = Math.max(0, total - elapsed)
-  const frac = total > 0 ? remaining / total : 0
+credit  = trunc( 2000 × 20/30 )  = trunc(1333.33)  = 1333   →  $13.33
+charge  = trunc( 5000 × 20/30 )  = trunc(3333.33)  = 3333   →  $33.33
+net     = 3333 − 1333            = 2000             →  $20.00  billed now
+```
 
-  // Math.trunc reproduces Go's int64() conversion (truncate toward zero),
-  // which is exactly what service.CalculateProration does.
-  const credit = Math.trunc(curMinor * frac)
-  const charge = Math.trunc(newMinor * frac)
-  const net = charge - credit
+The customer is invoiced **$20.00** immediately for the richer plan over the
+remaining 20 days. Reverse the prices (a **$50 → $20 downgrade**) at the same
+point and `net` is **−$20.00** — Recurso issues a credit note for that amount.
 
-  const fmt = (minor) => {
-    const sign = minor < 0 ? "−" : ""
-    const abs = Math.abs(minor)
-    return sign + "$" + (abs / 100).toFixed(2)
-  }
-  const pct = total > 0 ? Math.round(frac * 100) : 0
-  const isUpgrade = net > 0
-  const isFlat = net === 0
+The table below shows the net for the same two plans at different points in the
+cycle (30-day cycle, `$20 ↔ $50`):
 
-  const field = (label, value, onChange, suffix) => (
-    <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 45%", minWidth: "9rem" }}>
-      <span style={{ fontSize: "0.8rem", fontWeight: 600, opacity: 0.7 }}>{label}</span>
-      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-        <input
-          type="number"
-          value={value}
-          min="0"
-          step="any"
-          onChange={(e) => onChange(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "0.5rem 0.6rem",
-            borderRadius: "0.5rem",
-            border: "1px solid rgba(128,128,128,0.35)",
-            background: "rgba(128,128,128,0.06)",
-            fontVariantNumeric: "tabular-nums",
-            fontSize: "0.95rem",
-          }}
-        />
-        {suffix ? <span style={{ fontSize: "0.8rem", opacity: 0.6 }}>{suffix}</span> : null}
-      </span>
-    </label>
-  )
-
-  const stat = (label, value, color) => (
-    <div style={{ flex: "1 1 30%", minWidth: "7rem" }}>
-      <div style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.04em", opacity: 0.6, fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: "1.35rem", fontWeight: 700, fontVariantNumeric: "tabular-nums", color, marginTop: "0.15rem" }}>{value}</div>
-    </div>
-  )
-
-  const emerald = "#10B981"
-  const amber = "#D97706"
-
-  return (
-    <div style={{
-      border: "1px solid rgba(128,128,128,0.25)",
-      borderRadius: "0.9rem",
-      padding: "1.25rem",
-      margin: "1rem 0",
-      background: "rgba(16,185,129,0.03)",
-    }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.9rem" }}>
-        {field("Current plan price", currentPrice, setCurrentPrice, "/cycle")}
-        {field("New plan price", newPrice, setNewPrice, "/cycle")}
-        {field("Cycle length", cycleDays, setCycleDays, "days")}
-        {field("Days elapsed", elapsedDays, setElapsedDays, "days")}
-      </div>
-
-      <div style={{ marginTop: "1rem", fontSize: "0.82rem", opacity: 0.75 }}>
-        <strong>{pct}%</strong> of the cycle remains ({remaining.toLocaleString()} of {total.toLocaleString()} days).
-      </div>
-
-      <div style={{ height: "1px", background: "rgba(128,128,128,0.2)", margin: "1rem 0" }} />
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
-        {stat("Credit (unused time)", "−" + fmt(credit).replace("−", ""), emerald)}
-        {stat("Charge (remaining time)", fmt(charge), "inherit")}
-        {stat(isUpgrade ? "Billed now" : isFlat ? "No change" : "Credited", fmt(net), isUpgrade ? amber : emerald)}
-      </div>
-
-      <div style={{
-        marginTop: "1rem",
-        padding: "0.7rem 0.85rem",
-        borderRadius: "0.55rem",
-        background: isUpgrade ? "rgba(217,119,6,0.1)" : "rgba(16,185,129,0.1)",
-        fontSize: "0.85rem",
-        lineHeight: 1.5,
-      }}>
-        {isFlat ? (
-          <span>Same effective price for the remaining time — nothing is billed or credited.</span>
-        ) : isUpgrade ? (
-          <span>Upgrade: the customer is invoiced <strong>{fmt(net)}</strong> now (before tax) for the richer plan over the {remaining.toLocaleString()} remaining days.</span>
-        ) : (
-          <span>Downgrade: Recurso issues a <strong>{fmt(-net)}</strong> credit note for the unused value they'd already paid.</span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-<ProrationCalculator />
+| Days elapsed | Remaining | Upgrade $20→$50 (billed) | Downgrade $50→$20 (credited) |
+|---|---|---|---|
+| 0 | 100% | $30.00 | $30.00 |
+| 10 | ⅔ | $20.00 | $20.00 |
+| 15 | ½ | $15.00 | $15.00 |
+| 25 | ⅙ | $5.00 | $5.00 |
+| 30 | 0% | $0.00 | $0.00 |
 
 <Tip>
 Tax isn't shown above because it depends on the customer's location and the
@@ -176,9 +75,8 @@ response.
 
 ## Previewing from the API
 
-The calculator reproduces the math, but you never have to compute it yourself.
-Ask Recurso for the exact breakdown — no writes, no side effects — before you
-commit a plan change:
+You never have to compute this yourself. Ask Recurso for the exact breakdown —
+no writes, no side effects — before you commit a plan change:
 
 <CodeGroup>
 ```bash cURL
@@ -204,12 +102,12 @@ unit:
     "current_plan_id": "plan_basic",
     "new_plan_id": "plan_pro",
     "currency": "USD",
-    "credit_amount": 666,       // unused time on the current plan
-    "charge_amount": 3333,      // prorated new plan
-    "net_amount": 2667,         // charge − credit, before tax
-    "tax_amount": 0,            // tax on the net (location + HSN dependent)
-    "total_amount": 2667,       // net + tax — what's billed now
-    "next_invoice_amount": 5000,// full new-plan charge at the next renewal
+    "credit_amount": 1333,       // unused time on the current plan
+    "charge_amount": 3333,       // prorated new plan
+    "net_amount": 2000,          // charge − credit, before tax
+    "tax_amount": 0,             // tax on the net (location + HSN dependent)
+    "total_amount": 2000,        // net + tax — what's billed now
+    "next_invoice_amount": 5000, // full new-plan charge at the next renewal
     "is_upgrade": true,
     "effective_date": "2026-01-10T00:00:00Z"
   }
@@ -230,6 +128,6 @@ customer is billed.
   net can be off by at most one minor unit from a rounded calculation, and it
   never over-charges.
 - **Time-based, not day-based.** Real proration uses seconds remaining in the
-  cycle. The calculator uses days for legibility; the ratio is identical.
+  cycle. The examples above use days for legibility; the ratio is identical.
 - **Same-price switches net to zero.** Moving between two equally-priced plans
   mid-cycle bills nothing — the credit and charge cancel exactly.
