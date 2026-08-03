@@ -162,6 +162,30 @@ credentials (see [Payment Gateways](/advanced/payment-gateways)) **before** that
 first renewal so charges succeed.
 </Warning>
 
+
+### Step 5: Prove it — the Compare gate
+
+Before pointing billing at Recurso, re-run your export through the Compare
+gate. It diffs the export against your live Recurso data — **read-only** —
+and reports, per record:
+
+- **Coverage** — every importable source record exists in Recurso
+- **Fidelity** — plan amount, currency, and interval match exactly; customer
+  identity intact
+- **Continuity** — billing resumes exactly where Stripe stops: a subscription
+  whose period end drifted more than an hour is flagged as the double-billing
+  / billing-gap risk it is
+
+```bash
+curl -s https://api.recurso.dev/v1/import/stripe/compare \
+  -H "Authorization: Bearer $RECURSO_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data @data.json | jq '{ready, issues}'
+```
+
+`"ready": true` means zero issues — safe to cut over. The same gate runs from
+the dashboard's Import wizard ("Before you cut over: run the Compare gate").
+
 ## After Migrating
 
 <Steps>
