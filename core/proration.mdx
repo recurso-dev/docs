@@ -73,6 +73,30 @@ collected (so GST is refunded correctly). See `tax_amount` in the preview
 response.
 </Tip>
 
+## Coupons: prorated at the price actually paid
+
+If the subscription carries a coupon and the **current period's invoice was
+discounted**, both sides of the formula use the **discounted** prices, not the
+list prices. The credit refunds what the customer actually paid for the unused
+time, and the charge matches what a renewal on the new plan would bill inside
+this discounted period.
+
+Worked example — the same `$20 → $50` upgrade at day 15, but with a **50%-off
+coupon** applied this period:
+
+```text
+credit  = trunc( 1000 × 15/30 ) =  500   →  $5.00   (half of the discounted $10)
+charge  = trunc( 2500 × 15/30 ) = 1250   →  $12.50  (half of the discounted $25)
+net     = 750                            →  $7.50 billed now
+```
+
+Without this, a discounted subscription would be credited unused time at list
+price — on a deep discount, a downgrade could return **more account credit than
+the customer ever paid**. Periods billed *without* the discount (a `once` coupon
+after its first period, a `repeating` coupon past its window) prorate at list
+prices, exactly as above. The preview endpoint reflects whichever applies, so
+what you show the customer is always what they'll be charged or credited.
+
 ## Previewing from the API
 
 You never have to compute this yourself. Ask Recurso for the exact breakdown —
