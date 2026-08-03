@@ -81,13 +81,27 @@ failure. The first published drill
 restored 97 tenants and 3,119 ledger transactions in under a second, all
 checks PASS.
 
+## Migration safety
+
+**Claim:** a migration into Recurso is proven before you cut billing over —
+not assumed correct.
+
+**Receipt:** the Compare gate
+([`POST /v1/import/stripe/compare`](https://github.com/recurso-dev/recurso/blob/main/internal/service/stripe_compare.go))
+re-diffs your committed Stripe export against live Recurso data, read-only,
+and reports per record: **coverage** (every importable source record exists),
+**fidelity** (plan amount, currency, and interval exact; customer identity),
+and **continuity** (a subscription whose `current_period_end` drifted more
+than an hour is flagged — the double-billing / billing-gap risk).
+`ready: true` means zero issues. It runs from the Import wizard's final step —
+"Before you cut over: run the Compare gate."
+
 ## What's not here yet — and is coming
 
 We hold ourselves to the same standard for absence: these proof artifacts do
 not exist yet, and we say so rather than imply otherwise.
 
-- **Migration Compare report** — import from Stripe/Chargebee/RevenueCat,
-  then a before/after reconciliation proving the imported ledger balances
-  *before* you cut over.
+- **Compare gate for Chargebee and RevenueCat** — the Stripe gate above,
+  extended to the other import sources.
 
 When they exist, they will be linked here with the same receipts-first format.
