@@ -66,13 +66,26 @@ every hot query shape; migrations
 [000161–000163](https://github.com/recurso-dev/recurso/tree/main/internal/adapter/db/migrations)
 document each shape and the worker/webhook/dashboard path it serves.
 
+## Restorability
+
+**Claim:** a backup of your books can be restored and proven complete — not
+assumed restorable.
+
+**Receipt:** [`scripts/restore_drill.sh`](https://github.com/recurso-dev/recurso/blob/main/scripts/restore_drill.sh)
+restores a live dump into a fresh database and then proves four properties:
+row-count parity per table, order-independent invoice content fidelity
+(md5 over id|total|tax|paid|status), and double-entry conservation
+(Σdebits = Σcredits) globally **and per tenant** — exiting non-zero on any
+failure. The first published drill
+([2026-08-03 report](https://github.com/recurso-dev/recurso/blob/main/docs/drills/2026-08-03-restore-drill.md))
+restored 97 tenants and 3,119 ledger transactions in under a second, all
+checks PASS.
+
 ## What's not here yet — and is coming
 
 We hold ourselves to the same standard for absence: these proof artifacts do
 not exist yet, and we say so rather than imply otherwise.
 
-- **Disaster-recovery drill report** — a scripted prod-backup restore,
-  reconciled to zero, with time-to-restore published.
 - **Migration Compare report** — import from Stripe/Chargebee/RevenueCat,
   then a before/after reconciliation proving the imported ledger balances
   *before* you cut over.
