@@ -30,7 +30,8 @@
             "group": "Migrating to Recurso",
             "pages": [
               "migrate-from-stripe",
-              "migrate-from-chargebee"
+              "migrate-from-chargebee",
+              "migrate-from-revenuecat"
             ],
             "icon": "right-left"
           },
