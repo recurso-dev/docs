@@ -262,6 +262,16 @@ flowchart LR
 Recurso verifies webhook signatures from both Razorpay (using webhook secret) and Stripe (using signing secret) before processing any event. Configure these secrets alongside your API credentials.
 </Info>
 
+<Note>
+**Delivery and retries.** Recurso deduplicates inbound gateway events by event
+id, so redeliveries are acknowledged without re-running side effects. If the
+dedup store is briefly unavailable, Recurso responds **503 instead of
+processing on faith** — the gateway's own retry (all three retry on non-2xx
+with backoff) delivers the event once the store recovers. A short burst of
+retries in your gateway dashboard during a Recurso maintenance window is
+therefore expected and safe: no event is lost, and none is double-processed.
+</Note>
+
 ## Failover Strategies
 
 While Recurso does not automatically fail over between gateways (a Razorpay subscription stays on Razorpay), you can implement retry logic at the application level.
