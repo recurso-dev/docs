@@ -1,0 +1,80 @@
+---
+title: "Evidence"
+description: "Every financial outcome in Recurso is explainable, reproducible, and independently verifiable. This page is the receipts — live links to the proofs, not claims."
+---
+
+Most billing platforms ask for trust. Recurso shows its work. Every claim below
+links to the actual proof — code, CI, or a runnable check — not a marketing page.
+
+## The self-verifying ledger
+
+**Claim:** Recurso's double-entry books reconcile to zero discrepancies after
+every billing operation.
+
+**Receipts:**
+- The [randomized invariant harness](https://github.com/recurso-dev/recurso/blob/main/internal/service/ledger_invariant_pg_test.go)
+  runs real billing sequences — subscriptions, upgrades, downgrades, coupons,
+  refunds, recognition, cancels — against real Postgres **in CI on every
+  commit**, and fails if the reconciler finds a single missing ledger leg,
+  unbalanced book, wrong-sign balance, or deferred revenue below its
+  recognition schedule.
+- The [reconciler itself ships in the product](https://github.com/recurso-dev/recurso/blob/main/internal/service/reconciliation.go)
+  (Finance → Reconciliation): the same checks, on demand, against your live books.
+- The E2E suite ends with a **zero-discrepancy gate** — a release cannot ship
+  with unexplained money.
+- This harness has caught real high-severity bugs before any customer saw them
+  — including bugs its own authors introduced. The
+  [public CI history](https://github.com/recurso-dev/recurso/actions) is the record.
+
+## The accounting-scenario corpus
+
+**Claim:** money-path fixes in Recurso ship with a failing-first oracle — a
+test proven to fail on the old behavior before the fix lands.
+
+**Receipts:** the repository carries a corpus of Postgres-backed accounting
+scenarios grown one real bug at a time — downgrade proration against
+recognized revenue, coupon-aware plan changes, refund tax reversal,
+cross-exponent currency conversion, gift and quote ledger legs, credit-note
+tax breakdowns, and more. Browse them:
+[`*_pg_test.go` in the service layer](https://github.com/recurso-dev/recurso/tree/main/internal/service).
+Each test's comment explains the exact failure it locks out.
+
+## Exact money math
+
+**Claim:** usage billing is priced with exact rational arithmetic — no float
+drift — and rounded exactly once, on the final amount.
+
+**Receipt:** [the rating engine](https://github.com/recurso-dev/recurso/blob/main/internal/service/rating.go)
+uses `big.Rat` end-to-end across all seven charge models; the round-once
+discipline is documented and tested at each model.
+
+## API honesty
+
+**Claim:** the published OpenAPI spec matches the running API.
+
+**Receipt:** CI **fails on drift** — every registered route must exist in
+[`openapi.yaml`](https://github.com/recurso-dev/recurso/blob/main/cmd/api/openapi.yaml),
+enforced on every commit. The SDKs are generated from the same spec.
+
+## Performance claims
+
+**Claim:** hot-path queries are index-served, verified — not assumed.
+
+**Receipt:** the schema-wide audit (releases
+[v0.9.0](https://github.com/recurso-dev/recurso/releases/tag/v0.9.0)) EXPLAIN-verified
+every hot query shape; migrations
+[000161–000163](https://github.com/recurso-dev/recurso/tree/main/internal/adapter/db/migrations)
+document each shape and the worker/webhook/dashboard path it serves.
+
+## What's not here yet — and is coming
+
+We hold ourselves to the same standard for absence: these proof artifacts do
+not exist yet, and we say so rather than imply otherwise.
+
+- **Disaster-recovery drill report** — a scripted prod-backup restore,
+  reconciled to zero, with time-to-restore published.
+- **Migration Compare report** — import from Stripe/Chargebee/RevenueCat,
+  then a before/after reconciliation proving the imported ledger balances
+  *before* you cut over.
+
+When they exist, they will be linked here with the same receipts-first format.

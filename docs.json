@@ -148,7 +148,8 @@
             "pages": [
               "troubleshooting",
               "faq",
-              "glossary"
+              "glossary",
+              "evidence"
             ],
             "icon": "circle-question"
           }
