@@ -87,6 +87,17 @@ curl -X POST https://api.recurso.dev/v1/coupons \
 }
 ```
 
+<Note>
+**Coupons and mid-cycle plan changes.** When a subscription changes plans in a
+period whose invoice carried the coupon's discount, the [proration
+math](/core/proration#coupons-prorated-at-the-price-actually-paid) uses the
+**discounted** prices for both the unused-time credit and the remaining-time
+charge — the customer is credited what they actually paid, and charged what a
+renewal on the new plan would bill. Periods billed without the discount (a
+`once` coupon after its first period, a `repeating` coupon past its window)
+prorate at list prices.
+</Note>
+
 ## Apply to Subscription
 
 ```typescript
