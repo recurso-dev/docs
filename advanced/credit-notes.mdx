@@ -224,6 +224,38 @@ Voiding a credit note is irreversible. If the credit note has already been parti
 const pdf = await recurso.creditNotes.pdf('cn_xyz');
 ```
 
+### Statutory tax breakdown (GST-grade CDN)
+
+Credit notes record their **tax breakdown at creation** and the document
+renders it — taxable value (with HSN), and the GST components that apply
+(IGST inter-state, CGST + SGST intra-state). For Indian tenants this makes the
+document a statutory-grade **credit note (CDN)** the buyer can use to reverse
+input tax:
+
+- an **invoice-linked** credit (refund or adjustment) slices the invoice's tax
+  proportionally — the same math the GSTR-1 CDNR report uses, so the document
+  and the return always agree
+- a **downgrade** credit carries the proration tax actually reversed
+- a **standalone** goodwill credit reverses no supply and stays gross-only
+
+The API returns the same figures on the credit-note object (`subtotal`,
+`tax_amount`, `igst_amount`, `cgst_amount`, `sgst_amount`, `tax_type`,
+`hsn_code` — zero/empty when no breakdown was recorded), and the dashboard's
+detail view mirrors them.
+
+## Customer notifications
+
+The customer is **emailed automatically when a credit note goes live**:
+
+- a **refund** note sends "your refund is on its way" (with the 5–10
+  business-day banking note)
+- an **account credit** note explains it will be applied automatically to
+  upcoming invoices
+
+Direct-issued notes email immediately; notes created under maker-checker
+approval email **at approval**, when they actually take effect — never while
+still pending.
+
 ## Credit expiry
 
 An adjustment credit can carry an optional `expires_at`. When that date passes
