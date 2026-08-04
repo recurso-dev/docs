@@ -49,6 +49,10 @@ Let a tenant connect their own account so autopay (save card + renewal + dunning
 
 ### Step 1: Configure the credential vault key (once)
 
+<Frame caption="Integrations — connect Stripe, Razorpay, or GoCardless with your own keys">
+  <img src="/images/setup/integrations-gateways.jpg" alt="The Integrations page showing connected payment gateways" />
+</Frame>
+
 BYO gateway credentials are sealed at rest with AES-256-GCM, so the server needs
 a master key. Without it, "Connect a gateway" is disabled and payments fall back
 to the platform gateway.
