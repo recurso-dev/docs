@@ -19,6 +19,14 @@ See [Wallets](/advanced/wallets) for the draining order and balance mechanics.
 In the dashboard, go to **Wallets → Create wallet** (pick the customer and
 currency); or via the API:
 
+<Frame caption="Wallets — each customer's prepaid balance and auto-recharge state">
+  <img src="/images/setup/wallets-list.jpg" alt="The Wallets page listing customer balances" />
+</Frame>
+
+<Frame caption="Create wallet — pick the customer and currency">
+  <img src="/images/setup/wallets-create.jpg" alt="The Create wallet dialog" />
+</Frame>
+
 ```bash
 curl -X POST https://api.recurso.dev/v1/wallets \
   -H "Authorization: Bearer $API_KEY" \
