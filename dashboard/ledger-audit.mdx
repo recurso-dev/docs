@@ -61,6 +61,45 @@ book balances, use the
 [Trial Balance](/dashboard/finance-reports#trial-balance) report.
 </Info>
 
+### Posting codes
+
+Every ledger transaction carries a posting code — what the movement *is*, in
+words. The dashboard shows these as labels; the full glossary:
+
+| Code | Label | What it records |
+| --- | --- | --- |
+| 1 | Invoice raised | The receivable at issue — customer AR against Deferred Revenue (subscriptions) or Revenue (one-offs), at the gross amount |
+| 2 | Revenue recognized | One recognition event moving its slice from Deferred to Recognized Revenue |
+| 3 | Payment | Cash settling the customer's receivable |
+| 4 | Refund | Cash returned to the customer |
+| 5 | Refund — deferred reversal | The still-unearned portion of a refunded invoice leaving Deferred |
+| 6 | Output tax | The tax slice reclassified from Deferred to Tax Payable |
+| 7 | Credit applied | Account credit offsetting an invoice |
+| 8 | Credit note | A credit note issued (Credits Issued against Customer Credit) |
+| 9 | Refund — tax reversal | The tax slice of a refund leaving Tax Payable |
+| 10 | TDS receivable | Tax withheld at source by the customer, recoverable against income tax |
+| 11 | Wallet top-up | Prepaid wallet funding (booked as cash at top-up) |
+| 12 | Wallet drain | Wallet balance consumed against an invoice |
+| 13 | Wallet refund | Wallet balance returned to the customer |
+| 14 | Wallet forfeit | Wallet balance forfeited on closure |
+| 15 | Wallet expiry | Wallet balance expired per policy |
+| 16 | Downgrade credit | Proration credit minted by a plan downgrade |
+| 17 | Downgrade — tax reversal | The tax slice of a downgrade proration |
+| 18 | Credit expiry | Account credit expired per policy |
+| 19 | Payment reversal | A settled payment clawed back by the bank (e.g. an ACH return) — AR reinstated, cash removed |
+| 20 | Credit void | A credit note voided before use |
+| 21 | Downgrade — revenue reversal | Recognized revenue unwound by a downgrade |
+| 22 | Write-off | An uncollectible invoice's reversal — Deferred (or Revenue) and the receivable both relieved |
+| 23 | Write-off — tax reversal | The tax slice of a write-off leaving Tax Payable |
+| 24 | Write-off recovery | A written-off invoice paid after all — the receivable and Deferred re-established before the payment settles |
+| 25 | Write-off recovery — tax | The tax slice re-established on recovery |
+
+<Tip>
+Codes 19 and 22–25 can repeat for one invoice across settle → reverse →
+re-settle cycles; each cycle posts fresh legs, so the history stays complete
+and append-only.
+</Tip>
+
 ## Audit Log
 
 The **Audit Log** records every configuration change, immutably. Updates and
