@@ -4,10 +4,11 @@ sidebarTitle: "Introduction"
 description: "Subscriptions, usage-based billing, prepaid wallets, and India-first compliance on a real double-entry ledger — MIT-licensed and self-hostable."
 ---
 
-Recurso is a production-grade billing engine you can **actually own**. Meter
-usage, price it with tiered charges, drain prepaid wallets before cards are
-touched, and issue GST-correct e-invoices — all posting balanced debits and
-credits to a **real double-entry ledger**, not a table of balances.
+Recurso is a production-grade billing engine you can **actually own**. It runs
+the whole commercial lifecycle — **plan, subscribe, meter, bill, collect,
+recognize, and close** — on one system, and every event posts balanced debits
+and credits to a **real double-entry ledger**, not a table of balances. So the
+story ends where finance actually lives: a month that provably balances.
 Self-host it under MIT, or run it on Recurso Cloud.
 
 <CardGroup cols={2}>
@@ -15,7 +16,7 @@ Self-host it under MIT, or run it on Recurso Cloud.
     From clone to a seeded dashboard in under five minutes with `make demo`.
   </Card>
   <Card title="Usage-based billing" icon="gauge" href="/advanced/usage-billing">
-    Billable metrics, four charge models, batch ingestion, arrears rating.
+    Billable metrics, seven charge models, batch ingestion, arrears rating.
   </Card>
   <Card title="API reference" icon="code" href="/api-reference/introduction">
     Every endpoint, typed — with an interactive playground.
@@ -27,30 +28,35 @@ Self-host it under MIT, or run it on Recurso Cloud.
 
 ## What's in the engine
 
+Follow the lifecycle — **meter, bill, collect, recognize, account, close** —
+and every stage lives on the same system, ending in books that provably balance.
+
 <Columns cols={2}>
   <Card title="Meter anything, price it your way" icon="gauge-high" href="/advanced/usage-billing">
-    Metrics aggregate events by count, sum, max, or unique value. Charges
-    price them per-unit, graduated, volume, or package — with sub-paise
-    rates computed exactly and billed in arrears on the renewal invoice.
+    Metrics aggregate events eight ways — count, sum, max, unique, percentile,
+    and more. Seven charge models price them (per-unit, graduated, volume,
+    package, percentage, graduated-percentage, dynamic), with sub-paise rates
+    computed exactly and billed in arrears on the renewal invoice.
   </Card>
   <Card title="Wallets, commitments & alerts" icon="wallet" href="/advanced/wallets">
     Customers prepay into money wallets that settle invoices before any
     gateway is charged. Contract minimums true-up automatically; usage
     alerts fire once per period before a customer is surprised.
   </Card>
+  <Card title="Collect & recover" icon="heart-pulse" href="/advanced/growth-overview">
+    Multi-gateway collection, dunning campaigns, smart retries, cancel flows,
+    a collections worklist, and a self-service portal — recovered revenue is
+    attributed and reported.
+  </Card>
   <Card title="Books that balance" icon="scale-balanced" href="/advanced/ledger">
     Every invoice, payment, refund, and wallet drain posts balanced debits
-    and credits to an immutable ledger — with revenue recognition, trial
-    balance, and daily reconciliation on top.
+    and credits to an immutable ledger — with accrual revenue recognition,
+    a trial balance, and month-end close on top.
   </Card>
   <Card title="India-first, global-ready" icon="earth-asia" href="/compliance/overview">
     Native GST (CGST/SGST/IGST, HSN, Place of Supply), IRP e-invoicing,
     GSTR exports, RBI-compliant UPI AutoPay — plus multi-currency, EU VAT,
     and US sales tax on the same engine.
-  </Card>
-  <Card title="Recover revenue before it churns" icon="heart-pulse" href="/advanced/growth-overview">
-    Dunning campaigns, smart retries, cancel flows, churn scoring, and a
-    self-service portal — recovered revenue is attributed and reported.
   </Card>
   <Card title="Developer-first" icon="terminal" href="/api-reference/introduction">
     REST API with OpenAPI 3.1 served from your instance, typed SDKs,
@@ -70,7 +76,7 @@ Self-host it under MIT, or run it on Recurso Cloud.
 | Prepaid wallets | **Yes** | Yes | Limited | No |
 | GST &amp; e-invoicing | **Native** | No | Limited | Yes |
 | Razorpay + UPI AutoPay | **Yes** | No | No | Yes |
-| Pricing | Free · [$299/mo Cloud](/pricing) | Free / cloud | 0.5%+ of revenue | $599+/mo |
+| Pricing | Free self-host · [0.4% or $99 Cloud](/pricing) | Free / cloud | 0.5%+ of revenue | $599+/mo |
 
 ## Get started
 
