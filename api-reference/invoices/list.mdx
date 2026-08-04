@@ -11,7 +11,7 @@ description: "Retrieve a list of invoices"
 | `customer_id` | string | Filter by customer |
 | `subscription_id` | string | Filter by subscription |
 | `status` | string | `draft`, `open`, `paid`, `past_due`, `void` |
-| `limit` | integer | Max results (default: 10) |
+| `limit` | integer | Max results (default: 50, capped at 250) |
 | `offset` | integer | Pagination offset |
 
 ## Example Request

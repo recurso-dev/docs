@@ -9,7 +9,7 @@ description: "Retrieve a paginated list of webhook events"
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `type` | string | Filter by event type (e.g. `invoice.paid`) |
-| `limit` | integer | Max results (default: 10, max: 100) |
+| `limit` | integer | Max results (default: 50, capped at 500) |
 | `offset` | integer | Pagination offset |
 
 ## Example Request

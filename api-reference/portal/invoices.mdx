@@ -11,7 +11,7 @@ Requires a valid portal session token obtained via magic link authentication.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `status` | string | Filter by status: `draft`, `open`, `paid`, `past_due`, `void` |
-| `limit` | integer | Max results (default: 10, max: 100) |
+| `limit` | integer | Max results (default: 1000, capped at 1000) |
 | `offset` | integer | Pagination offset |
 
 ## Example Request

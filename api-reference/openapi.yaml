@@ -188,6 +188,15 @@ paths:
                   type: string
                   format: password
                   minLength: 8
+                country:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  description: >
+                    Optional ISO-2 business country (e.g. "US"). Stamped on the
+                    tenant's primary legal entity, which is the seller tax
+                    jurisdiction — a US signup invoices under US sales tax from
+                    day one. Omit to configure later in settings.
       responses:
         '201':
           description: Tenant, owner user, and session created. Sets recurso_session cookie.
@@ -668,6 +677,10 @@ paths:
                 gstin: { type: string }
                 tax_type: { type: string, enum: [business, consumer] }
                 place_of_supply: { type: string }
+                tax_exempt: { type: boolean, description: "US sales-tax exemption status (D2)." }
+                tax_exemption_number: { type: string, description: "Exemption/resale certificate number." }
+                tax_exemption_code: { type: string, description: "Provider entity-use / usage code (also the reason)." }
+                tax_exemption_expires_at: { type: string, format: date, description: "Exemption certificate expiry (YYYY-MM-DD); empty/omitted = no expiry. Past this date the buyer is charged tax again (Inc 2)." }
                 line1: { type: string }
                 city: { type: string }
                 state: { type: string }
@@ -691,6 +704,572 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/customers/{id}/credit-statement:
+    get:
+      operationId: getCreditStatement
+      tags: [Customers]
+      summary: Customer account-credit statement
+      description: >
+        A customer's consolidated account-credit statement — spendable balance
+        per currency/entity, every grant (credit note), the invoice draw-down
+        history, and a per-currency rollup. Reads existing GL-backed data; the
+        spendable balance equals the credit applier's view.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The credit statement.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      customer_id: { type: string, format: uuid }
+                      balances:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            currency: { type: string }
+                            entity_id: { type: string, format: uuid, nullable: true }
+                            balance: { type: integer, format: int64 }
+                      grants:
+                        type: array
+                        items: { $ref: '#/components/schemas/CreditNote' }
+                      applications:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            credit_note_id: { type: string, format: uuid }
+                            invoice_id: { type: string, format: uuid }
+                            invoice_number: { type: string }
+                            currency: { type: string }
+                            amount: { type: integer, format: int64 }
+                            created_at: { type: string, format: date-time }
+                      summary:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            currency: { type: string }
+                            total_issued: { type: integer, format: int64 }
+                            total_applied: { type: integer, format: int64 }
+                            current_balance: { type: integer, format: int64 }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/import/stripe/preview:
+    post:
+      operationId: previewStripeImport
+      tags: [Migration]
+      summary: Dry-run preview of a Stripe export
+      description: >
+        Parses an uploaded Stripe export (customers, products, prices,
+        subscriptions, payment methods) and returns a plan describing exactly
+        what a commit would create, link to an existing record, skip, or refuse
+        — with NO side effects. Existing customers are matched by email and
+        linked rather than duplicated.
+      requestBody:
+        required: true
+        description: The Stripe export JSON.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customers: { type: array, items: { type: object } }
+                products: { type: array, items: { type: object } }
+                prices: { type: array, items: { type: object } }
+                subscriptions: { type: array, items: { type: object } }
+                payment_methods: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The dry-run import plan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string, enum: [customer, plan, subscription, payment_method] }
+                        stripe_id: { type: string }
+                        label: { type: string }
+                        action: { type: string, enum: [create, link_existing, skip_already_imported, conflict, unsupported] }
+                        detail: { type: string }
+                  summary:
+                    type: object
+                    additionalProperties: { type: integer }
+                  warnings:
+                    type: array
+                    items: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/import/revenuecat/preview:
+    post:
+      operationId: previewRevenueCatImport
+      tags: [Migration]
+      summary: Dry-run preview of a RevenueCat export
+      description: >
+        Parses an uploaded RevenueCat export (subscribers + their subscriptions,
+        and products) and returns a plan of what a commit would do — no side
+        effects. Note: RevenueCat identifies subscribers by app_user_id; those
+        without an email surface as conflicts (Recurso requires one).
+      requestBody:
+        required: true
+        description: The RevenueCat export JSON.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscribers: { type: array, items: { type: object } }
+                products: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The dry-run import plan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { type: object } }
+                  summary: { type: object, additionalProperties: { type: integer } }
+                  warnings: { type: array, items: { type: string } }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/import/revenuecat/commit:
+    post:
+      operationId: commitRevenueCatImport
+      tags: [Migration]
+      summary: Import a RevenueCat export (customers, plans, active subscriptions)
+      description: >
+        Imports the uploaded RevenueCat export idempotently — creating customers
+        (subscribers with an email), plans (products), and active subscriptions
+        via a direct insert (no billing side effect). Re-running is safe;
+        per-object failures are returned rather than aborting.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscribers: { type: array, items: { type: object } }
+                products: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The commit result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { type: object }
+                  created: { type: object, additionalProperties: { type: integer } }
+                  failures: { type: array, items: { type: object } }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/import/revenuecat/compare:
+    post:
+      operationId: compareRevenueCatImport
+      tags: [Migration]
+      summary: Compare gate — prove the RevenueCat migration before cut-over
+      description: >
+        Diffs the uploaded RevenueCat export against the tenant's live Recurso
+        data with zero writes — coverage (subscribers with an email, active
+        entitlements), fidelity (product price/currency/period; identity), and
+        billing continuity (an entitlement whose expires_at drifted >1h from
+        the imported period end is flagged). ready=true means zero issues.
+      requestBody:
+        required: true
+        description: The same RevenueCat export JSON the commit consumed.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscribers: { type: array, items: { type: object } }
+                products: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The compare report.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  source: { type: string }
+                  customers:
+                    $ref: '#/components/schemas/CompareCount'
+                  plans:
+                    $ref: '#/components/schemas/CompareCount'
+                  subscriptions:
+                    $ref: '#/components/schemas/CompareCount'
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        external_id: { type: string }
+                        field: { type: string }
+                        source: { type: string }
+                        recurso: { type: string }
+                  ready: { type: boolean }
+                  generated_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/import/compare-reports:
+    get:
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 }, description: Max runs returned (default 50, capped at 200). }
+      operationId: listCompareReports
+      tags: [Migration]
+      summary: List stored Compare runs
+      description: Every persisted migration Compare run (newest first) — each one a citable receipt that a migration was proven before cut-over.
+      responses:
+        '200':
+          description: Stored runs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        source: { type: string }
+                        ready: { type: boolean }
+                        generated_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/import/compare-reports/{id}:
+    get:
+      operationId: getCompareReport
+      tags: [Migration]
+      summary: Get a stored Compare run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The stored run with its full report.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/import/compare-reports/{id}/document:
+    get:
+      operationId: getCompareReportDocument
+      tags: [Migration]
+      summary: Printable Compare receipt
+      description: Self-contained HTML document (print-to-PDF) stating what was checked, what matched, and the verdict.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The printable document.
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/import/chargebee/preview:
+    post:
+      operationId: previewChargebeeImport
+      tags: [Migration]
+      summary: Dry-run preview of a Chargebee export
+      description: >
+        Parses an uploaded Chargebee export (customers, plans, subscriptions)
+        and returns a plan of what a commit would create, link, skip, or refuse
+        — with NO side effects. Existing customers are matched by email.
+      requestBody:
+        required: true
+        description: The Chargebee export JSON.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customers: { type: array, items: { type: object } }
+                plans: { type: array, items: { type: object } }
+                subscriptions: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The dry-run import plan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string, enum: [customer, plan, subscription] }
+                        chargebee_id: { type: string }
+                        label: { type: string }
+                        action: { type: string, enum: [create, link_existing, skip_already_imported, conflict, unsupported] }
+                        detail: { type: string }
+                  summary:
+                    type: object
+                    additionalProperties: { type: integer }
+                  warnings:
+                    type: array
+                    items: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/import/chargebee/commit:
+    post:
+      operationId: commitChargebeeImport
+      tags: [Migration]
+      summary: Import a Chargebee export (customers, plans, subscriptions)
+      description: >
+        Imports the uploaded Chargebee export idempotently — creating customers,
+        plans, and subscriptions and recording an idempotency mapping for each.
+        Subscriptions are imported in their current billing state via a direct
+        insert (no invoice/charge/ledger side effect). Re-running is safe;
+        per-object failures are returned rather than aborting the import.
+      requestBody:
+        required: true
+        description: The Chargebee export JSON (same shape as the preview endpoint).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customers: { type: array, items: { type: object } }
+                plans: { type: array, items: { type: object } }
+                subscriptions: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The commit result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { type: object }
+                  created:
+                    type: object
+                    additionalProperties: { type: integer }
+                  failures:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        stripe_id: { type: string }
+                        error: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/import/chargebee/compare:
+    post:
+      operationId: compareChargebeeImport
+      tags: [Migration]
+      summary: Compare gate — prove the Chargebee migration before cut-over
+      description: >
+        Diffs the uploaded Chargebee export against the tenant's live Recurso
+        data with zero writes — coverage, money-critical fidelity (plan price,
+        currency, period; customer identity), and billing continuity
+        (current_term_end drift >1h flagged as a double-billing risk).
+        ready=true means zero issues.
+      requestBody:
+        required: true
+        description: The same Chargebee export JSON the commit consumed.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customers: { type: array, items: { type: object } }
+                plans: { type: array, items: { type: object } }
+                subscriptions: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The compare report.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  source: { type: string }
+                  customers:
+                    $ref: '#/components/schemas/CompareCount'
+                  plans:
+                    $ref: '#/components/schemas/CompareCount'
+                  subscriptions:
+                    $ref: '#/components/schemas/CompareCount'
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        external_id: { type: string }
+                        field: { type: string }
+                        source: { type: string }
+                        recurso: { type: string }
+                  ready: { type: boolean }
+                  generated_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/import/stripe/commit:
+    post:
+      operationId: commitStripeImport
+      tags: [Migration]
+      summary: Import a Stripe export (customers, plans, subscriptions)
+      description: >
+        Imports the uploaded Stripe export, creating customers, plans, and
+        subscriptions and recording an idempotency mapping for each. Re-running
+        is safe: already-imported ids and records that already exist (by email
+        or plan code) are skipped. Subscriptions are imported in their current
+        billing state via a direct insert — no invoice, charge, or ledger entry
+        is generated, so Recurso takes over at the next renewal instead of
+        re-billing the current cycle. Per-object failures are returned in the
+        response rather than aborting the whole import. Card payment methods are
+        NOT imported — card data can't be migrated from a static export.
+      requestBody:
+        required: true
+        description: The Stripe export JSON (same shape as the preview endpoint).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customers: { type: array, items: { type: object } }
+                products: { type: array, items: { type: object } }
+                prices: { type: array, items: { type: object } }
+                subscriptions: { type: array, items: { type: object } }
+                payment_methods: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The commit result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan: { type: object }
+                  created:
+                    type: object
+                    additionalProperties: { type: integer }
+                  failures:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        stripe_id: { type: string }
+                        error: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/import/stripe/compare:
+    post:
+      operationId: compareStripeImport
+      tags: [Migration]
+      summary: Compare gate — prove the migration before cut-over
+      description: >
+        Diffs the uploaded Stripe export against the tenant's live Recurso data
+        with zero writes. Three checks, per record: coverage (every importable
+        source record exists in Recurso), fidelity (plan amount, currency, and
+        interval; customer identity), and billing continuity (a subscription
+        whose current_period_end drifted more than an hour is flagged — the
+        double-billing / billing-gap risk). ready=true means zero issues.
+        Run after a commit, before pointing billing at Recurso.
+      requestBody:
+        required: true
+        description: The same Stripe export JSON the commit consumed.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customers: { type: array, items: { type: object } }
+                products: { type: array, items: { type: object } }
+                prices: { type: array, items: { type: object } }
+                subscriptions: { type: array, items: { type: object } }
+                payment_methods: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: The compare report.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  source: { type: string }
+                  customers:
+                    $ref: '#/components/schemas/CompareCount'
+                  plans:
+                    $ref: '#/components/schemas/CompareCount'
+                  subscriptions:
+                    $ref: '#/components/schemas/CompareCount'
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string }
+                        external_id: { type: string }
+                        field: { type: string }
+                        source: { type: string }
+                        recurso: { type: string }
+                  ready: { type: boolean }
+                  generated_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /v1/customers:
     post:
       operationId: createCustomer
@@ -746,67 +1325,6 @@ paths:
                       $ref: '#/components/schemas/Customer'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
-  /v1/customers/{id}/credit-statement:
-    get:
-      operationId: getCreditStatement
-      tags: [Customers]
-      summary: Customer account-credit statement
-      description: >-
-        A customer's consolidated account-credit statement — spendable balance
-        per currency/entity, every grant (credit note), the invoice draw-down
-        history, and a per-currency rollup. The spendable balance equals the
-        credit applier's view (adjustment credits, status issued, balance > 0)
-        and reconciles to the Customer Credit ledger account.
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
-      responses:
-        '200':
-          description: The credit statement.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      customer_id: { type: string, format: uuid }
-                      balances:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            currency: { type: string }
-                            entity_id: { type: [string, 'null'], format: uuid }
-                            balance: { type: integer, format: int64 }
-                      grants:
-                        type: array
-                        items: { $ref: '#/components/schemas/CreditNote' }
-                      applications:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            credit_note_id: { type: string, format: uuid }
-                            invoice_id: { type: string, format: uuid }
-                            invoice_number: { type: string }
-                            currency: { type: string }
-                            amount: { type: integer, format: int64 }
-                            created_at: { type: string, format: date-time }
-                      summary:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            currency: { type: string }
-                            total_issued: { type: integer, format: int64 }
-                            total_applied: { type: integer, format: int64 }
-                            current_balance: { type: integer, format: int64 }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
   /v1/customers/{id}/payment-method:
     put:
@@ -905,6 +1423,24 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   /v1/subscriptions/{id}:
+    get:
+      operationId: getSubscription
+      tags: [Subscriptions]
+      summary: Get a subscription by id
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      responses:
+        '200':
+          description: The subscription.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscription'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       operationId: updateSubscription
       tags: [Subscriptions]
@@ -1109,6 +1645,8 @@ paths:
       tags: [Subscriptions]
       summary: List unbilled charges for a subscription
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
         - $ref: '#/components/parameters/PathID'
       responses:
         '200':
@@ -1322,58 +1860,31 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /v1/invoices/{id}/eu-einvoice:
-    get:
-      operationId: getEUEInvoice
-      tags: [Invoices]
-      summary: Get EU e-invoice (EN 16931 / UBL) status
-      description: >-
-        Returns the invoice's generated EU e-invoice — status, syntax, UBL
-        document, delivery id/error — or data:null when none has been generated.
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
-      responses:
-        '200':
-          description: EU e-invoice record, or null when not generated.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: [object, 'null']
-                    description: The EU e-invoice record (null if none generated).
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /v1/invoices/{id}/eu-einvoice/retry:
+  /v1/invoices/{id}/send:
     post:
-      operationId: retryEUEInvoice
+      operationId: sendInvoiceEmail
       tags: [Invoices]
-      summary: Regenerate and re-transmit the EU e-invoice
-      description: >-
-        Re-runs EN 16931 UBL generation and Access Point transmission for the
-        invoice, recovering a generation or transmission failure. Idempotent.
-        data:null when the tenant hasn't opted in to EU e-invoicing.
+      summary: Email the invoice to the customer
+      description: >
+        (Re)sends the invoice email — the customer's rendered invoice with a
+        hosted "Pay Now" checkout link — to the customer's email on file.
+        Invoices are also auto-emailed on generation; this is the on-demand
+        resend. 400 if the customer has no email address.
       parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/PathID'
       responses:
         '200':
-          description: Retry executed; the current EU e-invoice record (or null).
+          description: Invoice email sent.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  data:
-                    type: [object, 'null']
                   message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
   /v1/invoices/{id}/einvoice:
     get:
@@ -1460,6 +1971,61 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/invoices/{id}/eu-einvoice:
+    get:
+      operationId: getEUEInvoice
+      tags: [Invoices]
+      summary: Get EU e-invoice (EN 16931 / UBL) status
+      description: Returns the invoice's generated EU e-invoice — status, syntax, UBL document, delivery id/error — or data:null when none has been generated.
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      responses:
+        '200':
+          description: EU e-invoice record, or null when not generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    nullable: true
+                    type: object
+                    description: The EU e-invoice record (null if none generated).
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/invoices/{id}/eu-einvoice/retry:
+    post:
+      operationId: retryEUEInvoice
+      tags: [Invoices]
+      summary: Regenerate and re-transmit the EU e-invoice
+      description: Re-runs EN 16931 UBL generation and Access Point transmission for the invoice, recovering a generation or transmission failure. Idempotent. data:null when the tenant hasn't opted in.
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      responses:
+        '200':
+          description: Retry executed; the current EU e-invoice record (or null).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    nullable: true
+                    type: object
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /v1/coupons/{id}:
     put:
       operationId: updateCoupon
@@ -1540,6 +2106,9 @@ paths:
       operationId: listCoupons
       tags: [Coupons]
       summary: List coupons
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
       responses:
         '200':
           description: Coupons for the tenant.
@@ -1784,6 +2353,8 @@ paths:
       tags: [Credit Notes]
       summary: List credit notes
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
         - name: customer_id
           in: query
           description: Filter by customer.
@@ -1804,6 +2375,129 @@ paths:
                       $ref: '#/components/schemas/CreditNote'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /v1/credit-notes/{id}/pdf:
+    get:
+      operationId: downloadCreditNotePDF
+      tags: [Credit Notes]
+      summary: Download a printable credit note
+      description: >
+        Returns a print-ready HTML rendering of the credit note, tenant-scoped.
+        Requires authentication (API key or dashboard session): the document
+        carries the customer's legal name and address, so it is never publicly
+        fetchable by UUID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Print-ready credit note document.
+          content:
+            text/html:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/credit-notes/{id}/approve:
+    post:
+      operationId: approveCreditNote
+      tags: [Credit Notes]
+      summary: Approve a pending credit note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Credit note approved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreditNote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/credit-notes/{id}/reject:
+    post:
+      operationId: rejectCreditNote
+      tags: [Credit Notes]
+      summary: Reject a pending credit note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Credit note rejected.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreditNote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/credit-notes/{id}/void:
+    post:
+      operationId: voidCreditNote
+      tags: [Credit Notes]
+      summary: Void an issued account-credit note
+      description: >
+        Cancels an issued adjustment (account-credit) note and writes off its
+        unspent balance, posting the GL reversal. Only the unspent portion is
+        reversed; any already-applied credit stays real. Refund notes cannot be
+        voided (the money left through the payment gateway). Admins/owners only.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Credit note voided.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreditNote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /v1/quotes:
     post:
@@ -1835,6 +2529,8 @@ paths:
       tags: [Quotes]
       summary: List quotes
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
         - name: status
           in: query
           schema:
@@ -2135,6 +2831,8 @@ paths:
       summary: List deliveries for a webhook endpoint
       description: Recent delivery attempts to this endpoint, newest first.
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 500 }, description: Max rows returned (default 50, capped at 500). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip. }
         - $ref: '#/components/parameters/PathID'
         - $ref: '#/components/parameters/Limit'
         - name: offset
@@ -2175,6 +2873,8 @@ paths:
       summary: List events
       description: Chronological feed of billing events emitted for this tenant.
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 500 }, description: Max rows returned (default 50, capped at 500). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip. }
         - $ref: '#/components/parameters/Limit'
         - name: offset
           in: query
@@ -2287,7 +2987,9 @@ paths:
       operationId: getMRR
       tags: [Analytics]
       summary: Monthly recurring revenue
-      description: Current MRR across active subscriptions. Responses are cached for up to 5 minutes.
+      description: Current MRR across active subscriptions. Optional entity_id scopes to one legal entity; omitted = all entities (consolidated). Responses are cached for up to 5 minutes.
+      parameters:
+        - { $ref: '#/components/parameters/EntityIdQuery' }
       responses:
         '200':
           description: Current MRR.
@@ -2295,6 +2997,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MRRMetrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/analytics/mrr/by-entity:
+    get:
+      operationId: getMRRByEntity
+      tags: [Analytics]
+      summary: MRR broken down by legal entity
+      description: >-
+        MRR contribution of each legal entity (Multi-Entity Books), normalized to
+        the reporting currency and sorted by MRR descending. Every entity appears
+        (zero if it has no active MRR); a single-entity tenant gets one row.
+        Cached for up to 5 minutes.
+      responses:
+        '200':
+          description: Per-entity MRR breakdown.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      reporting_currency: { type: string }
+                      total_mrr: { type: integer, format: int64 }
+                      entities:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MRREntityBreakdown'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/analytics/entities-overview:
+    get:
+      operationId: getEntitiesOverview
+      tags: [Analytics]
+      summary: Multi-entity control tower (MRR + open AR per entity)
+      description: >-
+        Every legal entity with its MRR and open receivables side by side, plus
+        consolidated totals, normalized to the reporting currency. Empty for
+        single-entity tenants (use the consolidated dashboards). Cached up to 5m.
+      responses:
+        '200':
+          description: Per-entity MRR + AR overview.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      reporting_currency: { type: string }
+                      total_mrr: { type: integer, format: int64 }
+                      total_ar_outstanding: { type: integer, format: int64 }
+                      entities:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/EntityOverviewRow'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -2317,6 +3079,7 @@ paths:
           in: query
           schema: { type: string, format: date }
           description: Period end (YYYY-MM-DD). Defaults to today.
+        - { $ref: '#/components/parameters/EntityIdQuery' }
       responses:
         '200':
           description: MRR waterfall for the period.
@@ -2339,6 +3102,9 @@ paths:
       description: >-
         Outstanding receivables bucketed by how far past due each open invoice is
         (current / 1-30 / 31-60 / 61-90 / 90+), normalized to the reporting currency.
+        Optional entity_id scopes to one legal entity; omitted = all entities.
+      parameters:
+        - { $ref: '#/components/parameters/EntityIdQuery' }
       responses:
         '200':
           description: Invoice aging report.
@@ -2771,6 +3537,103 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /webhooks/gocardless:
+    post:
+      operationId: handleGoCardlessWebhook
+      tags: [Inbound Webhooks]
+      summary: GoCardless webhook receiver (platform account)
+      description: |
+        Receives GoCardless webhook deliveries for the platform's own
+        GoCardless account. Each delivery batches multiple events; billing
+        request fulfilment activates the corresponding mandate and mandate
+        lifecycle events keep local status in sync. The raw body is verified
+        against the `Webhook-Signature` HMAC before any event is trusted.
+        Called by GoCardless, not by API consumers.
+      security: []
+      parameters:
+        - name: Webhook-Signature
+          in: header
+          required: true
+          description: HMAC-SHA256 hex signature of the raw request body.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw GoCardless events payload.
+      responses:
+        '200':
+          description: Batch processed (individual events may be ignored).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, ignored]
+                  processed:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /webhooks/gocardless/{connID}:
+    post:
+      operationId: handleGoCardlessWebhookForConnection
+      tags: [Inbound Webhooks]
+      summary: GoCardless webhook receiver (per-connection, BYO)
+      description: |
+        Per-connection variant of the GoCardless webhook receiver for tenants
+        who connected their own GoCardless account. The batch is verified with
+        THAT connection's own signing secret (resolved from `connID`) before
+        any event is trusted. Called by GoCardless, not by API consumers.
+      security: []
+      parameters:
+        - name: connID
+          in: path
+          required: true
+          description: The tenant's GoCardless gateway-connection id.
+          schema:
+            type: string
+            format: uuid
+        - name: Webhook-Signature
+          in: header
+          required: true
+          description: HMAC-SHA256 hex signature of the raw request body.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw GoCardless events payload.
+      responses:
+        '200':
+          description: Batch processed (individual events may be ignored).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, ignored]
+                  processed:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /webhooks/razorpay/{connID}:
     post:
       operationId: handleRazorpayWebhookForConnection
@@ -3166,6 +4029,44 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /portal/api/payment-method/bank-setup-intent:
+    post:
+      operationId: portalStartBankAccountSetup
+      tags: [Customer Portal]
+      summary: Start an ACH bank-account setup (Stripe Financial Connections)
+      description: >
+        Creates a us_bank_account SetupIntent via Stripe Financial Connections
+        for the authenticated portal customer (instant bank verification) and
+        returns the client secret the browser's collectBankAccountForSetup
+        confirms, plus the publishable key. Bank data goes browser→Stripe — none
+        reaches Recurso. The saved account is finalized by
+        /portal/api/payment-method/confirm. 503 where Stripe/ACH is unavailable.
+      security:
+        - portalSession: []
+      responses:
+        '200':
+          description: Bank-account SetupIntent created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      client_secret:
+                        type: string
+                      publishable_key:
+                        type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Bank (ACH) payments aren't available on this deployment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /portal/api/payment-method/confirm:
     post:
       operationId: portalConfirmPaymentMethod
@@ -3370,6 +4271,8 @@ paths:
         Lists disputes for the authenticated tenant. There is no admin dashboard
         UI for disputes yet; this API is the current surface.
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
         - name: status
           in: query
           required: false
@@ -3451,6 +4354,9 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/UsageStats'
+                  customers_metered:
+                    type: integer
+                    description: Distinct customers with any recorded usage.
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -3518,6 +4424,121 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/DunningHistory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/collections/invoices/{id}/retry-now:
+    post:
+      operationId: collectionsRetryNow
+      tags: [Collections]
+      summary: Retry a failing invoice now
+      description: >
+        Requeue a past-due invoice for an immediate smart-retry attempt. Refused
+        (409) for a paused, mandate, or already-settling invoice; 404 if not found.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Requeued for retry.
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/collections/invoices/{id}/pause:
+    post:
+      operationId: collectionsPauseDunning
+      tags: [Collections]
+      summary: Pause or resume automated dunning on an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paused: { type: boolean }
+      responses:
+        '200':
+          description: Dunning pause state updated.
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/collections/invoices/{id}/mark-uncollectible:
+    post:
+      operationId: collectionsMarkUncollectible
+      tags: [Collections]
+      summary: Manually write off an invoice as uncollectible
+      description: >
+        Operator-initiated write-off (status change only, no ledger leg — matching
+        the automated path). Only flips a still-collectible invoice.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Invoice marked uncollectible.
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/collections/queue:
+    get:
+      operationId: getCollectionsQueue
+      tags: [Collections]
+      summary: Collections worklist of currently-failing invoices
+      description: >
+        Operator-facing list of invoices in a recovery state (past_due or
+        uncollectible with a balance owing), each with its customer, amount
+        remaining, days overdue, retry count, last failure code, next scheduled
+        retry, which engine owns it, and the latest ACH attempt status. Read-only.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 250 }, description: Page size (default 50, capped at 250). Also accepts page/per_page. }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip (overrides page-derived offset). }
+        - name: status
+          in: query
+          description: Narrow to a single recovery status.
+          schema:
+            type: string
+            enum: [past_due, uncollectible]
+        - name: managed_by
+          in: query
+          description: Narrow to invoices owned by a specific recovery engine.
+          schema:
+            type: string
+            enum: [scheduler, worker, campaign]
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 250, default: 50 }
+      responses:
+        '200':
+          description: The collections worklist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollectionsQueueItem'
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -3634,6 +4655,61 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/billing/status:
+    get:
+      operationId: getBillingStatus
+      tags: [Account]
+      summary: Get the tenant's managed-cloud billing/trial status
+      description: >
+        Returns the tenant's billing lifecycle: status (trialing/active/
+        past_due/canceled), plan tier, trial end, days left, and whether the
+        trial has expired. Read-only in this increment.
+      responses:
+        '200':
+          description: Billing status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  billing_status: { type: string, enum: [trialing, active, past_due, canceled] }
+                  plan_tier: { type: string }
+                  trial_ends_at: { type: string, format: date-time }
+                  trial_days_left: { type: integer }
+                  trial_expired: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/billing/plans:
+    get:
+      operationId: getBillingPlans
+      tags: [Account]
+      summary: Managed-cloud plan catalog
+      description: The available managed-cloud plans (mirrors recurso.dev/pricing).
+      responses:
+        '200':
+          description: Plan catalog.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tier: { type: string }
+                        name: { type: string }
+                        price: { type: string }
+                        period: { type: string }
+                        free_note: { type: string }
+                        features: { type: array, items: { type: string } }
+                        cta: { type: string }
+                        recommended: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /v1/account:
     get:
       operationId: getAccount
@@ -3689,6 +4765,9 @@ paths:
       tags: [Finance]
       summary: List ledger accounts
       description: Double-entry ledger accounts (cash, accounts receivable, revenue, etc.) for the tenant.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
       responses:
         '200':
           description: Ledger accounts.
@@ -3716,6 +4795,23 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: code
+          in: query
+          required: false
+          description: Filter to one posting code (e.g. 3 = payment). Omit for all.
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: Page size (default 50, max 250).
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         '200':
           description: Ledger transfers touching the account.
@@ -3741,7 +4837,17 @@ paths:
       description: |
         Every account with its posted debit/credit totals, its balance on the
         account's normal side, an abnormal-sign flag, and the double-entry
-        invariant (total debits == total credits). Read-only.
+        invariant (total debits == total credits). Read-only. Each line is
+        tagged with its legal entity (Multi-Entity Books); pass `entity_id` to
+        scope to one entity, or `consolidated=true` to roll every entity's
+        accounts up by code into one tenant-wide view.
+      parameters:
+        - { $ref: '#/components/parameters/EntityIdQuery' }
+        - name: consolidated
+          in: query
+          required: false
+          description: Roll all entities' accounts up by code into one consolidated trial balance.
+          schema: { type: boolean }
       responses:
         '200':
           description: Trial balance.
@@ -3762,7 +4868,10 @@ paths:
       summary: Export the general ledger (CSV)
       description: |
         Every posted transaction for the tenant, flattened with both account
-        codes/names, amount, and provenance, as a CSV download. Read-only.
+        codes/names, amount, and provenance, as a CSV download. Read-only. Pass
+        `entity_id` to scope the export to one legal entity's ledger.
+      parameters:
+        - { $ref: '#/components/parameters/EntityIdQuery' }
       responses:
         '200':
           description: General ledger as CSV.
@@ -3958,6 +5067,7 @@ paths:
           required: true
           schema: { type: integer, minimum: 2017, maximum: 2100 }
           description: Year of the tax period.
+        - { $ref: '#/components/parameters/EntityIdQuery' }
       responses:
         '200':
           description: The GSTR-1 return, readable and in government JSON shape.
@@ -4003,6 +5113,7 @@ paths:
           required: true
           schema: { type: integer, minimum: 2017, maximum: 2100 }
           description: Year of the tax period.
+        - { $ref: '#/components/parameters/EntityIdQuery' }
       responses:
         '200':
           description: The GSTR-3B return, readable and in government JSON shape.
@@ -4025,6 +5136,7 @@ paths:
   /v1/settings/gst:
     get:
       operationId: getGSTConfig
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
       tags: [Settings]
       summary: Get GST configuration
       description: Returns the tenant's Indian GST configuration, or sensible defaults when unconfigured.
@@ -4042,6 +5154,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     put:
       operationId: updateGSTConfig
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
       tags: [Settings]
       summary: Update GST configuration
       description: When a GSTIN is supplied without a state code, the state is derived from the GSTIN prefix.
@@ -4111,9 +5224,70 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/settings/tax/registrations:
+    get:
+      operationId: getTaxRegistrations
+      tags: [Settings]
+      summary: List US sales-tax registrations
+      description: Returns the tenant's US sales-tax registrations — where they hold (or are pending) a permit to collect. Pairs with nexus to surface gaps (nexus but not registered).
+      responses:
+        '200':
+          description: Registrations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        state_code: { type: string }
+                        registration_number: { type: string }
+                        status: { type: string, enum: [registered, pending, not_registered] }
+                        registered_at: { type: [string, 'null'], format: date }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: setTaxRegistrations
+      tags: [Settings]
+      summary: Set US sales-tax registrations
+      description: Replaces the tenant's entire registration set. Owner/admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                registrations:
+                  type: array
+                  items:
+                    type: object
+                    required: [state_code]
+                    properties:
+                      state_code: { type: string, example: "CA" }
+                      registration_number: { type: string }
+                      status: { type: string, enum: [registered, pending, not_registered], default: registered }
+                      registered_at: { type: string, format: date }
+      responses:
+        '200':
+          description: Updated registrations.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: object } }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /v1/settings/tax/nexus:
     get:
       operationId: getTaxNexus
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
       tags: [Settings]
       summary: List US sales-tax nexus states
       description: Returns the US states the tenant has declared sales-tax nexus in. Once any state is declared, US sales tax is collected only in those states.
@@ -4132,6 +5306,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     put:
       operationId: setTaxNexus
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
       tags: [Settings]
       summary: Set US sales-tax nexus states
       description: Replaces the tenant's entire nexus set. Owner/admin only.
@@ -4163,6 +5338,66 @@ paths:
                     items: { $ref: '#/components/schemas/TaxNexus' }
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/settings/tax/liability:
+    get:
+      operationId: getTaxLiabilityReport
+      tags: [Settings]
+      summary: Per-state US sales-tax liability report
+      description: >
+        Per-state US sales-tax liability for a filing period: gross sales, the
+        taxable/non-taxable split (by whether tax was collected), tax collected,
+        invoice count, and whether the tenant has nexus in each state. Period is
+        from+to (to exclusive) or year (defaults to the current calendar year).
+        Scoped to US buyers, USD, non-void/draft invoices — ties to the nexus
+        figures. Sales split into taxable (tax collected), exempt (a customer
+        exemption applied), and non-taxable (no-nexus / below-threshold).
+      parameters:
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer, minimum: 2018 }
+        - name: from
+          in: query
+          required: false
+          description: Inclusive start date (YYYY-MM-DD, UTC). Requires 'to'.
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          description: Exclusive end date (YYYY-MM-DD, UTC). Requires 'from'.
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Per-state US sales-tax liability.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      from_date: { type: string, format: date }
+                      to_date: { type: string, format: date }
+                      currency: { type: string }
+                      total_gross_sales: { type: integer, format: int64 }
+                      total_tax_collected: { type: integer, format: int64 }
+                      states:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            state_code: { type: string }
+                            gross_sales: { type: integer, format: int64 }
+                            taxable_sales: { type: integer, format: int64 }
+                            exempt_sales: { type: integer, format: int64 }
+                            non_taxable_sales: { type: integer, format: int64 }
+                            tax_collected: { type: integer, format: int64 }
+                            invoice_count: { type: integer }
+                            has_nexus: { type: boolean }
+                            nexus_type: { type: string, enum: [physical, voluntary, economic] }
         '401':
           $ref: '#/components/responses/Unauthorized'
   /v1/settings/tax/nexus/status:
@@ -4250,6 +5485,7 @@ paths:
   /v1/settings/irp:
     get:
       operationId: getIRPConfig
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
       tags: [Settings]
       summary: Get IRP (e-invoicing) configuration
       description: Returns the tenant's Invoice Registration Portal credentials with secrets masked.
@@ -4267,6 +5503,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     put:
       operationId: updateIRPConfig
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
       tags: [Settings]
       summary: Create or update IRP credentials
       description: Upserts IRP credentials for the tenant. `environment` defaults to `sandbox`.
@@ -4311,6 +5548,334 @@ paths:
                     type: boolean
                   message:
                     type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/settings/eu-einvoice:
+    get:
+      operationId: getEUEInvoiceConfig
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
+      tags: [Settings]
+      summary: Get EU e-invoicing configuration
+      description: Returns the tenant's EU e-invoicing config (opt-in flag + EN 16931 seller identity), or an empty disabled default when none is set.
+      responses:
+        '200':
+          description: EU e-invoicing configuration.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/EUEInvoiceConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: updateEUEInvoiceConfig
+      parameters: [{ $ref: '#/components/parameters/EntityIdQuery' }]
+      tags: [Settings]
+      summary: Create or update EU e-invoicing config
+      description: >
+        Upserts the tenant's EU e-invoicing config. Setting `enabled` true
+        requires a complete seller identity (`legal_name`, `vat_number`,
+        2-letter `country_code`) — the fields every generated EN 16931 document
+        needs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EUEInvoiceConfig'
+      responses:
+        '200':
+          description: Configuration saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/EUEInvoiceConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/crm/sync:
+    post:
+      operationId: syncCRMNow
+      tags: [Integrations]
+      summary: Sync this workspace's customers to its connected CRM now
+      description: >
+        Runs the CRM sweep for the calling workspace synchronously — the way to
+        test a freshly connected HubSpot token instead of waiting for the daily
+        sweep. Returns how many contacts were upserted. 400 when no CRM is
+        connected; 502 carries the provider's own rejection (bad token, missing
+        scopes).
+      responses:
+        '200':
+          description: Sweep completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      contacts_synced: { type: integer }
+                      contacts_remaining:
+                        type: integer
+                        description: Eligible contacts not pushed this call (manual sync is capped; the daily sweep finishes them).
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '424':
+          description: The CRM provider rejected the sync (e.g. invalid token); the message carries the provider's error.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/settings/tax/us:
+    get:
+      operationId: getUSTaxConfig
+      tags: [Settings]
+      summary: Get US tax identity (W-9)
+      description: Returns the tenant's US tax identity (legal name, EIN, address) shown on US sales-tax invoices, or an empty default when none is set.
+      responses:
+        '200':
+          description: US tax configuration.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/USTaxConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: updateUSTaxConfig
+      tags: [Settings]
+      summary: Create or update US tax identity (W-9)
+      description: Upserts the tenant's US tax identity (legal name, EIN, address). Presentation only — it does not affect tax computation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/USTaxConfig'
+      responses:
+        '200':
+          description: Configuration saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/USTaxConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/settings/invoice-branding:
+    get:
+      operationId: getInvoiceBranding
+      tags: [Settings]
+      summary: Get invoice branding
+      description: Returns the tenant's invoice presentation settings (display name, logo, signature, signatory, bank details, terms), or an empty default when none is set.
+      responses:
+        '200':
+          description: Invoice branding.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvoiceBranding'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: updateInvoiceBranding
+      tags: [Settings]
+      summary: Create or update invoice branding
+      description: Upserts the tenant's invoice presentation settings. Logo and signature must be data:image/png or data:image/jpeg base64 URLs (max 300KB decoded). Presentation only — statutory seller identity (GST / W-9) still takes precedence on tax invoices.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceBranding'
+      responses:
+        '200':
+          description: Branding saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvoiceBranding'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/entities:
+    get:
+      operationId: listEntities
+      tags: [Entities]
+      summary: List legal entities
+      description: Returns the tenant's legal entities (Multi-Entity Books), primary first. Every tenant has exactly one primary entity.
+      responses:
+        '200':
+          description: The tenant's entities.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Entity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createEntity
+      tags: [Entities]
+      summary: Create a legal entity
+      description: Creates a new (non-primary) entity. Its ledger id and invoice-number sequence are allocated automatically.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityInput'
+      responses:
+        '201':
+          description: Entity created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Entity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/entities/{id}:
+    get:
+      operationId: getEntity
+      tags: [Entities]
+      summary: Get a legal entity
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      responses:
+        '200':
+          description: The entity.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Entity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: updateEntity
+      tags: [Entities]
+      summary: Update a legal entity
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityInput'
+      responses:
+        '200':
+          description: Entity updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Entity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: deleteEntity
+      tags: [Entities]
+      summary: Delete a legal entity
+      description: Deletes a non-primary entity. The primary entity cannot be deleted.
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      responses:
+        '200':
+          description: Entity deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/settings/mcp:
+    get:
+      operationId: getMCPSettings
+      tags: [Settings]
+      summary: Get MCP server settings
+      description: Returns the tenant's MCP opt-in — currently the Tier-3 (money-path) toggle. Defaults to disabled when never set.
+      responses:
+        '200':
+          description: MCP settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MCPSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: updateMCPSettings
+      tags: [Settings]
+      summary: Update MCP server settings
+      description: >
+        Upserts the tenant's MCP opt-in. Enabling `tier3_enabled` lets AI agents
+        run money-path / destructive MCP tools (convert quote to invoice, cancel
+        subscription, issue credit note, top up wallet, …) against this tenant.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPSettings'
+      responses:
+        '200':
+          description: Settings saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MCPSettings'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -4473,6 +6038,8 @@ paths:
       tags: [Referrals]
       summary: List referrals
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 250 }, description: Page size (default 50, capped at 250). Also accepts page/per_page. }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip (overrides page-derived offset). }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
       responses:
@@ -4596,6 +6163,8 @@ paths:
       tags: [Gifts]
       summary: List gift subscriptions
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 250 }, description: Page size (default 50, capped at 250). Also accepts page/per_page. }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip (overrides page-derived offset). }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
       responses:
@@ -4684,6 +6253,39 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/gifts/{id}/cancel:
+    post:
+      operationId: cancelGift
+      tags: [Gifts]
+      summary: Cancel an unredeemed gift (buyer gets account credit)
+      description: >-
+        Cancels a purchased-but-unredeemed gift. If the buyer's purchase
+        invoice was PAID, a spendable adjustment credit note for the amount is
+        issued to the buyer (through the normal credit-note path, so approval
+        governance and ledger postings apply). If the invoice is still open, it
+        is voided instead — no money arrived, nothing is credited. A redeemed
+        gift cannot be canceled (409); a second cancel is refused (409) so the
+        credit can never issue twice.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The canceled gift and what happened to the buyer's money.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      gift: { $ref: '#/components/schemas/Gift' }
+                      credit_note: { $ref: '#/components/schemas/CreditNote' }
+                      invoice_voided: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /v1/mandates:
     post:
       operationId: createMandate
@@ -4696,8 +6298,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [customer_id, vpa, max_amount, frequency]
+              required: [customer_id, max_amount, frequency]
               properties:
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                  description: Mandate rail. Empty/INR = Razorpay UPI AutoPay; an overridden currency (e.g. EUR) = bank debit via GoCardless. VPA is only required for INR.
                 customer_id:
                   type: string
                   format: uuid
@@ -4737,6 +6344,9 @@ paths:
       operationId: listMandates
       tags: [Mandates]
       summary: List mandates
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
       responses:
         '200':
           description: Mandates for the tenant.
@@ -4839,6 +6449,9 @@ paths:
       operationId: listVirtualAccounts
       tags: [Offline Payments]
       summary: List virtual accounts
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
       responses:
         '200':
           description: Virtual accounts for the tenant.
@@ -4917,6 +6530,9 @@ paths:
       operationId: listOfflinePayments
       tags: [Offline Payments]
       summary: List offline payments
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
       responses:
         '200':
           description: Offline payments for the tenant.
@@ -5321,9 +6937,25 @@ paths:
       operationId: triggerAccountingSync
       tags: [Accounting]
       summary: Trigger a sync to connected accounting systems
+      description: |
+        Starts a forced full re-push to every active accounting connection in
+        the background and returns immediately — the sweep can take minutes
+        for large tenants. Progress is observable via the sync-activity log
+        and each connection's sync_status. One manual sync runs per tenant at
+        a time; a request while one is running returns 200 with
+        status=sync_already_running.
+      parameters:
+        - name: provider
+          in: query
+          required: false
+          description: >-
+            Scope the sweep to one connection. Scoped syncs run INCREMENTALLY
+            (unchanged records are skipped); omitting provider sweeps all
+            active connections with a forced full re-push.
+          schema: { type: string, enum: [quickbooks, xero, netsuite, tally] }
       responses:
-        '200':
-          description: Sync started.
+        '202':
+          description: Sync started in the background.
           content:
             application/json:
               schema:
@@ -5332,6 +6964,16 @@ paths:
                   status:
                     type: string
                     const: sync_triggered
+        '200':
+          description: A manual sync is already running for this tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: sync_already_running
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -5339,8 +6981,31 @@ paths:
     get:
       operationId: getAccountingSyncStatus
       tags: [Accounting]
+      parameters:
+        - name: provider
+          in: query
+          required: false
+          description: Only rows for this integration.
+          schema: { type: string }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [success, error] }
+        - name: search
+          in: query
+          required: false
+          description: Substring match on the provider-side or internal record id.
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 25, maximum: 200 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
       summary: Recent accounting sync log
-      description: The 50 most recent per-entity sync results.
+      description: Recent per-entity sync results, newest first (paged via limit/offset).
       responses:
         '200':
           description: Sync log entries.
@@ -5384,6 +7049,8 @@ paths:
       tags: [Churn]
       summary: List high-churn-risk customers
       parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 1000, maximum: 1000 }, description: Max rows returned (clamped to 1000). }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip, for paging past the clamp. }
         - name: threshold
           in: query
           description: Minimum churn score (0-100) to include.
@@ -6019,6 +7686,83 @@ paths:
                         count: { type: integer }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /v1/analytics/dunning/timing:
+    get:
+      tags: [Dunning]
+      summary: Best-time-to-retry insights
+      description: >-
+        Historical retry success rate by hour-of-day (0-23) and day-of-week
+        (0-6, Sunday=0), in UTC, plus the best-performing hour and day among
+        buckets with enough samples. Read-only; does not change the live retry
+        bandit. Cached for up to 5 minutes.
+      operationId: getDunningTiming
+      responses:
+        "200":
+          description: Timing insights.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      by_hour:
+                        type: array
+                        items: { $ref: '#/components/schemas/DunningTimingRate' }
+                      by_day_of_week:
+                        type: array
+                        items: { $ref: '#/components/schemas/DunningTimingRate' }
+                      best_hour: { type: integer, nullable: true }
+                      best_day: { type: integer, nullable: true }
+                      sample_size: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/analytics/collections/funnel:
+    get:
+      tags: [Collections]
+      summary: Collections recovery funnel
+      description: >-
+        The failed → resolved journey of billed revenue: past_due (still being
+        chased), uncollectible (written off), and recovered (all-time),
+        FX-normalized to the reporting currency, with a recovery rate over
+        concluded cases. Cached for up to 5 minutes.
+      operationId: getCollectionsFunnel
+      responses:
+        "200":
+          description: Recovery funnel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CollectionsFunnel'
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/analytics/collections/failures:
+    get:
+      tags: [Collections]
+      summary: Failure-reason breakdown by money at risk
+      description: >-
+        Currently-failing invoices grouped by their last failure code, ranked by
+        the amount of billed revenue at risk (FX-normalized). Cached for up to 5
+        minutes.
+      operationId: getCollectionsFailures
+      responses:
+        "200":
+          description: Failure reasons ranked by money at risk.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollectionsFailureBucket'
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /v1/plans/{id}/entitlements:
     get:
       tags: [Entitlements]
@@ -6383,6 +8127,41 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   /v1/usage-alerts/{id}:
+    put:
+      tags: [Metering]
+      summary: Edit a usage alert's threshold
+      description: >-
+        Re-aims an existing alert at a new threshold (type and value).
+        Subscription and metric are the alert's identity — to change those,
+        delete and re-create. Editing resets the per-period fired dedup so the
+        new threshold can fire in the current billing period.
+      operationId: updateUsageAlert
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [threshold_type, threshold]
+              properties:
+                threshold_type: { type: string, enum: [quantity, percent_of_limit] }
+                threshold: { type: integer, format: int64, exclusiveMinimum: 0 }
+      responses:
+        "200":
+          description: The updated alert
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/UsageAlert" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: An identical alert already exists for the subscription + metric.
+        "401": { $ref: "#/components/responses/Unauthorized" }
     delete:
       tags: [Metering]
       summary: Delete a usage alert
@@ -6451,9 +8230,10 @@ paths:
       tags: [Wallets]
       summary: Create a prepaid wallet
       description: >-
-        One wallet per customer+currency, holding money-denominated balance
-        (minor units). At invoice time the wallet drains FIRST — before
-        adjustment credit notes and before the payment gateway.
+        One wallet per customer+entity+currency, holding money-denominated
+        balance (minor units). At invoice time the wallet drains FIRST — before
+        adjustment credit notes and before the payment gateway. A wallet is
+        spendable only on its own entity's invoices.
       operationId: createWallet
       requestBody:
         required: true
@@ -6465,6 +8245,12 @@ paths:
               properties:
                 customer_id: { type: string, format: uuid }
                 currency: { type: string, minLength: 3, maxLength: 3 }
+                entity_id:
+                  type: string
+                  format: uuid
+                  description: >-
+                    Legal entity the wallet belongs to (Multi-Entity Books).
+                    Omit for the tenant's primary entity.
                 auto_recharge_threshold:
                   type: [integer, 'null']
                   format: int64
@@ -6506,43 +8292,6 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
-  /v1/wallets/{id}/close:
-    post:
-      operationId: closeWallet
-      tags: [Wallets]
-      summary: Close a wallet (cash out)
-      description: >-
-        Closes a wallet and settles its remaining balance: paid balance is
-        refunded to the customer and promotional balance is forfeited, each with
-        its ledger leg. Irreversible — a closed wallet rejects further top-ups
-        and drains.
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
-      responses:
-        '200':
-          description: Wallet closed; the settled amounts.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      refunded:
-                        type: integer
-                        format: int64
-                        description: Paid balance refunded to the customer (minor units).
-                      forfeited:
-                        type: integer
-                        format: int64
-                        description: Promotional balance written off (minor units).
-                  message: { type: string }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
   /v1/wallets/{id}/top-up:
     post:
       tags: [Wallets]
@@ -6581,6 +8330,38 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/WalletTransaction" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/wallets/{id}/close:
+    post:
+      tags: [Wallets]
+      summary: Close a wallet and settle its balance
+      description: >-
+        Closes the wallet: paid residue is refunded to the customer, promotional
+        residue is forfeited (non-refundable), and the ledger legs are posted
+        (DR Customer Credit / CR Cash for the refund; DR Customer Credit /
+        CR Credits for the forfeit). A closed wallet accepts no further top-ups
+        or drains. `refunded` is the amount owed back to the customer; the actual
+        money return is handled out of band, like a manual refund.
+      operationId: closeWallet
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: The settled amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      refunded: { type: integer, format: int64, description: Paid balance to return (minor units) }
+                      forfeited: { type: integer, format: int64, description: Promotional balance written off (minor units) }
+                  message: { type: string }
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -6899,6 +8680,56 @@ paths:
                 properties:
                   message: { type: string }
         '400': { $ref: '#/components/responses/BadRequest' }
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [Auth]
+      summary: Confirm an account's email with a token
+      description: >
+        Consumes a single-use verification token from the emailed link and marks
+        the account's email address confirmed. Invalid/expired/used tokens return
+        a generic 400 so the endpoint is not a token oracle.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200':
+          description: Email verified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /auth/verify-email/resend:
+    post:
+      operationId: resendVerification
+      tags: [Auth]
+      summary: Resend the verification link
+      description: >
+        Re-sends the email-verification link to the logged-in user. Always
+        answers 200 (including when the address is already verified) so it
+        reveals nothing and is safe to call idempotently.
+      responses:
+        '200':
+          description: Generic acknowledgement.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /v1/auth/mfa/setup:
     post:
@@ -7498,6 +9329,16 @@ components:
         tenant API key (`bearerAuth`).
 
   parameters:
+    EntityIdQuery:
+      name: entity_id
+      in: query
+      required: false
+      description: >-
+        Legal entity to scope the tax config to (Multi-Entity Books). Omit for
+        the tenant's primary entity / default config.
+      schema:
+        type: string
+        format: uuid
     PathID:
       name: id
       in: path
@@ -7514,10 +9355,16 @@ components:
     Limit:
       name: limit
       in: query
-      description: Maximum number of records to return.
+      description: >-
+        Maximum records to return. Defaults to 50 when omitted and is capped
+        at 1000 (a larger request returns the cap, not an error). Pass an
+        explicit limit when you need the full set — omitting it silently
+        returns only the first page.
       schema:
         type: integer
         minimum: 1
+        default: 50
+        maximum: 1000
     Page:
       name: page
       in: query
@@ -7596,7 +9443,7 @@ components:
       description: Secret-free projection of a BYO gateway connection.
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [stripe, razorpay] }
+        provider: { type: string, enum: [stripe, razorpay, gocardless] }
         mode: { type: string, enum: [test, live] }
         public_key: { type: string }
         has_webhook_secret: { type: boolean }
@@ -7807,6 +9654,7 @@ components:
         and the gateway at invoice time. Amounts are minor units.
       properties:
         id: { type: string, format: uuid }
+        entity_id: { type: string, format: uuid }
         customer_id: { type: string, format: uuid }
         currency: { type: string }
         balance: { type: integer, format: int64 }
@@ -8071,6 +9919,19 @@ components:
         place_of_supply:
           type: string
           description: Indian state code for GST place of supply.
+        tax_exempt:
+          type: boolean
+          description: US sales-tax exemption status (D2). When true, the number and code are passed to the tax provider.
+        tax_exemption_number:
+          type: string
+          description: Exemption/resale certificate number on file.
+        tax_exemption_code:
+          type: string
+          description: Provider entity-use / customer-usage code (e.g. Avalara "A"); also the exemption reason.
+        tax_exemption_expires_at:
+          type: [string, 'null']
+          format: date
+          description: Exemption certificate expiry (YYYY-MM-DD). Honored through this date; past it the buyer is charged tax again. Null = no expiry on file (Inc 2).
         line1:
           type: string
         city:
@@ -8084,12 +9945,24 @@ components:
           minLength: 2
           maxLength: 2
           description: ISO 3166-1 alpha-2 code.
+        billing_address:
+          allOf:
+            - $ref: '#/components/schemas/BillingAddress'
+          description: >-
+            Nested address, accepted as an alias for the flat line1/city/state/
+            zip/country fields. A flat field wins when both are supplied;
+            postal_code and zip are synonyms.
 
     BillingAddress:
       type: object
       properties:
         line1:
           type: string
+        line2:
+          type: string
+        postal_code:
+          type: string
+          description: Synonym for zip.
         city:
           type: string
         state:
@@ -8128,6 +10001,15 @@ components:
           type: string
         place_of_supply:
           type: [string, 'null']
+        tax_exempt:
+          type: boolean
+        tax_exemption_number:
+          type: string
+        tax_exemption_code:
+          type: string
+        tax_exemption_expires_at:
+          type: [string, 'null']
+          format: date
         referral_code:
           type: [string, 'null']
         risk_score:
@@ -8166,6 +10048,10 @@ components:
         plan_id:
           type: string
           format: uuid
+        entity_id:
+          type: string
+          format: uuid
+          description: "Multi-Entity Books: the issuing legal entity. Omit for the tenant's primary entity."
         coupon_code:
           type: string
         start_date:
@@ -8361,6 +10247,14 @@ components:
         total:
           type: integer
           format: int64
+        tax_regime:
+          type: string
+          enum: [gst, sales_tax, vat, plain]
+          description: >-
+            Presentation regime (how the invoice is displayed, not how it was
+            taxed), from the seller's jurisdiction. gst shows GSTIN/HSN/
+            CGST-SGST-IGST/IRN; sales_tax, vat and plain show a single tax line
+            and hide every GST artifact. Computed at read time; not persisted.
         igst_amount:
           type: integer
           format: int64
@@ -8544,11 +10438,44 @@ components:
         invoice_id:
           type: [string, 'null']
           format: uuid
+        entity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            Legal entity that issued the credit note (Multi-Entity Books);
+            inherits the referenced invoice's entity.
         reference:
           type: [string, 'null']
         amount:
           type: integer
           format: int64
+        subtotal:
+          type: integer
+          format: int64
+          description: >-
+            Taxable (net-of-tax) value of the credit, minor units. Present
+            (non-zero) when the note recorded a tax breakdown at creation —
+            invoice-linked credits slice the invoice's tax proportionally,
+            downgrade credits carry the reversed proration tax. 0 on legacy
+            rows and standalone goodwill credits (gross-only).
+        tax_amount:
+          type: integer
+          format: int64
+          description: Tax reversed by this credit, minor units.
+        igst_amount:
+          type: integer
+          format: int64
+        cgst_amount:
+          type: integer
+          format: int64
+        sgst_amount:
+          type: integer
+          format: int64
+        tax_type:
+          type: string
+          description: Tax regime of the breakdown (e.g. inter_state, intra_state); empty when none recorded.
+        hsn_code:
+          type: string
         balance:
           type: integer
           format: int64
@@ -8563,7 +10490,7 @@ components:
         expires_at:
           type: [string, 'null']
           format: date-time
-          description: When a dated adjustment credit lapses; null = never expires. On this date any unused balance is written off.
+          description: When a dated adjustment credit lapses; null = never expires.
         created_at:
           type: string
           format: date-time
@@ -8589,7 +10516,10 @@ components:
           description: Price per unit in the lowest currency unit.
         amount:
           type: integer
-          description: quantity x unit_price, in the lowest currency unit.
+          description: >-
+            Line total in the lowest currency unit. Computed as
+            quantity x unit_price for itemized lines; for a lump-sum line send
+            `amount` directly with quantity/unit_price omitted.
 
     CreateQuoteRequest:
       type: object
@@ -8764,6 +10694,29 @@ components:
         created_at:
           type: string
           format: date-time
+
+    MRREntityBreakdown:
+      type: object
+      description: One legal entity's MRR contribution, in the reporting currency.
+      properties:
+        entity_id: { type: string, format: uuid }
+        entity_name: { type: string }
+        is_primary: { type: boolean }
+        normalized_mrr: { type: integer, format: int64 }
+        arr: { type: integer, format: int64 }
+        subscriptions: { type: integer }
+
+    EntityOverviewRow:
+      type: object
+      description: One legal entity's MRR + open AR, in the reporting currency.
+      properties:
+        entity_id: { type: string, format: uuid }
+        entity_name: { type: string }
+        is_primary: { type: boolean }
+        mrr: { type: integer, format: int64 }
+        arr: { type: integer, format: int64 }
+        ar_outstanding: { type: integer, format: int64 }
+        subscriptions: { type: integer }
 
     MRRMetrics:
       type: object
@@ -8943,6 +10896,96 @@ components:
         created_at:
           type: string
           format: date-time
+
+    CollectionsQueueItem:
+      type: object
+      description: One currently-failing invoice on the collections worklist.
+      properties:
+        id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        customer_name: { type: string }
+        customer_email: { type: string }
+        invoice_number: { type: string }
+        status:
+          type: string
+          enum: [past_due, uncollectible]
+        currency: { type: string }
+        amount_remaining:
+          type: integer
+          format: int64
+          description: Total minus amount paid, in minor units.
+        due_date: { type: string, format: date-time }
+        days_overdue: { type: integer }
+        retry_count: { type: integer }
+        last_payment_error:
+          type: string
+          description: Raw gateway/ACH failure code from the last attempt, if any.
+        next_retry_at:
+          type: string
+          format: date-time
+          nullable: true
+        managed_by:
+          type: string
+          enum: [scheduler, worker, campaign]
+        attempt_status:
+          type: string
+          description: Status of the latest payment attempt (ACH), if one exists.
+
+    CollectionsBucket:
+      type: object
+      description: One stage of the recovery funnel, in the reporting currency.
+      properties:
+        count: { type: integer }
+        amount:
+          type: integer
+          format: int64
+          description: Minor units, FX-normalized to the reporting currency.
+
+    CollectionsFunnel:
+      type: object
+      description: The failed → resolved journey of billed revenue.
+      properties:
+        reporting_currency: { type: string }
+        past_due: { $ref: '#/components/schemas/CollectionsBucket' }
+        uncollectible: { $ref: '#/components/schemas/CollectionsBucket' }
+        recovered: { $ref: '#/components/schemas/CollectionsBucket' }
+        recovery_rate:
+          type: number
+          description: >-
+            Windowed concluded cohort — of cases concluded (recovered or written
+            off) in the trailing rate_window_days, the fraction recovered.
+        rate_window_days:
+          type: integer
+          description: Trailing window (days) the recovery_rate is computed over.
+        fx_excluded_currencies:
+          type: array
+          items: { type: string }
+          description: >-
+            Currencies whose amounts could not be converted into the reporting
+            currency and are excluded from the bucket amounts (their invoices
+            still count). Non-empty means the money figures are understated.
+
+    CollectionsFailureBucket:
+      type: object
+      description: One failure reason ranked by money at risk.
+      properties:
+        error_code: { type: string }
+        count: { type: integer }
+        amount_at_risk:
+          type: integer
+          format: int64
+          description: Minor units at risk, FX-normalized to the reporting currency.
+
+    DunningTimingRate:
+      type: object
+      description: One time bucket's retry success rate.
+      properties:
+        bucket:
+          type: integer
+          description: Hour (0-23) or day-of-week (0-6, Sunday=0), UTC.
+        total: { type: integer }
+        successes: { type: integer }
+        success_rate: { type: number }
 
     APIKey:
       type: object
@@ -9132,6 +11175,103 @@ components:
         has_lut:
           type: boolean
           description: Letter of Undertaking on file (zero-rated exports).
+
+    Entity:
+      type: object
+      description: A legal entity under a tenant (Multi-Entity Books). Each entity has its own ledger and invoice series; every tenant has exactly one primary entity.
+      properties:
+        id: { type: string, format: uuid }
+        tenant_id: { type: string, format: uuid }
+        name: { type: string, description: Display name, e.g. "ACME India". }
+        legal_name: { type: string }
+        is_primary: { type: boolean, description: The backfill entity every tenant has; cannot be deleted. }
+        tb_ledger_id: { type: integer, description: The entity's isolated ledger id (primary is 1). Assigned automatically. }
+        invoice_prefix: { type: string, description: Prefix for this entity's invoice series, e.g. "ACME-IN". }
+        country_code: { type: string, description: ISO 3166-1 alpha-2. }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    EntityInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        legal_name: { type: string }
+        invoice_prefix: { type: string, description: Optional; defaults to a slug of the name. }
+        country_code: { type: string, minLength: 2, maxLength: 2, description: "ISO 3166-1 alpha-2. `country` is accepted as an alias; country_code wins if both are sent." }
+        country: { type: string, minLength: 2, maxLength: 2, description: "Alias for country_code (the field /auth/register uses)." }
+    MCPSettings:
+      type: object
+      description: A tenant's MCP server opt-in.
+      properties:
+        tier3_enabled:
+          type: boolean
+          description: When true, AI agents may run money-path / destructive MCP tools (convert quote to invoice, cancel subscription, issue credit note, top up wallet, …) against this tenant. Off by default.
+    CompareCount:
+      type: object
+      description: Migration-compare coverage for one record kind.
+      properties:
+        source: { type: integer, description: Importable records in the export. }
+        matched: { type: integer, description: Found in Recurso. }
+        missing: { type: integer }
+    USTaxConfig:
+      type: object
+      description: A tenant's US tax identity (W-9) — the seller party shown on US sales-tax invoices. Presentation only.
+      properties:
+        legal_name:
+          type: string
+          description: Seller legal name shown on US invoices.
+        ein:
+          type: string
+          description: Employer Identification Number (the W-9 tax id).
+        address:
+          type: string
+          description: Seller postal address shown on US invoices.
+    InvoiceBranding:
+      type: object
+      description: A tenant's invoice presentation settings — display name, logo, signature, signatory, bank details and terms rendered on invoice documents. Presentation only; statutory seller identity (GST / W-9) takes precedence on tax invoices.
+      properties:
+        company_name:
+          type: string
+          description: Display name shown at the top of invoices (max 200 chars).
+        logo_data_url:
+          type: string
+          description: "Logo as a data:image/png or data:image/jpeg base64 URL (max 300KB decoded)."
+        signature_data_url:
+          type: string
+          description: "Signature image as a data:image/png or data:image/jpeg base64 URL (max 300KB decoded)."
+        signatory_name:
+          type: string
+          description: Name printed under the signature line (max 200 chars).
+        bank_details:
+          type: string
+          description: Bank/remittance details shown in the invoice footer (max 4000 chars).
+        terms:
+          type: string
+          description: Terms and conditions shown in the invoice footer (max 4000 chars).
+    EUEInvoiceConfig:
+      type: object
+      description: A tenant's EU e-invoicing configuration — the opt-in flag plus the EN 16931 seller party.
+      properties:
+        enabled:
+          type: boolean
+          description: When true, invoices generate an EN 16931 (UBL 2.1) e-invoice. Off by default.
+        legal_name:
+          type: string
+          description: Seller registered/legal name (BT-27). Required to enable.
+        vat_number:
+          type: string
+          description: Seller VAT identifier incl. country prefix, e.g. "DE123456789" (BT-31). Required to enable.
+        country_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Seller country as an ISO 3166-1 alpha-2 code (BT-40). Required to enable.
+        street:
+          type: string
+        city:
+          type: string
+        postal_zone:
+          type: string
 
     IRPConfig:
       type: object
