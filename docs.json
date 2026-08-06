@@ -36,7 +36,7 @@
             "icon": "right-left"
           },
           {
-            "group": "Guides",
+            "group": "Tutorials",
             "pages": [
               "tutorials/usage-based-saas",
               "tutorials/feature-gating",
@@ -99,23 +99,29 @@
             "icon": "arrow-trend-up"
           },
           {
-            "group": "Integrations & Platform",
+            "group": "Integrations",
             "pages": [
-              "advanced/platform-overview",
+              "advanced/integrations",
+              "advanced/accounting",
+              "advanced/payment-gateways",
               "advanced/webhooks",
               "advanced/automation",
-              "advanced/okta-sso",
-              "advanced/accounting",
-              "advanced/integrations",
-              "advanced/demo-mode",
-              "advanced/payment-gateways",
-              "advanced/organizations",
-              "advanced/virtual-accounts",
-              "advanced/developer-settings",
-              "advanced/mcp-server",
-              "advanced/idempotency"
+              "advanced/mcp-server"
             ],
             "icon": "plug"
+          },
+          {
+            "group": "Platform",
+            "pages": [
+              "advanced/platform-overview",
+              "advanced/organizations",
+              "advanced/virtual-accounts",
+              "advanced/okta-sso",
+              "advanced/developer-settings",
+              "advanced/demo-mode",
+              "advanced/idempotency"
+            ],
+            "icon": "server"
           },
           {
             "group": "Customer Portal",
@@ -154,13 +160,13 @@
         "tab": "Setup Guides",
         "groups": [
           {
-            "group": "Start here",
+            "group": "Start Here",
             "pages": [
               "setup/index"
             ]
           },
           {
-            "group": "Core billing & monetization",
+            "group": "Core Billing & Monetization",
             "pages": [
               "setup/wallets",
               "setup/usage-alerts",
@@ -171,7 +177,7 @@
             ]
           },
           {
-            "group": "Payments & recovery",
+            "group": "Payments & Recovery",
             "pages": [
               "setup/payment-gateway",
               "setup/ach",
@@ -179,7 +185,7 @@
             ]
           },
           {
-            "group": "Growth & retention",
+            "group": "Growth & Retention",
             "pages": [
               "setup/gifts-referrals",
               "setup/cancel-flows",
@@ -187,7 +193,7 @@
             ]
           },
           {
-            "group": "Compliance",
+            "group": "Compliance Setup",
             "pages": [
               "setup/eu-einvoicing",
               "setup/us-exemptions",
@@ -222,7 +228,7 @@
         "tab": "Dashboard Guide",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "icon": "compass",
             "pages": [
               "dashboard/index",
@@ -230,7 +236,7 @@
             ]
           },
           {
-            "group": "Customers & subscriptions",
+            "group": "Customers & Subscriptions",
             "icon": "users",
             "pages": [
               "dashboard/customers",
@@ -253,7 +259,7 @@
             ]
           },
           {
-            "group": "Retention & risk",
+            "group": "Retention & Risk",
             "icon": "shield-halved",
             "pages": [
               "dashboard/collections",
@@ -264,7 +270,7 @@
             ]
           },
           {
-            "group": "Finance & records",
+            "group": "Finance & Records",
             "icon": "book",
             "pages": [
               "dashboard/entities",
@@ -306,14 +312,14 @@
         "tab": "SDKs",
         "groups": [
           {
-            "group": "Get started",
+            "group": "Get Started",
             "icon": "code",
             "pages": [
               "sdk-guides/overview"
             ]
           },
           {
-            "group": "By language",
+            "group": "By Language",
             "icon": "laptop-code",
             "pages": [
               "sdk-guides/node",
