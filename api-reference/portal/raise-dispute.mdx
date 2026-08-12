@@ -1,0 +1,55 @@
+---
+title: "Raise an Invoice Dispute"
+openapi: "POST /portal/api/invoices/{id}/dispute"
+description: "Raise a dispute or query on one of the logged-in customer's own invoices"
+---
+
+<Note>
+Portal endpoints authenticate via the `portal_session` cookie issued by [magic-link verification](/api-reference/portal/auth-verify) — not a Bearer API key. State-changing portal calls must additionally echo the `portal_csrf` cookie's value in the `X-CSRF-Token` header (double-submit CSRF).
+</Note>
+
+Opens a dispute on the given invoice. The invoice must belong to the authenticated portal customer, otherwise a `404` is returned (existence is not leaked). At most one open dispute exists per invoice: re-raising updates the reason of the existing open dispute.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The invoice ID. Must belong to the authenticated customer. |
+
+## Request body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `reason` | string | Yes | Why the customer is disputing the invoice. |
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/portal/api/invoices/3c9e1f57-2b8a-4d6c-9f0e-5a7b3d1c8e42/dispute" \
+  -b "portal_session=$PORTAL_SESSION; portal_csrf=$CSRF_TOKEN" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reason": "I was charged twice for this invoice."
+  }'
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "id": "8e4b2d17-5a9c-4f3e-b6d0-1c7a4e9f2b58",
+    "tenant_id": "f2a8c4e6-9b1d-4a3c-8e5f-7d0b2c4a6e91",
+    "invoice_id": "3c9e1f57-2b8a-4d6c-9f0e-5a7b3d1c8e42",
+    "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+    "reason": "I was charged twice for this invoice.",
+    "status": "open",
+    "note": null,
+    "created_at": "2026-08-12T09:15:00Z",
+    "resolved_at": null
+  }
+}
+```
+
+List the customer's existing disputes with [List Customer Disputes](/api-reference/portal/disputes).

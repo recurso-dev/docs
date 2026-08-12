@@ -1,0 +1,56 @@
+---
+title: "Get Revenue by Plan"
+openapi: "GET /v1/analytics/revenue-by-plan"
+description: "Current MRR broken down by plan, largest first, with each plan's share of total."
+---
+
+Breaks current MRR down by plan, largest first, with each plan's share of the total. Amounts are FX-normalized to the reporting currency, in minor units.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/revenue-by-plan" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "reporting_currency": "USD",
+    "total_mrr": 4850000,
+    "segments": [
+      {
+        "key": "2b6f4a91-8c3d-4e7a-b1f5-6d9c2a8e0b47",
+        "label": "Growth (Monthly)",
+        "mrr": 2910000,
+        "subscriptions": 180,
+        "share_pct": 60.0
+      },
+      {
+        "key": "e91c5d27-3a8f-4b60-9e2d-7c4b1f8a6d35",
+        "label": "Starter (Monthly)",
+        "mrr": 1455000,
+        "subscriptions": 132,
+        "share_pct": 30.0
+      },
+      {
+        "key": "50a7e3b9-6f2c-4d18-a94b-3e8d0c5f7a26",
+        "label": "Enterprise (Annual)",
+        "mrr": 485000,
+        "subscriptions": 22,
+        "share_pct": 10.0
+      }
+    ]
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reporting_currency` | string | Currency every amount is normalized into |
+| `total_mrr` | integer | Total MRR across all plans, minor units |
+| `segments[]` | array | One entry per plan, sorted by MRR descending: `key` (plan ID), `label` (plan name), `mrr` (minor units), active `subscriptions`, `share_pct` (percent of total) |

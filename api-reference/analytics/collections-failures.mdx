@@ -1,0 +1,50 @@
+---
+title: "Get Collections Failure Breakdown"
+openapi: "GET /v1/analytics/collections/failures"
+description: "Currently-failing invoices grouped by their last failure code, ranked by money at risk."
+---
+
+Groups the invoices currently in collections by the failure code of their last payment attempt, ranked by the amount of billed revenue at risk. Amounts are FX-normalized to the reporting currency, in minor units. Responses are cached for up to 5 minutes.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/collections/failures" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "error_code": "insufficient_funds",
+      "count": 34,
+      "amount_at_risk": 412000
+    },
+    {
+      "error_code": "card_expired",
+      "count": 12,
+      "amount_at_risk": 168500
+    },
+    {
+      "error_code": "do_not_honor",
+      "count": 5,
+      "amount_at_risk": 74900
+    }
+  ]
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error_code` | string | The failure code from the invoice's last payment attempt |
+| `count` | integer | Number of currently-failing invoices with this failure code |
+| `amount_at_risk` | integer | Billed revenue at risk, FX-normalized to the reporting currency, minor units |
+
+<Tip>
+Pair this with the [collections funnel](/api-reference/analytics/collections-funnel) to see how much of the at-risk revenue is ultimately recovered.
+</Tip>

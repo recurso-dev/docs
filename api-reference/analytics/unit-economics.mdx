@@ -1,0 +1,48 @@
+---
+title: "Get Unit Economics"
+openapi: "GET /v1/analytics/unit-economics"
+description: "Average revenue per account and per subscription, plus LTV derived from revenue churn."
+---
+
+Returns average revenue per account (ARPA — MRR divided by active customers), average revenue per subscription (ARPU — MRR divided by active subscriptions), and lifetime value (LTV — ARPA divided by the monthly revenue churn rate). All money values are FX-normalized to the reporting currency, in minor units.
+
+LTV requires MRR history and a non-zero churn rate: `has_ltv` is `false` (and `ltv` is 0) until both exist.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/unit-economics" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "reporting_currency": "USD",
+    "mrr": 4850000,
+    "active_customers": 320,
+    "active_subscriptions": 334,
+    "arpa": 15156,
+    "arpu": 14520,
+    "monthly_churn_rate": 1.8,
+    "ltv": 842000,
+    "has_ltv": true
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reporting_currency` | string | Currency every money value is normalized into |
+| `mrr` | integer | Normalized MRR, minor units |
+| `active_customers` | integer | Customers with at least one active subscription |
+| `active_subscriptions` | integer | Active subscriptions |
+| `arpa` | integer | MRR / active customers, minor units |
+| `arpu` | integer | MRR / active subscriptions, minor units |
+| `monthly_churn_rate` | number | Revenue churn over the trailing period, in percent |
+| `ltv` | integer | ARPA / monthly churn rate, minor units; 0 while `has_ltv` is `false` |
+| `has_ltv` | boolean | `true` once MRR history exists and churn is non-zero |

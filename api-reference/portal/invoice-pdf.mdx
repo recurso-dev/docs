@@ -1,0 +1,27 @@
+---
+title: "Download Invoice PDF"
+openapi: "GET /portal/api/invoices/{id}/pdf"
+description: "Download a print-ready rendering of one of the logged-in customer's own invoices"
+---
+
+<Note>
+Portal endpoints authenticate via the `portal_session` cookie issued by [magic-link verification](/api-reference/portal/auth-verify) — not a Bearer API key. Non-browser clients may send the token in the `X-Portal-Session` header instead.
+</Note>
+
+Returns a print-ready HTML rendering of an invoice belonging to the authenticated portal customer. The endpoint is scoped to the customer's own invoices: requesting another customer's invoice ID returns `404` — the invoice's existence is never confirmed.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The invoice ID. Must belong to the authenticated customer. |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/portal/api/invoices/3c9e1f57-2b8a-4d6c-9f0e-5a7b3d1c8e42/pdf" \
+  -b "portal_session=$PORTAL_SESSION" \
+  -o invoice.html
+```
+
+The `200` response body is `text/html` — a print-ready invoice document, not JSON.

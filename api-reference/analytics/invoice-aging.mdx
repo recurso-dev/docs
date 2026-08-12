@@ -1,0 +1,48 @@
+---
+title: "Get Invoice Aging"
+openapi: "GET /v1/analytics/invoice-aging"
+description: "Outstanding receivables bucketed by how far past due each open invoice is."
+---
+
+Buckets outstanding receivables by how far past due each open invoice is — `current`, `1-30`, `31-60`, `61-90`, and `90+` days — normalized to the reporting currency. Amounts are the remaining unpaid balance of each invoice, in minor units.
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `entity_id` | string (uuid) | No | Scope the report to one legal entity (Multi-Entity Books). Omit for all entities. |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/invoice-aging" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "reporting_currency": "USD",
+    "buckets": [
+      { "label": "current", "count": 18, "amount": 214600 },
+      { "label": "1-30", "count": 22, "amount": 268900 },
+      { "label": "31-60", "count": 7, "amount": 96400 },
+      { "label": "61-90", "count": 3, "amount": 41200 },
+      { "label": "90+", "count": 1, "amount": 34300 }
+    ],
+    "total_outstanding": 655400,
+    "total_count": 51
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reporting_currency` | string | Currency every amount is normalized into |
+| `buckets[]` | array | The fixed, ordered aging bands (`current`, `1-30`, `31-60`, `61-90`, `90+`): invoice `count` and outstanding `amount` (minor units) per band |
+| `total_outstanding` | integer | Total unpaid balance across all open invoices, minor units |
+| `total_count` | integer | Total number of open invoices |

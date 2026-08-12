@@ -1,0 +1,55 @@
+---
+title: "Get MRR by Entity"
+openapi: "GET /v1/analytics/mrr/by-entity"
+description: "MRR contribution of each legal entity, normalized to the reporting currency."
+---
+
+Breaks MRR down by legal entity (Multi-Entity Books), normalized to the reporting currency and sorted by MRR descending. Every entity appears — with zero if it has no active MRR — and a single-entity tenant gets one row. Responses are cached for up to 5 minutes.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/mrr/by-entity" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "reporting_currency": "USD",
+    "total_mrr": 4850000,
+    "entities": [
+      {
+        "entity_id": "c4f8b2a6-1d9e-4c3a-8b7f-5e2a9d0c6f41",
+        "entity_name": "Acme Inc (US)",
+        "is_primary": true,
+        "normalized_mrr": 3000000,
+        "arr": 36000000,
+        "subscriptions": 120
+      },
+      {
+        "entity_id": "7d2e9a15-4c8b-4f6a-a3d1-9b0e5c7f2a84",
+        "entity_name": "Acme India Pvt Ltd",
+        "is_primary": false,
+        "normalized_mrr": 1850000,
+        "arr": 22200000,
+        "subscriptions": 214
+      }
+    ]
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reporting_currency` | string | Currency every amount is normalized into |
+| `total_mrr` | integer | Consolidated MRR across all entities, minor units |
+| `entities[]` | array | One row per legal entity, sorted by MRR descending: `entity_id`, `entity_name`, `is_primary`, `normalized_mrr`, `arr`, active `subscriptions` |
+
+<Tip>
+For MRR and open receivables side by side per entity, use the [entities overview](/api-reference/analytics/entities-overview).
+</Tip>

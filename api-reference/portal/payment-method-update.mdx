@@ -1,0 +1,47 @@
+---
+title: "Update Payment Method"
+openapi: "PUT /portal/api/payment-method"
+description: "Update the logged-in customer's vaulted payment method"
+---
+
+<Note>
+Portal endpoints authenticate via the `portal_session` cookie issued by [magic-link verification](/api-reference/portal/auth-verify) — not a Bearer API key. State-changing portal calls must additionally echo the `portal_csrf` cookie's value in the `X-CSRF-Token` header (double-submit CSRF).
+</Note>
+
+Updates the vaulted payment method for the authenticated portal customer. The card metadata (brand / last4 / expiry) is produced by the client-side gateway tokenization step — no raw card number (PAN) is ever accepted. The customer is resolved from the portal session and can never be supplied in the body.
+
+## Request body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `card_brand` | string | Yes | Card brand from tokenization, e.g. `visa`. |
+| `card_last4` | string | Yes | Last four digits (exactly 4 characters). |
+| `card_exp_month` | integer | Yes | Expiry month, 1–12. |
+| `card_exp_year` | integer | Yes | Expiry year (2020 or later). |
+
+## Example Request
+
+```bash
+curl -X PUT "https://api.recurso.dev/portal/api/payment-method" \
+  -b "portal_session=$PORTAL_SESSION; portal_csrf=$CSRF_TOKEN" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "card_brand": "visa",
+    "card_last4": "4242",
+    "card_exp_month": 11,
+    "card_exp_year": 2028
+  }'
+```
+
+## Response
+
+```json
+{
+  "status": "ok"
+}
+```
+
+<Tip>
+To collect a new card through Stripe first, start with [Start Card Update](/api-reference/portal/payment-method-setup-intent); for US bank accounts use [Start Bank Account Setup](/api-reference/portal/payment-method-bank-setup-intent).
+</Tip>
