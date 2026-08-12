@@ -1,0 +1,38 @@
+---
+title: "List US Tax Registrations"
+openapi: "GET /v1/settings/tax/registrations"
+description: "List the states where the tenant holds (or is pending) a sales-tax permit."
+---
+
+Returns the tenant's US sales-tax registrations — where they hold, or are
+pending, a permit to collect. Pairs with
+[nexus](/api-reference/settings/get-nexus) to surface gaps: states with nexus
+but no registration.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/settings/tax/registrations \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": [
+    {
+      "state_code": "CA",
+      "registration_number": "123-456789",
+      "status": "registered",
+      "registered_at": "2026-02-01"
+    },
+    {
+      "state_code": "NY",
+      "registration_number": "",
+      "status": "pending",
+      "registered_at": null
+    }
+  ]
+}
+```

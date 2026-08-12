@@ -1,0 +1,33 @@
+---
+title: "Get the Current User"
+openapi: "GET /auth/me"
+description: "Return the authenticated dashboard user and tenant for the current session."
+---
+
+Returns the authenticated dashboard user and their tenant, resolved from the
+`recurso_session` cookie. Useful for restoring UI state after a page load;
+returns `401` when the session is missing or expired.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/auth/me \
+  -b cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "user": {
+    "id": "7b3f9c12-5e8a-4d16-b429-1c6f8a2d0e57",
+    "email": "admin@acme.com",
+    "name": "Ada Admin",
+    "role": "owner"
+  },
+  "tenant": {
+    "id": "d4c3b2a1-0f9e-4765-8321-abcdef012345",
+    "name": "Acme Corporation"
+  }
+}
+```

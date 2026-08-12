@@ -1,0 +1,31 @@
+---
+title: "Update US Tax Identity"
+openapi: "PUT /v1/settings/tax/us"
+description: "Create or update the US tax identity (W-9) shown on US invoices."
+---
+
+Upserts the tenant's US tax identity — legal name, EIN, and address — shown on
+US sales-tax invoices. Presentation only: it does not affect tax computation.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `legal_name` | string | No | Seller legal name shown on US invoices. |
+| `ein` | string | No | Employer Identification Number (the W-9 tax id). |
+| `address` | string | No | Seller postal address shown on US invoices. |
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/settings/tax/us \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "legal_name": "Acme Corporation Inc.",
+    "ein": "12-3456789",
+    "address": "100 Market Street, Suite 300, San Francisco, CA 94105"
+  }'
+```
+
+The saved identity is echoed back in the `data` envelope.

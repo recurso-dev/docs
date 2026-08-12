@@ -1,0 +1,25 @@
+---
+title: "Get MCP Server Settings"
+openapi: "GET /v1/settings/mcp"
+description: "Fetch the tenant's MCP opt-in — the Tier-3 money-path toggle."
+---
+
+Returns the tenant's MCP server opt-in — currently the Tier-3 (money-path)
+toggle. Defaults to disabled when it has never been set.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/settings/mcp \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "tier3_enabled": false
+  }
+}
+```

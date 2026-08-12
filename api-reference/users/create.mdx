@@ -1,0 +1,47 @@
+---
+title: "Add a Team Member"
+openapi: "POST /v1/users"
+description: "Create a teammate with a password you choose."
+---
+
+Creates a dashboard teammate directly, with a password chosen by the caller.
+Requires the caller to be `owner` or `admin` (or a tenant API key). Prefer
+[Invite a Team Member](/api-reference/users/invite) when the teammate should
+set their own password via an emailed link. Returns `409` when the email is
+already taken.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `email` | string | Yes | The teammate's email. Must be unique. |
+| `name` | string | Yes | The teammate's display name. |
+| `role` | string | Yes | One of `owner`, `admin`, `member`. |
+| `password` | string | Yes | Initial password. Minimum 8 characters. |
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/users \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "sam@acme.com",
+    "name": "Sam Support",
+    "role": "member",
+    "password": "s3cur3P@ssw0rd"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "id": "3e6a1d48-9c2b-4f70-8d15-6b0e4a7c2f93",
+    "email": "sam@acme.com",
+    "name": "Sam Support",
+    "role": "member"
+  }
+}
+```

@@ -1,0 +1,32 @@
+---
+title: "Get EU E-Invoicing Config"
+openapi: "GET /v1/settings/eu-einvoice"
+description: "Fetch the tenant's EU e-invoicing opt-in and EN 16931 seller identity."
+---
+
+Returns the tenant's EU e-invoicing configuration — the opt-in flag plus the
+EN 16931 seller party — or an empty, disabled default when none has been set.
+Scope to a legal entity with the optional `entity_id` query parameter.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/settings/eu-einvoice \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "enabled": true,
+    "legal_name": "Acme GmbH",
+    "vat_number": "DE123456789",
+    "country_code": "DE",
+    "street": "Musterstrasse 12",
+    "city": "Berlin",
+    "postal_zone": "10115"
+  }
+}
+```

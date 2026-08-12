@@ -1,0 +1,24 @@
+---
+title: "Resend the Verification Email"
+openapi: "POST /auth/verify-email/resend"
+description: "Re-send the email-verification link to the logged-in user."
+---
+
+Re-sends the email-verification link to the currently logged-in user. Always
+answers `200` — including when the address is already verified — so it reveals
+nothing and is safe to call idempotently. Requires an authenticated session.
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/auth/verify-email/resend \
+  -b cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "message": "If your email is unverified, a verification link has been sent."
+}
+```

@@ -1,0 +1,33 @@
+---
+title: "Verify an Email Address"
+openapi: "POST /auth/verify-email"
+description: "Confirm an account's email address with the emailed token."
+---
+
+Consumes the single-use verification token from the emailed link and marks
+the account's email address confirmed. Invalid, expired, or already-used
+tokens return a generic `400` so the endpoint is not a token oracle.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `token` | string | Yes | The single-use token from the verification email. |
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/auth/verify-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "evt_5cX9mK2qRvW8yB4nF1dG7hJ0pL3tS6aZ"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "message": "email verified"
+}
+```

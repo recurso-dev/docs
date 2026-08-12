@@ -1,0 +1,44 @@
+---
+title: "Update EU E-Invoicing Config"
+openapi: "PUT /v1/settings/eu-einvoice"
+description: "Create or update the EU e-invoicing opt-in and EN 16931 seller identity."
+---
+
+Upserts the tenant's EU e-invoicing configuration. Setting `enabled` to `true`
+requires a complete seller identity — `legal_name`, `vat_number`, and a
+2-letter `country_code` — the fields every generated EN 16931 (UBL 2.1)
+document needs. Scope to a legal entity with the optional `entity_id` query
+parameter.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `enabled` | boolean | No | When `true`, invoices generate an EN 16931 (UBL 2.1) e-invoice. Off by default. |
+| `legal_name` | string | To enable | Seller registered/legal name (BT-27). |
+| `vat_number` | string | To enable | Seller VAT identifier incl. country prefix, e.g. `DE123456789` (BT-31). |
+| `country_code` | string | To enable | Seller country, ISO 3166-1 alpha-2 (BT-40). |
+| `street` | string | No | Seller street address. |
+| `city` | string | No | Seller city. |
+| `postal_zone` | string | No | Seller postal code. |
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/settings/eu-einvoice \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "legal_name": "Acme GmbH",
+    "vat_number": "DE123456789",
+    "country_code": "DE",
+    "street": "Musterstrasse 12",
+    "city": "Berlin",
+    "postal_zone": "10115"
+  }'
+```
+
+The saved configuration is echoed back in the `data` envelope. For India's
+IRP e-invoicing, see [IRP configuration](/api-reference/einvoice/irp-config)
+instead.

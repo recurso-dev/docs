@@ -1,0 +1,36 @@
+---
+title: "List Team Members"
+openapi: "GET /v1/users"
+description: "List all dashboard users in your tenant."
+---
+
+Lists every dashboard user in the caller's tenant. Any authenticated member
+may read the list.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/users \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": [
+    {
+      "id": "7b3f9c12-5e8a-4d16-b429-1c6f8a2d0e57",
+      "email": "admin@acme.com",
+      "name": "Ada Admin",
+      "role": "owner"
+    },
+    {
+      "id": "3e6a1d48-9c2b-4f70-8d15-6b0e4a7c2f93",
+      "email": "sam@acme.com",
+      "name": "Sam Support",
+      "role": "member"
+    }
+  ]
+}
+```

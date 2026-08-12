@@ -1,0 +1,32 @@
+---
+title: "Get Invoice Branding"
+openapi: "GET /v1/settings/invoice-branding"
+description: "Fetch the tenant's invoice presentation settings."
+---
+
+Returns the tenant's invoice presentation settings — display name, logo,
+signature, signatory, bank details, and terms — or an empty default when none
+has been set. Presentation only: statutory seller identity (GST / W-9) still
+takes precedence on tax invoices.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/settings/invoice-branding \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "company_name": "Acme Corporation",
+    "logo_data_url": "data:image/png;base64,iVBORw0KGgo...",
+    "signature_data_url": "data:image/png;base64,iVBORw0KGgo...",
+    "signatory_name": "Ada Admin",
+    "bank_details": "HDFC Bank, A/C 50100123456789, IFSC HDFC0000123",
+    "terms": "Payment due within 15 days of the invoice date."
+  }
+}
+```

@@ -1,0 +1,39 @@
+---
+title: "Set US Tax Registrations"
+openapi: "PUT /v1/settings/tax/registrations"
+description: "Replace the tenant's entire set of US sales-tax registrations."
+---
+
+Replaces the tenant's **entire** registration set — states omitted from the
+request are removed. `owner`/`admin` only.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `registrations` | array | No | The full set of registrations. |
+| `registrations[].state_code` | string | Yes | Two-letter US state code, e.g. `CA`. |
+| `registrations[].registration_number` | string | No | The state-issued permit number. |
+| `registrations[].status` | string | No | One of `registered`, `pending`, `not_registered`. Defaults to `registered`. |
+| `registrations[].registered_at` | string (date) | No | Date the permit became effective (YYYY-MM-DD). |
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/settings/tax/registrations \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "registrations": [
+      {
+        "state_code": "CA",
+        "registration_number": "123-456789",
+        "status": "registered",
+        "registered_at": "2026-02-01"
+      },
+      { "state_code": "NY", "status": "pending" }
+    ]
+  }'
+```
+
+The updated registration set is returned in the `data` envelope.
