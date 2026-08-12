@@ -178,11 +178,12 @@ curl -X POST https://api.recurso.dev/v1/events/{event_id}/redeliver \
 
 <AccordionGroup>
 
-<Accordion title="Creating a subscription fails, or `checkout_url` is never returned">
+<Accordion title="Invoices are created but payments are never collected">
 
-**Cause** — The gateway named in `payment_gateway` (`razorpay` or `stripe`)
-has no credentials configured, so Recurso can't create the gateway-side
-subscription.
+**Cause** — No gateway credentials are configured for the invoice currency.
+Recurso routes each payment from the invoice currency (INR → Razorpay,
+others → Stripe by default); with no matching connection, the hosted
+checkout page and autopay have nothing to charge through.
 
 **Fix** — Set the keys for the gateway you use, then restart the API:
 

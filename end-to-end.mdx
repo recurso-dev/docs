@@ -17,10 +17,9 @@ sequenceDiagram
     You->>R: 1. Create Plan
     You->>R: 2. Create Customer
     You->>R: 3. Create Subscription
-    R->>G: Create gateway subscription
-    R-->>You: checkout_url
-    You-->>C: Redirect to checkout
-    C->>G: Complete payment
+    Note over R: First invoice issued on activation
+    You-->>C: Hosted checkout link /checkout/{invoice_id}
+    C->>G: Complete payment (gateway chosen by currency)
     G->>R: payment.succeeded webhook
     R->>You: subscription.created webhook
     Note over R: Billing cycle begins
@@ -85,7 +84,7 @@ curl -X POST https://api.recurso.dev/v1/customers \
     "name": "Acme Corporation",
     "email": "billing@acme.com",
     "phone": "+919876543210",
-    "address": {
+    "billing_address": {
       "line1": "123 MG Road",
       "city": "Bangalore",
       "state": "Karnataka",
@@ -123,8 +122,7 @@ curl -X POST https://api.recurso.dev/v1/subscriptions \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "cust_acme01",
-    "plan_id": "plan_pro01",
-    "payment_gateway": "razorpay"
+    "plan_id": "plan_pro01"
   }'
 ```
 
@@ -136,13 +134,19 @@ curl -X POST https://api.recurso.dev/v1/subscriptions \
     "id": "sub_xyz789",
     "customer_id": "cust_acme01",
     "plan_id": "plan_pro01",
-    "status": "created",
-    "checkout_url": "https://api.recurso.dev/checkout/sub_xyz789"
+    "status": "active",
+    "current_period_start": "2026-06-24T00:00:00Z",
+    "current_period_end": "2026-07-24T00:00:00Z"
   }
 }
 ```
 
-Redirect the customer to `checkout_url` to complete payment. After payment succeeds, Recurso fires these webhooks:
+Activation issues the first invoice. Fetch it (`GET /v1/invoices?subscription_id=...`)
+and send the customer to the hosted checkout page —
+`https://api.recurso.dev/checkout/{invoice_id}` — where Recurso picks the
+gateway from the invoice currency. (With a saved [UPI mandate](/compliance/upi-mandates)
+or card on file, collection is automatic instead.) After payment succeeds,
+Recurso fires these webhooks:
 
 ### Webhook: `subscription.created`
 
@@ -168,7 +172,7 @@ Redirect the customer to `checkout_url` to complete payment. After payment succe
   "data": {
     "id": "pay_001",
     "invoice_id": "inv_001",
-    "amount": 5899,
+    "amount": 589882,
     "currency": "INR",
     "gateway": "razorpay"
   }
@@ -195,9 +199,9 @@ At the end of each billing period, Recurso automatically generates the next invo
     "subscription_id": "sub_xyz789",
     "status": "open",
     "currency": "INR",
-    "subtotal": 4999,
-    "tax_amount": 900,
-    "total": 5899,
+    "subtotal": 499900,
+    "tax_amount": 89982,
+    "total": 589882,
     "due_date": "2026-08-08T00:00:00Z"
   }
 }
@@ -222,7 +226,7 @@ Recurso charges the customer's saved payment method automatically. On success:
   "data": {
     "id": "inv_002",
     "status": "paid",
-    "amount_paid": 5899,
+    "amount_paid": 589882,
     "paid_at": "2026-07-24T00:05:00Z"
   }
 }

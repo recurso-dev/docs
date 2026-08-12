@@ -21,9 +21,9 @@ subscribers over with the `cmd/import` tool — idempotently, with a dry run, an
 | Invoice | **Invoice** | Auto-generated at period end; GST/tax computed automatically. |
 | Metered usage / Usage Records | **Usage events** (`POST /v1/usage/events`) | Report against a subscription `dimension`. See [Usage-Based Billing](/advanced/usage-billing). |
 | Entitlements / feature flags | **Entitlements** | Native boolean + limit grants per plan. See [Entitlements](/advanced/entitlements). |
-| Webhooks (signed with `Stripe-Signature`) | **Webhooks** (signed with `recurso-signature`) | HMAC-SHA256 over the raw body; verify the same way. |
+| Webhooks (signed with `Stripe-Signature`) | **Webhooks** (signed with `X-Recurso-Signature`) | HMAC-SHA256 over the raw body; verify the same way. |
 | Coupons / Promotion Codes | **Coupons** | See [Coupons](/advanced/coupons). |
-| Payment Intents / checkout | **Checkout** (`checkout_url`) | Recurso returns a `checkout_url` on subscription creation. |
+| Payment Intents / checkout | **Hosted checkout** | Send customers to `https://api.recurso.dev/checkout/{invoice_id}`; the gateway is chosen from the invoice currency. |
 
 <Tip>
 Because a Recurso Plan holds multiple currency prices, a Stripe Product with

@@ -21,21 +21,13 @@ curl https://api.recurso.dev/v1/invoices/inv_005/payment-wall \
 
 ```json
 {
-  "object": "payment_wall",
-  "invoice_id": "inv_005",
-  "payment_wall_active": true,
-  "grace_days_remaining": 3,
-  "grace_period_start": "2024-02-01T00:00:00Z",
-  "grace_period_end": "2024-02-08T00:00:00Z",
-  "blocked_at": null,
-  "customer_id": "cust_abc123",
-  "subscription_id": "sub_xyz789",
-  "invoice_total": 5899,
-  "currency": "INR",
-  "checkout_url": "https://pay.recurso.dev/wall/inv_005"
+  "data": {
+    "invoice_id": "inv_005",
+    "payment_wall_active": true
+  }
 }
 ```
 
 <Info>
-A payment wall restricts customer access to your product when an invoice is overdue. Once the grace period expires and `grace_days_remaining` reaches 0, the `blocked_at` timestamp is set and the customer is blocked until payment is collected.
+A payment wall restricts customer access to your product when an invoice is overdue. `payment_wall_active` is `true` once the campaign's grace period has expired with the invoice still unpaid — gate access in your product on this flag. Grace-period settings live on the [dunning campaign](/advanced/dunning-campaigns).
 </Info>
