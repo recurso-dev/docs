@@ -521,7 +521,6 @@
               {
                 "group": "Cancellation",
                 "pages": [
-                  "api-reference/cancellation/cancel",
                   "api-reference/cancellation/reactivate",
                   "api-reference/cancellation/reasons"
                 ]
@@ -939,5 +938,14 @@
         "name": "Authorization"
       }
     }
+  },
+  "redirects": [
+    {
+      "source": "/api-reference/cancellation/cancel",
+      "destination": "/api-reference/subscriptions/cancel"
+    }
+  ],
+  "seo": {
+    "indexing": "navigable"
   }
 }
