@@ -25,7 +25,7 @@ double-billing anyone mid-cycle**.
 | Invoice | **Invoice** | Auto-generated at period end; GST/tax computed automatically. |
 | Metered / usage-based Item Price | **Usage events** (`POST /v1/usage/events`) | Report against a subscription `dimension`. See [Usage-Based Billing](/advanced/usage-billing). |
 | Entitlements / Feature | **Entitlements** | Native boolean + limit grants per plan. See [Entitlements](/advanced/entitlements). |
-| Webhooks | **Webhooks** (signed with `recurso-signature`) | HMAC-SHA256 over the raw body. |
+| Webhooks | **Webhooks** (signed with `X-Recurso-Signature`) | HMAC-SHA256 over the raw body. |
 | Coupons | **Coupons** | See [Coupons](/advanced/coupons). |
 | Credit Notes | **Credit Notes** | See [Credit Notes](/advanced/credit-notes). |
 | Quotes | **Quotes** | Full quote lifecycle: create, send, accept, convert. See [Quotes](/advanced/quotes). |
@@ -195,7 +195,7 @@ the dashboard's Import wizard ("Before you cut over: run the Compare gate").
 <Steps>
   <Step title="Point webhooks at Recurso">
     Register your endpoint with `POST /v1/webhooks` and verify the
-    `recurso-signature` header. See [Webhooks](/advanced/webhooks).
+    `X-Recurso-Signature` header. See [Webhooks](/advanced/webhooks).
   </Step>
   <Step title="Configure tax">
     Set GST (India) or TaxJar (US) so the first Recurso invoice is compliant.

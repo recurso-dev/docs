@@ -362,14 +362,13 @@ The report lists at most 100 discrepancies (`truncated: true` when more
 exist); `total_discrepancies` always carries the full count.
 </Info>
 
-## Webhook Events
+## Watching ledger activity
 
-The ledger emits events you can subscribe to:
-
-| Event | Description |
-|-------|-------------|
-| `ledger.entry.created` | A new journal entry was recorded |
-| `ledger.account.balance_updated` | An account balance changed |
+There are no `ledger.*` webhook event types. Every posting is written
+synchronously with the billing event that caused it, so subscribe to the
+business events instead (`invoice.created`, `payment.succeeded`, ...) and
+read the postings with the [entries endpoint](/api-reference/ledger/entries)
+when you need them.
 
 ## Best Practices
 

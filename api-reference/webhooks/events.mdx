@@ -9,13 +9,15 @@ All webhook events follow this structure:
 
 ```json
 {
-  "id": "evt_abc123",
-  "object": "event",
-  "type": "subscription.activated",
-  "created_at": "2024-01-15T10:30:00Z",
+  "id": "3f8e2a91-7c4b-4d6e-9a1f-5b2c8d7e0f34",
+  "tenant_id": "b7d91c25-4e8a-4f3b-a6d2-9c0e1f5a7b83",
+  "type": "subscription.created",
+  "object_type": "subscription",
+  "object_id": "8b1f4e27-9c5a-4d3e-b8f2-6a7c9d0e1f23",
   "data": {
     // Event-specific payload
-  }
+  },
+  "created_at": "2026-06-24T10:30:00Z"
 }
 ```
 
@@ -23,7 +25,7 @@ All webhook events follow this structure:
 
 ### `subscription.created`
 
-New subscription created (awaiting payment).
+New subscription started.
 
 ```json
 {
@@ -32,26 +34,18 @@ New subscription created (awaiting payment).
     "id": "sub_xyz",
     "customer_id": "cust_abc",
     "plan_id": "plan_pro",
-    "status": "created"
+    "status": "active"
   }
 }
 ```
 
-### `subscription.activated`
+### `subscription.renewed`
 
-First payment successful, subscription now active.
-
-### `subscription.updated`
-
-Plan, quantity, or settings changed.
+Billing period advanced after a successful renewal.
 
 ### `subscription.canceled`
 
 Subscription canceled (may remain active until period end).
-
-### `subscription.past_due`
-
-Payment failed, subscription in dunning.
 
 ## Payment Events
 
@@ -63,7 +57,7 @@ Payment failed, subscription in dunning.
   "data": {
     "id": "pay_123",
     "invoice_id": "inv_001",
-    "amount": 5899,
+    "amount": 589882,
     "currency": "INR",
     "gateway": "razorpay"
   }
@@ -73,10 +67,6 @@ Payment failed, subscription in dunning.
 ### `payment.failed`
 
 Payment attempt failed.
-
-### `payment.refunded`
-
-Refund issued.
 
 ## Invoice Events
 
@@ -91,10 +81,6 @@ Invoice paid in full.
 ### `invoice.payment_failed`
 
 Payment attempt on invoice failed.
-
-### `invoice.past_due`
-
-Invoice past due date.
 
 ## Customer Events
 

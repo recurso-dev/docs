@@ -273,14 +273,12 @@ Recurso pushes the following billing objects to your accounting platform:
 | Customer (`cust_`) | Customer | Contact |
 | Plan | Item (lines reference it by `ItemRef`) | Item (lines reference it by `Code` — see [Xero Item Linkage](#xero-item-linkage)) |
 
-## Webhook Events
+## Monitoring Syncs
 
-| Event | Description |
-|-------|-------------|
-| `accounting.connection_created` | New accounting provider connected |
-| `accounting.connection_revoked` | Connection disconnected or tokens revoked |
-| `accounting.sync_completed` | Sync finished successfully |
-| `accounting.sync_failed` | Sync encountered errors |
+There are no `accounting.*` webhook event types — monitor sync state with
+[the sync-status endpoint](/api-reference/accounting/sync-status) (connection,
+last sync time, and last error) and the sync log in the dashboard's
+Integrations page.
 
 ## Best Practices
 
