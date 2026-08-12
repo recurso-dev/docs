@@ -1,0 +1,56 @@
+---
+title: "List Wallet Transactions"
+openapi: "GET /v1/wallets/{id}/transactions"
+description: "The wallet's movement history — top-ups, drains, refunds, expiries — newest first."
+---
+
+## Path parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The wallet ID. |
+
+## Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | integer | No | Max transactions to return. Default `100`, max `500`. |
+
+## Example request
+
+```bash
+curl "https://api.recurso.dev/v1/wallets/5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53/transactions?limit=20" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example response
+
+```json
+{
+  "data": [
+    {
+      "id": "2c8f4a71-6d3e-4b9c-a5f8-0e7b2d9c4a63",
+      "wallet_id": "5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53",
+      "type": "drain",
+      "amount": 1180000,
+      "balance_after": 3820000,
+      "invoice_id": "7d2b9f41-8c3e-4a5d-b6f0-1e4a7c9d2b58",
+      "created_at": "2026-08-01T12:00:00Z"
+    },
+    {
+      "id": "7e3b9d25-8f1c-4a6e-b2d7-4c9f0a5e8b12",
+      "wallet_id": "5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53",
+      "type": "top_up",
+      "source": "manual",
+      "amount": 5000000,
+      "remaining": 3820000,
+      "balance_after": 5000000,
+      "created_at": "2026-07-20T09:00:00Z"
+    }
+  ]
+}
+```
+
+A `drain` is the wallet settling an invoice (it posts DR Customer Credit /
+CR Accounts Receivable, Code 12); `invoice_id` is the invoice it paid.
+On `top_up` rows, `remaining` is the undrained residue of that top-up.

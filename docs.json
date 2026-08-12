@@ -484,6 +484,13 @@
               {
                 "group": "Wallets",
                 "pages": [
+                  "api-reference/wallets/list",
+                  "api-reference/wallets/create",
+                  "api-reference/wallets/get",
+                  "api-reference/wallets/customer-wallets",
+                  "api-reference/wallets/top-up",
+                  "api-reference/wallets/transactions",
+                  "api-reference/wallets/auto-recharge",
                   "api-reference/wallets/close"
                 ]
               },

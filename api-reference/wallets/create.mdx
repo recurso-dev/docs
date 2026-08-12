@@ -1,0 +1,49 @@
+---
+title: "Create a Wallet"
+openapi: "POST /v1/wallets"
+description: "Create a prepaid wallet — one per customer, entity, and currency."
+---
+
+## Request body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `customer_id` | string (uuid) | Yes | The wallet's owner. |
+| `currency` | string | Yes | ISO 4217 code; the wallet holds minor units of this currency. |
+| `entity_id` | string (uuid) | No | Legal entity the wallet belongs to (Multi-Entity Books). Omit for the primary entity. |
+| `auto_recharge_threshold` | integer \| null | No | Recharge when the balance falls below this (minor units). |
+| `auto_recharge_amount` | integer \| null | No | Amount charged to the saved payment method on recharge. |
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/wallets \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+    "currency": "INR"
+  }'
+```
+
+## Example response
+
+```json
+{
+  "data": {
+    "id": "5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53",
+    "entity_id": "c4f8b2a6-1d9e-4c3a-8b7f-5e2a9d0c6f41",
+    "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+    "currency": "INR",
+    "balance": 4070000,
+    "auto_recharge_threshold": null,
+    "auto_recharge_amount": null,
+    "created_at": "2026-05-02T09:00:00Z",
+    "updated_at": "2026-08-01T12:00:00Z"
+  }
+}
+```
+
+Returns `409` when a wallet for this customer, entity, and currency
+already exists. New wallets start at a zero balance — fund them with a
+[top-up](/api-reference/wallets/top-up).

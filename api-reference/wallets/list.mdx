@@ -1,0 +1,40 @@
+---
+title: "List Wallets"
+openapi: "GET /v1/wallets"
+description: "List the tenant's prepaid wallets, most recently active first."
+---
+
+## Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | integer | No | Max wallets to return. Default `200`, max `500`. |
+
+## Example request
+
+```bash
+curl "https://api.recurso.dev/v1/wallets?limit=50" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example response
+
+```json
+{
+  "data": [{
+    "id": "5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53",
+    "entity_id": "c4f8b2a6-1d9e-4c3a-8b7f-5e2a9d0c6f41",
+    "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+    "currency": "INR",
+    "balance": 4070000,
+    "auto_recharge_threshold": null,
+    "auto_recharge_amount": null,
+    "created_at": "2026-05-02T09:00:00Z",
+    "updated_at": "2026-08-01T12:00:00Z"
+  }]
+}
+```
+
+Amounts are minor units in the wallet's own currency. A wallet drains
+**first** at invoice time — before adjustment credit notes and before the
+payment gateway — and is spendable only on its own entity's invoices.

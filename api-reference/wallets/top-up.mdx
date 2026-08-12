@@ -1,0 +1,51 @@
+---
+title: "Top Up a Wallet"
+openapi: "POST /v1/wallets/{id}/top-up"
+description: "Add balance to a wallet — record money received, or grant promotional credit."
+---
+
+## Path parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The wallet ID. |
+
+## Request body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | integer | Yes | Minor currency units; must be greater than 0. |
+| `source` | string | No | `manual` (default) records money already received — bank transfer or offline. `promotional` grants credit with no money movement. |
+| `expires_at` | string \| null | No | Promotional top-ups only: when the granted credit lapses. |
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/wallets/5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53/top-up \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5000000,
+    "source": "manual"
+  }'
+```
+
+## Example response
+
+```json
+{
+  "data": {
+    "id": "7e3b9d25-8f1c-4a6e-b2d7-4c9f0a5e8b12",
+    "wallet_id": "5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53",
+    "type": "top_up",
+    "source": "manual",
+    "amount": 5000000,
+    "balance_after": 5000000,
+    "created_at": "2026-08-01T12:00:00Z"
+  }
+}
+```
+
+Every top-up posts balanced ledger legs: a `manual` top-up debits Cash and
+credits Customer Credit (Code 11); a `promotional` top-up debits Credits &
+Adjustments instead (Code 8) — no cash moved.
