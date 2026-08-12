@@ -365,7 +365,30 @@
               "api-reference/introduction",
               "api-reference/authentication",
               "api-reference/errors",
-              "api-reference/auth/register"
+              {
+                "group": "Auth",
+                "pages": [
+                  "api-reference/auth/register",
+                  "api-reference/auth/login",
+                  "api-reference/auth/login-mfa",
+                  "api-reference/auth/me",
+                  "api-reference/auth/logout",
+                  "api-reference/auth/forgot-password",
+                  "api-reference/auth/reset-password",
+                  "api-reference/auth/verify-email",
+                  "api-reference/auth/resend-verification"
+                ]
+              },
+              {
+                "group": "Team",
+                "pages": [
+                  "api-reference/users/list",
+                  "api-reference/users/create",
+                  "api-reference/users/invite",
+                  "api-reference/users/update-role",
+                  "api-reference/users/delete"
+                ]
+              }
             ],
             "icon": "rocket"
           },
@@ -573,7 +596,17 @@
                   "api-reference/analytics/dunning-overview",
                   "api-reference/analytics/dunning-weights",
                   "api-reference/analytics/dunning-history",
-                  "api-reference/analytics/dunning-recovered"
+                  "api-reference/analytics/dunning-recovered",
+                  "api-reference/analytics/mrr-waterfall",
+                  "api-reference/analytics/mrr-by-entity",
+                  "api-reference/analytics/revenue-by-plan",
+                  "api-reference/analytics/revenue-by-geography",
+                  "api-reference/analytics/invoice-aging",
+                  "api-reference/analytics/unit-economics",
+                  "api-reference/analytics/entities-overview",
+                  "api-reference/analytics/collections-funnel",
+                  "api-reference/analytics/collections-failures",
+                  "api-reference/analytics/dunning-timing"
                 ]
               }
             ],
@@ -692,6 +725,16 @@
                 ]
               },
               {
+                "group": "Entities",
+                "pages": [
+                  "api-reference/entities/list",
+                  "api-reference/entities/create",
+                  "api-reference/entities/get",
+                  "api-reference/entities/update",
+                  "api-reference/entities/delete"
+                ]
+              },
+              {
                 "group": "Organizations",
                 "pages": [
                   "api-reference/organizations/list",
@@ -714,6 +757,23 @@
                   "api-reference/accounting/disconnect",
                   "api-reference/accounting/sync",
                   "api-reference/accounting/sync-status"
+                ]
+              },
+              {
+                "group": "Import",
+                "pages": [
+                  "api-reference/import/stripe-preview",
+                  "api-reference/import/stripe-commit",
+                  "api-reference/import/stripe-compare",
+                  "api-reference/import/chargebee-preview",
+                  "api-reference/import/chargebee-commit",
+                  "api-reference/import/chargebee-compare",
+                  "api-reference/import/revenuecat-preview",
+                  "api-reference/import/revenuecat-commit",
+                  "api-reference/import/revenuecat-compare",
+                  "api-reference/import/list-compare-reports",
+                  "api-reference/import/get-compare-report",
+                  "api-reference/import/compare-report-document"
                 ]
               },
               {
@@ -753,9 +813,22 @@
                 ]
               },
               {
-                "group": "Tax Settings",
+                "group": "Settings",
                 "pages": [
-                  "api-reference/settings/nexus-status"
+                  "api-reference/settings/nexus-status",
+                  "api-reference/settings/get-nexus",
+                  "api-reference/settings/update-nexus",
+                  "api-reference/settings/get-tax-registrations",
+                  "api-reference/settings/update-tax-registrations",
+                  "api-reference/settings/get-us-tax",
+                  "api-reference/settings/update-us-tax",
+                  "api-reference/settings/tax-liability",
+                  "api-reference/settings/get-eu-einvoice",
+                  "api-reference/settings/update-eu-einvoice",
+                  "api-reference/settings/get-invoice-branding",
+                  "api-reference/settings/update-invoice-branding",
+                  "api-reference/settings/get-mcp",
+                  "api-reference/settings/update-mcp"
                 ]
               },
               {
@@ -789,7 +862,12 @@
                   "api-reference/portal/payment-method-mandate",
                   "api-reference/portal/invoices",
                   "api-reference/portal/redeem",
-                  "api-reference/portal/logout"
+                  "api-reference/portal/logout",
+                  "api-reference/portal/disputes",
+                  "api-reference/portal/raise-dispute",
+                  "api-reference/portal/invoice-pdf",
+                  "api-reference/portal/payment-method-bank-setup-intent",
+                  "api-reference/portal/payment-method-update"
                 ]
               }
             ],
