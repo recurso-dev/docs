@@ -10,11 +10,12 @@ description: "Create a new subscription"
 |-----------|------|----------|-------------|
 | `customer_id` | string | Yes | Customer ID |
 | `plan_id` | string | Yes | Plan ID |
-| `quantity` | integer | No | Quantity (for per-seat pricing) |
-| `trial_end` | string | No | Trial end date (ISO 8601) |
-| `coupon` | string | No | Coupon code to apply |
-| `payment_gateway` | string | No | `razorpay` or `stripe` |
-| `metadata` | object | No | Custom key-value data |
+| `entity_id` | string (uuid) | No | Multi-Entity Books: the issuing legal entity. Omit for the tenant's primary entity |
+| `coupon_code` | string | No | Coupon code to apply |
+| `start_date` | string | No | Start date (ISO 8601); defaults to now |
+| `trial_days` | integer | No | Days > 0 start the subscription in `trialing`; it converts to `active` (issuing its first invoice) when the trial ends |
+| `billing_anchor_type` | string | No | `acquisition` (default) or `first_of_month` |
+| `payment_terms` | string | No | `net0`, `net15`, `net30`, or `net60` |
 
 ## Example Request
 
@@ -24,8 +25,7 @@ curl -X POST https://api.recurso.dev/v1/subscriptions \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "cust_abc123",
-    "plan_id": "plan_pro",
-    "payment_gateway": "razorpay"
+    "plan_id": "plan_pro"
   }'
 ```
 
@@ -42,11 +42,13 @@ curl -X POST https://api.recurso.dev/v1/subscriptions \
   "current_period_start": "2024-01-15T00:00:00Z",
   "current_period_end": "2024-02-15T00:00:00Z",
   "cancel_at_period_end": false,
-  "checkout_url": "https://pay.recurso.dev/checkout/sub_xyz789",
   "created_at": "2024-01-15T10:30:00Z"
 }
 ```
 
 <Info>
-Redirect the customer to `checkout_url` to complete payment.
+Activation issues the subscription's first invoice. Collect it on the hosted
+checkout page — `https://api.recurso.dev/checkout/{invoice_id}` (gateway
+chosen from the invoice currency) — or automatically via a saved mandate.
+Find the invoice with `GET /v1/invoices?subscription_id=...`.
 </Info>

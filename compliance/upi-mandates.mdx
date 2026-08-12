@@ -234,8 +234,7 @@ When a `subscription_id` is provided during mandate creation, Recurso automatica
 // Create a subscription
 const subscription = await recurso.subscriptions.create({
   customer_id: 'cust_abc123',
-  plan_id: 'plan_pro',
-  payment_gateway: 'razorpay'
+  plan_id: 'plan_pro'
 });
 
 // Create a mandate linked to the subscription

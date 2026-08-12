@@ -69,7 +69,7 @@ curl -X POST $BASE/v1/customers \
   -d '{
     "name": "Acme Corp",
     "email": "billing@acme.com",
-    "address": {
+    "billing_address": {
       "line1": "500 Market St",
       "city": "San Francisco",
       "state": "CA",
@@ -79,7 +79,7 @@ curl -X POST $BASE/v1/customers \
   }'
 ```
 
-## Step 4: Start a Stripe subscription
+## Step 4: Start a subscription
 
 ```bash
 curl -X POST $BASE/v1/subscriptions \
@@ -87,12 +87,11 @@ curl -X POST $BASE/v1/subscriptions \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "cust_abc",
-    "plan_id": "plan_pro",
-    "payment_gateway": "stripe"
+    "plan_id": "plan_pro"
   }'
 ```
 
-Your customer pays through the hosted Stripe Payment Element. In development with
+USD invoices route to your Stripe connection automatically, and your customer pays through the hosted checkout page. In development with
 no gateway keys, the mock gateway simulates the charge — see
 [Testing & Sandbox](/testing).
 

@@ -18,16 +18,17 @@ Subscriptions connect customers to plans and handle the billing cycle automatica
 <CodeGroup>
 ```typescript TypeScript
 const subscription = await recurso.subscriptions.create({
-  customer_id: 'cust_abc123',
-  plan_id: 'plan_pro',
-  payment_gateway: 'razorpay'  // or 'stripe'
+  customer_id: '9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01',
+  plan_id: '3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14'
 });
 
-// For payment page integration
-if (subscription.status === 'created') {
-  // Redirect to complete payment
-  window.location.href = subscription.checkout_url;
-}
+// The first invoice is issued when the subscription activates.
+// Fetch it, then collect on the hosted checkout page (gateway
+// chosen by invoice currency) — or let a saved mandate autopay it:
+const { data: invoices } = await recurso.invoices.list({
+  subscription_id: subscription.id,
+});
+const payLink = `https://api.recurso.dev/checkout/${invoices[0].id}`;
 ```
 
 ```bash cURL
@@ -35,11 +36,16 @@ curl -X POST https://api.recurso.dev/v1/subscriptions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "cust_abc123",
-    "plan_id": "plan_pro"
+    "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+    "plan_id": "3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14"
   }'
 ```
 </CodeGroup>
+
+There is no gateway parameter here: Recurso routes each payment to the right
+gateway from the invoice currency and your [gateway connections](/advanced/payment-gateways),
+and payment happens per invoice — on the [hosted checkout page](/core/payments)
+or automatically via a saved mandate.
 
 ### Apply a Coupon at Creation
 
@@ -47,10 +53,9 @@ Apply a discount coupon when creating a subscription:
 
 ```typescript
 const subscription = await recurso.subscriptions.create({
-  customer_id: 'cust_abc123',
-  plan_id: 'plan_pro',
-  payment_gateway: 'razorpay',
-  coupon_id: 'coupon_launch20'  // 20% off first 3 months
+  customer_id: '9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01',
+  plan_id: '3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14',
+  coupon_code: 'LAUNCH20'  // 20% off first 3 months
 });
 ```
 
@@ -282,13 +287,18 @@ For Indian customers paying via UPI, you can set up a UPI mandate for automatic 
 
 ```typescript
 const subscription = await recurso.subscriptions.create({
-  customer_id: 'cust_abc123',
-  plan_id: 'plan_pro',
-  payment_gateway: 'razorpay',
-  mandate: {
-    type: 'upi',
-    max_amount: 9999  // Maximum amount per debit
-  }
+  customer_id: '9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01',
+  plan_id: '3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14'
+});
+
+// Mandates are their own resource — register one against the
+// subscription and renewals collect automatically:
+const mandate = await recurso.mandates.create({
+  customer_id: subscription.customer_id,
+  subscription_id: subscription.id,
+  vpa: 'customer@upi',
+  max_amount: 999900,        // per-debit cap, minor units (₹9,999.00)
+  frequency: 'monthly'
 });
 ```
 
