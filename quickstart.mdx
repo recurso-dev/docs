@@ -315,6 +315,37 @@ settings, auto-login, and an hourly reset.
     });
     ```
   </Step>
+
+  <Step title="Watch the books balance">
+    This is the part most billing tools don't have. Every event you just
+    triggered — the invoice, the payment, the usage — posted balanced
+    double-entry rows to a real ledger. Ask Recurso to prove it:
+
+    ```bash
+    curl http://localhost:8080/v1/finance/reconciliation \
+      -H "Authorization: Bearer your-api-key"
+    ```
+
+    ```json
+    {
+      "data": {
+        "invoices_checked": 1,
+        "paid_invoices_checked": 1,
+        "total_discrepancies": 0,
+        "discrepancies": [],
+        "tb_compared": false
+      }
+    }
+    ```
+
+    <Check>
+    `total_discrepancies: 0` is the whole point: every billing record
+    ties to its ledger postings, down to the minor unit. That check runs
+    daily in production, and the same invariant is enforced in CI on every
+    commit to Recurso itself. Read how the postings work in the
+    [Ledger guide](/advanced/ledger).
+    </Check>
+  </Step>
 </Steps>
 
 ## Self-Hosting
@@ -331,8 +362,9 @@ For production deployments, see the [self-hosting guide on GitHub](https://githu
   <Card title="Usage-based billing" icon="gauge" href="/advanced/usage-billing">
     Billable metrics, charge models, wallets, commitments, and alerts.
   </Card>
-  <Card title="SDKs" icon="cube" href="/sdk-guides/overview">
-    Official Go, Node, and Python clients.
+  <Card title="The Ledger" icon="scale-balanced" href="/advanced/ledger">
+    Double-entry postings, account codes, and the reconciliation that
+    reads zero.
   </Card>
   <Card title="Going to production" icon="server" href="/going-to-production">
     Hardening, backups, and the production checklist.
