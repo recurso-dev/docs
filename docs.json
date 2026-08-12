@@ -66,6 +66,7 @@
             "group": "Money & Books",
             "icon": "scale-balanced",
             "pages": [
+              "advanced/double-entry",
               "advanced/finance-overview",
               "advanced/ledger",
               "advanced/revenue-recognition",
