@@ -1,0 +1,148 @@
+---
+title: "Double-Entry, for Engineers"
+description: "How Recurso's ledger works, explained for developers who have never done accounting — accounts, debits, credits, and why the books always balance."
+keywords: ["accounting basics", "debits and credits", "double-entry bookkeeping", "journal entry", "trial balance"]
+---
+
+You don't need an accounting background to run Recurso — but ten minutes
+here will make every number in the product explainable. This page teaches
+the model from scratch, using the exact postings Recurso makes.
+
+## The problem bookkeeping solves
+
+Imagine tracking money with a single `balance` column. Every bug is
+invisible: if the number is wrong, nothing tells you *where* it went wrong.
+
+Double-entry bookkeeping is the fix, and it's an engineer's fix: an
+**append-only event log with an invariant**. Money is never created or
+destroyed in the records — it only *moves between named buckets*, and every
+movement records both ends. If the two ends ever disagree, you know
+immediately, and you can replay the log to find out where.
+
+## Accounts are buckets with a sign convention
+
+An **account** is a named bucket. Recurso provisions these automatically:
+
+| Code | Account | Type | What it holds |
+|------|---------|------|---------------|
+| `1000` | Cash | asset | Money you've received |
+| `1100` | Accounts Receivable | asset | Money customers owe you |
+| `2100` | Deferred Revenue | liability | Subscription money you've billed but **not yet earned** |
+| `2200` | Tax Payable | liability | Tax you collected and owe the government |
+| `2300` | Customer Credit | liability | Wallet balances and credit you owe customers |
+| `4000` | Revenue | revenue | One-off income, earned immediately |
+| `4100` | Recognized Revenue | revenue | Subscription income, earned month by month |
+| `5000` | Refunds | expense | Money returned to customers |
+
+(The [full chart](/advanced/ledger#built-in-account-codes) adds TDS
+Receivable, Credits & Adjustments, and Bad Debt Expense.)
+
+Two intuitions carry you a long way:
+
+- **Assets** are what you *have or are owed*. **Liabilities** are what you
+  *owe someone else* — including "a month of service the customer already
+  paid for."
+- **Debit** and **credit** are not "minus" and "plus." They're the two ends
+  of a transfer: debit = where value flows **to**, credit = where it flows
+  **from**. Debiting Cash means cash went *up*; crediting a liability means
+  what you owe went *up*. The signs feel inverted until you stop reading
+  them as arithmetic and start reading them as **direction**.
+
+## A posting is a transfer
+
+Recurso's ledger rows look like this — one debit account, one credit
+account, one amount:
+
+```json
+{
+  "debit_account_id": "…AR…",
+  "credit_account_id": "…Deferred…",
+  "amount": 499900,
+  "code": 1,
+  "reference_id": "…the invoice…"
+}
+```
+
+That's the entire mental model: **every financial event is one or more
+transfers between buckets**, each tagged with a `code` saying what kind of
+event produced it and a `reference_id` pointing at the business object.
+
+The invariant falls out for free: since every row adds the same amount to
+one side and the other, **total debits always equal total credits**.
+Checking that is called a **trial balance**, and Recurso asserts it
+continuously — in CI on every commit, and in your books on demand.
+
+## One subscription month, end to end
+
+A customer subscribes at ₹4,999/month + 18% GST (₹899.82). Watch the
+buckets — amounts in minor units:
+
+**1. Invoice issued** (Code 1 — gross, ₹5,898.82):
+
+```
+Debit   1100 Accounts Receivable   589882    "the customer owes us"
+Credit  2100 Deferred Revenue      589882    "we owe them a month of service"
+```
+
+**2. Tax carved out** (Code 6 — the GST isn't yours; move it to its own debt):
+
+```
+Debit   2100 Deferred Revenue       89982
+Credit  2200 Tax Payable            89982    "we owe the government this"
+```
+
+**3. Payment received** (Code 3):
+
+```
+Debit   1000 Cash                  589882    "money arrived"
+Credit  1100 Accounts Receivable   589882    "they no longer owe us"
+```
+
+**4. Revenue recognized** (Code 2 — the month elapses; you earned it):
+
+```
+Debit   2100 Deferred Revenue      499900
+Credit  4100 Recognized Revenue    499900    "now it's really income"
+```
+
+After all four transfers:
+
+| Account | Balance | Meaning |
+|---------|---------|---------|
+| Cash | +589,882 | You hold the money |
+| Accounts Receivable | 0 | Nothing outstanding |
+| Deferred Revenue | 0 | The service was delivered |
+| Tax Payable | +89,982 | Remit this at filing time |
+| Recognized Revenue | +499,900 | This month's earned income |
+
+Debits = credits at every step. Nothing appeared or vanished — it moved,
+and the log says exactly when and why.
+
+## Why bother deferring revenue?
+
+Because "we got paid" and "we earned it" are different events, and serious
+finance (and ASC 606) insists you not confuse them. If a customer prepays a
+year and cancels in month two, the un-earned ten months were never your
+income — they were a liability you owed back. Deferral makes refunds,
+audits, and month-end close *boring*, which is the goal.
+
+One-off charges skip this: a setup fee is earned the moment it's billed, so
+its Code-1 entry credits `4000 Revenue` directly.
+
+## Reconciliation: proving the log and reality agree
+
+Balanced books can still be *wrong* — an invoice could exist with no
+postings at all, and debits would still equal credits. So Recurso runs a
+second check: [reconciliation](/advanced/ledger#reconciliation) walks every
+billing record (invoices, payments, credits, wallets, write-offs) and
+verifies its postings exist and sum correctly — about twenty distinct
+checks, down to the minor unit. The number you want is
+`total_discrepancies: 0`, and the [quickstart ends by showing you exactly
+that](/quickstart).
+
+## Where to go next
+
+- [The Ledger](/advanced/ledger) — every posting code, the query API, and TigerBeetle
+- [Revenue Recognition](/advanced/revenue-recognition) — schedules, the waterfall, and the monthly report
+- [Month-End Close](/setup/month-end-close) — turning all of this into a one-call close pack
+- [Glossary](/glossary) — every term on this page, defined
