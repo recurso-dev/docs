@@ -166,7 +166,7 @@ set per subscription (`payment_terms: net0|net15|net30|net60`), not globally.
 Register endpoints to receive real-time event notifications:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const endpoint = await recurso.webhooks.create({
   url: "https://api.acme.com/webhooks/recurso",
   events: [

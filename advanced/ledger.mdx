@@ -147,7 +147,7 @@ there is nothing separate to reclass.
 Retrieve all ledger accounts and their current balances.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const accounts = await recurso.ledger.accounts();
 
 // Response
@@ -189,7 +189,7 @@ balanced transfer — a single debit account, a single credit account, one
 amount:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const entries = await recurso.ledger.entries({
   account_id: "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
   code: 3, // optional: only payment postings

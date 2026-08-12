@@ -108,7 +108,7 @@ curl "https://api.recurso.dev/v1/subscriptions/sub_abc123/preview-change?plan_id
   -H "Authorization: Bearer $RECURSO_API_KEY"
 ```
 
-```typescript TypeScript
+```typescript Node
 const preview = await recurso.subscriptions.previewChange('sub_abc123', {
   plan_id: 'plan_pro',
 });

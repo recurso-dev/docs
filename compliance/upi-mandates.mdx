@@ -67,7 +67,7 @@ stateDiagram-v2
 Create a UPI autopay mandate for a customer. Optionally link it to a subscription for automatic recurring billing.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const mandate = await recurso.mandates.create({
   customer_id: 'cust_abc123',
   subscription_id: 'sub_s9n3v7',   // optional
@@ -150,7 +150,7 @@ Display clear instructions to the customer after mandate creation: "Please check
 ## Get a Mandate
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const mandate = await recurso.mandates.get('mdt_m3k7p9');
 
 // Returns full mandate object with all fields
@@ -170,7 +170,7 @@ curl https://api.recurso.dev/v1/mandates/mdt_m3k7p9 \
 Retrieve all mandates for your tenant.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const mandates = await recurso.mandates.list();
 
 // Returns
@@ -209,7 +209,7 @@ If the pre-debit notification fails (e.g., UPI service downtime), the debit will
 Permanently cancel a mandate. No further debits will be executed.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const revoked = await recurso.mandates.revoke('mdt_m3k7p9');
 
 console.log(revoked.status);     // "revoked"

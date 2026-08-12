@@ -48,7 +48,7 @@ Unbilled charges sit in a pending state until the subscription's billing period 
 ### Add an Unbilled Charge
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const charge = await recurso.subscriptions.charges.add("sub_xyz", {
   amount: 250000,       // ₹2,500.00 in minor units
   currency: "INR",
@@ -104,7 +104,7 @@ curl -X POST https://api.recurso.dev/v1/subscriptions/sub_xyz/charges \
 Retrieve all pending charges for a subscription that have not yet been invoiced.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const charges = await recurso.subscriptions.charges.list("sub_xyz");
 
 // Response
@@ -181,7 +181,7 @@ Advance invoicing lets you generate an invoice for one or more future billing pe
 ### Generate an Advance Invoice
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const invoice = await recurso.subscriptions.advance("sub_xyz", {
   periods: 6  // Pre-bill for 6 upcoming periods
 });

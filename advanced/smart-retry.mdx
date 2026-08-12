@@ -170,7 +170,7 @@ Weights are cached with a **5-minute TTL** for performance. Changes from recent 
 Retrieve high-level analytics for your smart retry performance.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const overview = await recurso.analytics.dunning.overview();
 
 // Returns
@@ -198,7 +198,7 @@ curl -X GET https://api.recurso.dev/v1/analytics/dunning/overview \
 Inspect the learned weights for specific contexts.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const weights = await recurso.analytics.dunning.weights({
   context_key: 'USD:insufficient_funds:card:medium',
   limit: 20

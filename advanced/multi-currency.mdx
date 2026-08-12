@@ -100,7 +100,7 @@ the subscription bills in. See
 When creating a subscription, the currency is determined by the customer's configured currency or can be explicitly specified:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const subscription = await recurso.subscriptions.create({
   customer_id: "cust_eu_abc",
   plan_id: "plan_pro",
@@ -209,7 +209,7 @@ All financial reports aggregate to your base currency, giving you a single unifi
 ### Revenue by Currency
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const accounts = await recurso.ledger.accounts.list();
 const revenueAccount = accounts.data.find(a => a.code === "4000");
 

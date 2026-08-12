@@ -17,7 +17,7 @@ Subscriptions connect customers to plans and handle the billing cycle automatica
 ## Create a Subscription
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const subscription = await recurso.subscriptions.create({
   customer_id: '9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01',
   plan_id: '3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14'
@@ -203,7 +203,7 @@ For advanced cancellation flows with retention offers, see the [Cancel Flows gui
 If a subscription was canceled with `cancel_at_period_end: true` and the period has not yet ended, you can reactivate it:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 await recurso.subscriptions.reactivate('sub_xyz');
 
 // subscription.cancel_at_period_end = false

@@ -133,7 +133,7 @@ Invoices collected via mandate auto-debit (UPI Autopay, cards on file) now captu
 Retrieve credit notes with filters:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const creditNotes = await recurso.creditNotes.list({
   customer_id: 'cust_abc',
   status: 'issued',
@@ -207,7 +207,7 @@ const cn = await recurso.creditNotes.get('cn_xyz');
 Cancel a credit note that was issued in error. Only credit notes with no applications or refunds can be voided:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 // There is no void endpoint. To reverse a credit note issued in error,
 // offset it (e.g. an adjustment on the next invoice) and record the reason.
 ```

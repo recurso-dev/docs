@@ -62,7 +62,7 @@ stateDiagram-v2
 Each customer can have a unique referral code. Use the generate-code endpoint to create one.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const result = await recurso.referrals.generateCode({
   customer_id: 'cust_abc123'
 });
@@ -89,7 +89,7 @@ Share the generated code via email, in-app banners, or your customer portal. Cod
 When a referred customer signs up using a referral code, create the referral record to link both parties.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const referral = await recurso.referrals.create({
   referrer_id: 'cust_abc123',
   referred_id: 'cust_def456',
@@ -129,7 +129,7 @@ Two validation rules are enforced on creation:
 Once the referred customer meets your qualification criteria (e.g., completes their first payment, remains active for 30 days), mark the referral as qualified.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const qualified = await recurso.referrals.qualify('ref_r8n2v4');
 
 console.log(qualified.status);       // "qualified"
@@ -151,7 +151,7 @@ Qualification is a one-way transition. Once a referral is qualified, it cannot r
 Retrieve all referrals with pagination support.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const referrals = await recurso.referrals.list({
   page: 1,
   per_page: 25

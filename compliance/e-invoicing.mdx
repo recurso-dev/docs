@@ -124,7 +124,7 @@ Once IRP credentials are configured and `is_enabled` is set to `true`, Recurso a
 Retrieve the e-invoice status for any invoice.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const status = await recurso.invoices.einvoice.getStatus('inv_001');
 
 // Returns
@@ -158,7 +158,7 @@ curl https://api.recurso.dev/v1/invoices/inv_001/einvoice \
 If a submission fails (network error, IRP downtime, validation issue), retry it after fixing the underlying problem.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const result = await recurso.invoices.einvoice.retry('inv_001');
 
 console.log(result.data);    // Updated e-invoice object
@@ -180,7 +180,7 @@ Common failure reasons include incorrect GSTIN, missing mandatory fields (buyer 
 E-invoices can be canceled within 24 hours of generation on the IRP. You must provide a cancellation code and reason.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 await recurso.invoices.einvoice.cancel('inv_001', {
   cancel_code: 1,
   reason: 'Duplicate invoice generated in error'

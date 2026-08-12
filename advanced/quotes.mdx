@@ -85,7 +85,7 @@ await recurso.quotes.accept('quote_xyz');
 When a customer declines, the quote is marked as declined and cannot be modified or re-sent:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 await recurso.quotes.decline('quote_xyz');
 ```
 
@@ -145,7 +145,7 @@ const pdf = await recurso.quotes.pdf('quote_xyz');
 Only draft quotes can be updated. Once a quote has been sent, create a new one instead.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 await recurso.quotes.update('quote_xyz', {
   line_items: [
     {
@@ -181,7 +181,7 @@ curl -X PUT https://api.recurso.dev/v1/quotes/quote_xyz \
 Remove a draft quote that is no longer needed:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 await recurso.quotes.delete('quote_xyz');
 ```
 

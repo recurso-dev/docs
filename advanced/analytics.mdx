@@ -26,7 +26,7 @@ Monthly Recurring Revenue is the core health metric for any subscription busines
 ### Get MRR Metrics
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const metrics = await recurso.analytics.mrr();
 
 // Response
@@ -99,7 +99,7 @@ Monitor consumption metrics across all metered subscriptions. Usage statistics h
 ### Get Usage Stats
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const usage = await recurso.analytics.getUsageStats({
   start_date: '2026-06-01',
   end_date: '2026-06-23',
@@ -155,7 +155,7 @@ The `/analytics/ask` endpoint lets you query your billing data using plain Engli
 ### Ask a Question
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const result = await recurso.analytics.ask({
   question: 'Which customers churned last month and what was their MRR?'
 });
@@ -240,7 +240,7 @@ Track the performance of your payment recovery efforts with dedicated dunning an
 Get a high-level summary of dunning activity across your tenant:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const overview = await recurso.analytics.getDunningOverview({
   start_date: '2026-06-01',
   end_date: '2026-06-30'
@@ -271,7 +271,7 @@ curl -G https://api.recurso.dev/v1/analytics/dunning/overview \
 Understand which retry strategies are most effective. Weights indicate how much each retry attempt contributes to overall recovery:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const weights = await recurso.analytics.getDunningWeights();
 
 // Response
@@ -297,7 +297,7 @@ curl https://api.recurso.dev/v1/analytics/dunning/weights \
 View the timeline of dunning events for a specific period:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const history = await recurso.analytics.getDunningHistory({
   start_date: '2026-06-01',
   end_date: '2026-06-30',
