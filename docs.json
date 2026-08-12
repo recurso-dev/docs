@@ -14,79 +14,85 @@
         "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting Started",
+            "group": "Get Started",
+            "icon": "rocket",
             "pages": [
               "index",
               "quickstart",
-              "us-quickstart",
               "concepts",
-              "sdk",
-              "testing",
-              "end-to-end"
-            ],
-            "icon": "rocket"
+              "end-to-end",
+              "testing"
+            ]
           },
           {
-            "group": "Migrating to Recurso",
+            "group": "Migrate to Recurso",
+            "icon": "truck-moving",
             "pages": [
               "migrate-from-stripe",
               "migrate-from-chargebee",
               "migrate-from-revenuecat"
-            ],
-            "icon": "right-left"
+            ]
           },
           {
-            "group": "Tutorials",
-            "pages": [
-              "tutorials/usage-based-saas",
-              "tutorials/feature-gating",
-              "tutorials/india-gst-setup",
-              "tutorials/us-sales-tax-setup"
-            ],
-            "icon": "graduation-cap"
-          },
-          {
-            "group": "Core Billing",
+            "group": "Core Concepts",
+            "icon": "cube",
             "pages": [
               "core/overview",
-              "core/plans",
               "core/customers",
+              "core/plans",
               "core/subscriptions",
-              "core/proration",
               "core/invoices",
-              "core/payments"
-            ],
-            "icon": "receipt"
+              "core/payments",
+              "core/proration"
+            ]
           },
           {
-            "group": "Monetization",
+            "group": "Usage & Monetization",
+            "icon": "gauge-high",
             "pages": [
               "advanced/monetization-overview",
               "advanced/usage-billing",
-              "advanced/wallets",
               "advanced/commitments",
               "advanced/usage-alerts",
               "advanced/entitlements",
               "advanced/coupons",
               "advanced/quotes",
               "advanced/credit-notes",
+              "advanced/wallets",
               "advanced/advanced-billing"
-            ],
-            "icon": "coins"
+            ]
           },
           {
-            "group": "Revenue & Finance",
+            "group": "Money & Books",
+            "icon": "scale-balanced",
             "pages": [
               "advanced/finance-overview",
               "advanced/ledger",
               "advanced/revenue-recognition",
               "advanced/multi-currency",
+              "advanced/accounting",
               "advanced/analytics"
-            ],
-            "icon": "chart-line"
+            ]
           },
           {
-            "group": "Growth & Recovery",
+            "group": "Tax & Compliance",
+            "icon": "landmark",
+            "pages": [
+              "compliance/overview",
+              "compliance/gst-invoicing",
+              "compliance/e-invoicing",
+              "compliance/gst-returns",
+              "compliance/upi-mandates",
+              "compliance/consent-tracking",
+              "compliance/dunning",
+              "compliance/eu-einvoicing",
+              "compliance/us-sales-tax",
+              "us-quickstart"
+            ]
+          },
+          {
+            "group": "Recover & Retain",
+            "icon": "heart-pulse",
             "pages": [
               "advanced/growth-overview",
               "advanced/smart-retry",
@@ -95,78 +101,82 @@
               "advanced/churn-prediction",
               "advanced/referrals",
               "advanced/gifts"
-            ],
-            "icon": "arrow-trend-up"
+            ]
           },
           {
-            "group": "Integrations",
+            "group": "Customer Portal",
+            "icon": "user",
             "pages": [
+              "portal/overview",
+              "portal/magic-links",
+              "portal/self-service",
+              "portal/cancel-self-service"
+            ]
+          },
+          {
+            "group": "Platform & Integrations",
+            "icon": "plug",
+            "pages": [
+              "advanced/platform-overview",
               "advanced/integrations",
-              "advanced/accounting",
               "advanced/payment-gateways",
               "advanced/webhooks",
               "advanced/automation",
-              "advanced/mcp-server"
-            ],
-            "icon": "plug"
-          },
-          {
-            "group": "Platform",
-            "pages": [
-              "advanced/platform-overview",
+              "advanced/mcp-server",
               "advanced/organizations",
               "advanced/virtual-accounts",
               "advanced/okta-sso",
               "advanced/developer-settings",
               "advanced/demo-mode",
               "advanced/idempotency"
-            ],
-            "icon": "server"
-          },
-          {
-            "group": "Customer Portal",
-            "pages": [
-              "portal/overview",
-              "portal/magic-links",
-              "portal/self-service",
-              "portal/cancel-self-service"
-            ],
-            "icon": "user"
+            ]
           },
           {
             "group": "Deploy & Operate",
+            "icon": "server",
             "pages": [
               "going-to-production",
               "performance",
               "telemetry",
-              "pricing"
-            ],
-            "icon": "server"
+              "troubleshooting"
+            ]
           },
           {
-            "group": "Help & Reference",
+            "group": "Reference",
+            "icon": "book",
             "pages": [
-              "troubleshooting",
               "faq",
               "glossary",
-              "evidence"
-            ],
-            "icon": "circle-question"
+              "evidence",
+              "pricing"
+            ]
           }
         ],
         "icon": "book-open"
       },
       {
-        "tab": "Setup Guides",
+        "tab": "Guides",
         "groups": [
           {
             "group": "Start Here",
+            "icon": "flag-checkered",
             "pages": [
               "setup/index"
             ]
           },
           {
-            "group": "Core Billing & Monetization",
+            "group": "Tutorials",
+            "icon": "graduation-cap",
+            "pages": [
+              "tutorials/usage-based-saas",
+              "tutorials/feature-gating",
+              "tutorials/india-gst-setup",
+              "tutorials/us-sales-tax-setup"
+            ]
+          },
+          {
+            "group": "Billing & Monetization",
+            "icon": "coins",
             "pages": [
               "setup/wallets",
               "setup/usage-alerts",
@@ -178,6 +188,7 @@
           },
           {
             "group": "Payments & Recovery",
+            "icon": "credit-card",
             "pages": [
               "setup/payment-gateway",
               "setup/ach",
@@ -186,6 +197,7 @@
           },
           {
             "group": "Growth & Retention",
+            "icon": "arrow-trend-up",
             "pages": [
               "setup/gifts-referrals",
               "setup/cancel-flows",
@@ -193,7 +205,8 @@
             ]
           },
           {
-            "group": "Compliance Setup",
+            "group": "Compliance",
+            "icon": "landmark",
             "pages": [
               "setup/eu-einvoicing",
               "setup/us-exemptions",
@@ -204,6 +217,7 @@
           },
           {
             "group": "Finance",
+            "icon": "scale-balanced",
             "pages": [
               "setup/revenue-recognition",
               "setup/month-end-close"
@@ -211,6 +225,7 @@
           },
           {
             "group": "Platform",
+            "icon": "gear",
             "pages": [
               "setup/webhooks",
               "setup/sso",
@@ -339,38 +354,6 @@
             ]
           }
         ]
-      },
-      {
-        "tab": "Compliance",
-        "groups": [
-          {
-            "group": "India (GST & RBI)",
-            "pages": [
-              "compliance/overview",
-              "compliance/gst-invoicing",
-              "compliance/e-invoicing",
-              "compliance/gst-returns",
-              "compliance/upi-mandates",
-              "compliance/consent-tracking",
-              "compliance/dunning"
-            ],
-            "icon": "landmark"
-          },
-          {
-            "group": "Europe (EU)",
-            "pages": [
-              "compliance/eu-einvoicing"
-            ]
-          },
-          {
-            "group": "Global Tax",
-            "pages": [
-              "compliance/us-sales-tax"
-            ],
-            "icon": "globe"
-          }
-        ],
-        "icon": "scale-balanced"
       },
       {
         "tab": "API Reference",
@@ -799,16 +782,6 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://docs.recurso.dev",
-          "icon": "book-open"
-        },
-        {
-          "anchor": "API Reference",
-          "href": "https://docs.recurso.dev/api-reference/introduction",
-          "icon": "code"
-        },
-        {
           "anchor": "GitHub",
           "href": "https://github.com/recurso-dev/recurso",
           "icon": "github"
@@ -943,6 +916,10 @@
     {
       "source": "/api-reference/cancellation/cancel",
       "destination": "/api-reference/subscriptions/cancel"
+    },
+    {
+      "source": "/sdk",
+      "destination": "/sdk-guides/overview"
     }
   ],
   "seo": {
