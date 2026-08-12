@@ -42,18 +42,13 @@ curl -X POST https://api.recurso.dev/v1/invoices/inv_Rp3mK7nBwQ/einvoice/cancel 
 
 ```json
 {
-  "message": "E-invoice canceled successfully",
-  "data": {
-    "id": "einv_Ys5tH2xLmN",
-    "invoice_id": "inv_Rp3mK7nBwQ",
-    "irn": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
-    "status": "canceled",
-    "cancel_code": 2,
-    "cancel_reason": "Incorrect line item amounts were included on the original invoice",
-    "cancelled_at": "2026-06-23T16:10:45Z"
-  }
+  "message": "E-invoice cancelled successfully"
 }
 ```
+
+The response carries only the confirmation message. The invoice's
+e-invoice status flips to `CANCELLED` — read it back with
+[Get e-invoice status](/api-reference/invoices/einvoice-status).
 
 ## Notes
 
