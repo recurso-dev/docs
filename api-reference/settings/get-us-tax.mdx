@@ -1,0 +1,28 @@
+---
+title: "Get US Tax Identity"
+openapi: "GET /v1/settings/tax/us"
+description: "Fetch the tenant's US tax identity (W-9) shown on US invoices."
+---
+
+Returns the tenant's US tax identity — legal name, EIN, and address — shown on
+US sales-tax invoices, or an empty default when none has been set.
+Presentation only: it does not affect tax computation.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/settings/tax/us \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "legal_name": "Acme Corporation Inc.",
+    "ein": "12-3456789",
+    "address": "100 Market Street, Suite 300, San Francisco, CA 94105"
+  }
+}
+```

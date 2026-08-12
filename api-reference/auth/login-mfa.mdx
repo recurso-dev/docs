@@ -1,0 +1,47 @@
+---
+title: "Complete an MFA Login"
+openapi: "POST /auth/login/mfa"
+description: "Exchange the MFA challenge token plus a TOTP or backup code for a session."
+---
+
+Second step of login for MFA-enabled users. Exchanges the short-lived,
+single-use `mfa_token` returned by [`/auth/login`](/api-reference/auth/login) —
+together with a current TOTP code or an unused backup code — for a session
+(sets the httpOnly `recurso_session` cookie). The `mfa_token`, and any backup
+code used, are consumed. Errors are deliberately generic.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mfa_token` | string | Yes | The single-use challenge token from `/auth/login`. |
+| `code` | string | Yes | A current TOTP code or an unused backup code. |
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/auth/login/mfa \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "mfa_token": "mfa_2Zk8xQvR5tW7yB1nC4dF6gH9jL3mP0aS",
+    "code": "482913"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "user": {
+    "id": "7b3f9c12-5e8a-4d16-b429-1c6f8a2d0e57",
+    "email": "admin@acme.com",
+    "name": "Ada Admin",
+    "role": "owner"
+  },
+  "tenant": {
+    "id": "d4c3b2a1-0f9e-4765-8321-abcdef012345",
+    "name": "Acme Corporation"
+  }
+}
+```

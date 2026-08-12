@@ -1,0 +1,60 @@
+---
+title: "US Sales-Tax Liability Report"
+openapi: "GET /v1/settings/tax/liability"
+description: "Per-state US sales-tax liability for a filing period."
+---
+
+Per-state US sales-tax liability for a filing period: gross sales, the
+taxable/exempt/non-taxable split, tax collected, invoice count, and whether
+the tenant has nexus in each state. Pick the period with `from` + `to`
+(`to` exclusive) or `year`; it defaults to the current calendar year. Scoped
+to US buyers, USD, non-void/draft invoices — so it ties to the
+[nexus status](/api-reference/settings/nexus-status) figures. Sales split into
+taxable (tax collected), exempt (a customer exemption applied), and
+non-taxable (no nexus / below threshold).
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/settings/tax/liability?from=2026-04-01&to=2026-07-01" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "from_date": "2026-04-01",
+    "to_date": "2026-07-01",
+    "currency": "USD",
+    "total_gross_sales": 84500000,
+    "total_tax_collected": 5460875,
+    "states": [
+      {
+        "state_code": "CA",
+        "gross_sales": 62450000,
+        "taxable_sales": 60950000,
+        "exempt_sales": 1500000,
+        "non_taxable_sales": 0,
+        "tax_collected": 4420125,
+        "invoice_count": 214,
+        "has_nexus": true,
+        "nexus_type": "economic"
+      },
+      {
+        "state_code": "TX",
+        "gross_sales": 22050000,
+        "taxable_sales": 0,
+        "exempt_sales": 0,
+        "non_taxable_sales": 22050000,
+        "tax_collected": 0,
+        "invoice_count": 63,
+        "has_nexus": false
+      }
+    ]
+  }
+}
+```
+
+Monetary fields are in the smallest currency unit (USD cents).

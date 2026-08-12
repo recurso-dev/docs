@@ -1,0 +1,39 @@
+---
+title: "List US Nexus States"
+openapi: "GET /v1/settings/tax/nexus"
+description: "List the US states where the tenant has declared sales-tax nexus."
+---
+
+Returns the US states the tenant has declared sales-tax nexus in. Once any
+state is declared, US sales tax is collected **only** in those states. Scope
+to a legal entity with the optional `entity_id` query parameter. For
+threshold tracking and auto-established economic nexus, see
+[US Economic-Nexus Status](/api-reference/settings/nexus-status).
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/settings/tax/nexus \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": [
+    {
+      "state_code": "CA",
+      "nexus_type": "physical",
+      "established_at": "2026-01-01T00:00:00Z",
+      "created_at": "2026-01-14T09:30:00Z"
+    },
+    {
+      "state_code": "NY",
+      "nexus_type": "economic",
+      "established_at": "2026-04-18T00:00:00Z",
+      "created_at": "2026-04-18T02:00:00Z"
+    }
+  ]
+}
+```

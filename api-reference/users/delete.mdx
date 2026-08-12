@@ -1,0 +1,23 @@
+---
+title: "Remove a Team Member"
+openapi: "DELETE /v1/users/{id}"
+description: "Remove a teammate from the tenant."
+---
+
+Removes a teammate from the tenant. `owner`/`admin` only. You cannot remove
+the last owner or your own account — both return `409`.
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/users/3e6a1d48-9c2b-4f70-8d15-6b0e4a7c2f93 \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "status": "removed"
+}
+```

@@ -1,0 +1,38 @@
+---
+title: "Change a Team Member's Role"
+openapi: "PATCH /v1/users/{id}"
+description: "Update a teammate's role. The last owner cannot be demoted."
+---
+
+Updates a teammate's role. `owner`/`admin` only. The last remaining owner
+cannot be demoted — that returns `409`.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `role` | string | Yes | One of `owner`, `admin`, `member`. |
+
+## Example Request
+
+```bash
+curl -X PATCH https://api.recurso.dev/v1/users/3e6a1d48-9c2b-4f70-8d15-6b0e4a7c2f93 \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role": "admin"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "id": "3e6a1d48-9c2b-4f70-8d15-6b0e4a7c2f93",
+    "email": "sam@acme.com",
+    "name": "Sam Support",
+    "role": "admin"
+  }
+}
+```

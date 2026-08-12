@@ -1,0 +1,23 @@
+---
+title: "Log Out"
+openapi: "POST /auth/logout"
+description: "Delete the current session and clear the session cookie."
+---
+
+Deletes the current dashboard session and clears the `recurso_session`
+cookie. Idempotent — calling it without a live session still returns `200`.
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/auth/logout \
+  -b cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "message": "logged out"
+}
+```

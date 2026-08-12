@@ -1,0 +1,34 @@
+---
+title: "Set US Nexus States"
+openapi: "PUT /v1/settings/tax/nexus"
+description: "Replace the tenant's entire set of declared US sales-tax nexus states."
+---
+
+Replaces the tenant's **entire** nexus set — states omitted from the request
+are removed. `owner`/`admin` only. Scope to a legal entity with the optional
+`entity_id` query parameter.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `states` | array | No | The full set of nexus declarations. |
+| `states[].state_code` | string | Yes | Two-letter US state code, e.g. `CA`. |
+| `states[].nexus_type` | string | No | One of `physical`, `voluntary`, `economic`. Defaults to `physical`. |
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/settings/tax/nexus \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "states": [
+      { "state_code": "CA", "nexus_type": "physical" },
+      { "state_code": "NY", "nexus_type": "economic" }
+    ]
+  }'
+```
+
+The updated nexus set is returned in the `data` envelope, in the same shape as
+[List US Nexus States](/api-reference/settings/get-nexus).

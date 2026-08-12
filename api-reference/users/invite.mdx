@@ -1,0 +1,45 @@
+---
+title: "Invite a Team Member"
+openapi: "POST /v1/users/invite"
+description: "Invite a teammate by email — they set their own password via a single-use link."
+---
+
+Adds a teammate **without** the admin choosing a password: the account is
+created unusable and the invitee is emailed a single-use link to set their
+own password. Requires `owner` or `admin`. The accept page calls
+[`POST /auth/reset-password`](/api-reference/auth/reset-password) with the
+emailed token.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `email` | string | Yes | The invitee's email. Must be unique. |
+| `name` | string | Yes | The invitee's display name. |
+| `role` | string | Yes | One of `owner`, `admin`, `member`. |
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/users/invite \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "finance@acme.com",
+    "name": "Fin Ops",
+    "role": "admin"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "id": "b8d2f4a0-7c1e-4936-a52d-9e0f3b6c8a17",
+    "email": "finance@acme.com",
+    "name": "Fin Ops",
+    "role": "admin"
+  }
+}
+```

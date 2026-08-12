@@ -1,0 +1,49 @@
+---
+title: "Log In"
+openapi: "POST /auth/login"
+description: "Verify email and password and open a dashboard session."
+---
+
+Verifies the email + password pair and opens a session by setting the httpOnly
+`recurso_session` cookie. Errors are deliberately generic — unknown email and
+wrong password both return the same `401` — so the endpoint cannot be used to
+enumerate accounts.
+
+If the account has MFA enabled, the response is a challenge instead of a
+session: complete it with [`POST /auth/login/mfa`](/api-reference/auth/login-mfa).
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/auth/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "email": "admin@acme.com",
+    "password": "s3cur3P@ssw0rd"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "user": {
+    "id": "7b3f9c12-5e8a-4d16-b429-1c6f8a2d0e57",
+    "email": "admin@acme.com",
+    "name": "Ada Admin",
+    "role": "owner"
+  },
+  "tenant": {
+    "id": "d4c3b2a1-0f9e-4765-8321-abcdef012345",
+    "name": "Acme Corporation"
+  }
+}
+```
+
+<Tip>
+This endpoint powers the dashboard's session auth. Server-to-server
+integrations should authenticate with an API key
+(`Authorization: Bearer $API_KEY`) instead — see
+[Authentication](/api-reference/authentication).
+</Tip>
