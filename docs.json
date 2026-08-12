@@ -3,9 +3,9 @@
   "theme": "maple",
   "name": "Recurso Docs",
   "colors": {
-    "primary": "#10B981",
+    "primary": "#059669",
     "light": "#34D399",
-    "dark": "#059669"
+    "dark": "#047857"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -944,5 +944,16 @@
   ],
   "seo": {
     "indexing": "navigable"
+  },
+  "fonts": {
+    "heading": {
+      "family": "Inter"
+    },
+    "body": {
+      "family": "Inter"
+    },
+    "codeFont": {
+      "family": "JetBrains Mono"
+    }
   }
 }
