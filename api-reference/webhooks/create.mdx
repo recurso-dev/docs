@@ -21,7 +21,7 @@ curl -X POST https://api.recurso.dev/v1/webhooks \
   -d '{
     "url": "https://yourapp.com/webhooks/recurso",
     "events": [
-      "subscription.activated",
+      "subscription.renewed",
       "payment.succeeded",
       "payment.failed",
       "invoice.paid"
@@ -37,7 +37,7 @@ curl -X POST https://api.recurso.dev/v1/webhooks \
   "object": "webhook",
   "url": "https://yourapp.com/webhooks/recurso",
   "events": [
-    "subscription.activated",
+    "subscription.renewed",
     "payment.succeeded",
     "payment.failed",
     "invoice.paid"

@@ -259,13 +259,13 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_rev4000&start_da
 
 ## Webhook Events
 
-Subscribe to these events for revenue tracking:
+There is no `ledger.*` event type — recognition postings happen inside
+Recurso on schedule. The two real events relevant to revenue tracking:
 
 | Event | Description |
 |-------|-------------|
-| `ledger.entry.created` | Fires for every journal entry, including recognition entries |
-| `invoice.paid` | Indicates a new recognition schedule has been created |
-| `subscription.canceled` | May trigger deferred revenue reversal |
+| `invoice.paid` | The invoice settled — its recognition schedule is built at this point |
+| `subscription.canceled` | May trigger deferred-revenue reversal |
 
 ## Building Revenue Reports
 

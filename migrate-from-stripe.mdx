@@ -194,7 +194,7 @@ the dashboard's Import wizard ("Before you cut over: run the Compare gate").
 <Steps>
   <Step title="Point webhooks at Recurso">
     Register your endpoint with `POST /v1/webhooks` and verify the
-    `recurso-signature` header. See [Webhooks](/advanced/webhooks).
+    `X-Recurso-Signature` header. See [Webhooks](/advanced/webhooks).
   </Step>
   <Step title="Configure tax">
     Set GST (India) or TaxJar (US) so the first Recurso invoice is compliant.

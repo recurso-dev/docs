@@ -128,7 +128,7 @@ the webhook endpoint, or the signed payload has been altered before verifying
     app.post('/webhooks/recurso',
       express.raw({ type: 'application/json' }),   // raw, not express.json()
       (req, res) => {
-        const signature = req.headers['recurso-signature'];
+        const signature = req.headers['x-recurso-signature'];
         const expected = crypto
           .createHmac('sha256', process.env.WEBHOOK_SECRET)
           .update(req.body)                        // Buffer of raw bytes
@@ -147,7 +147,7 @@ the webhook endpoint, or the signed payload has been altered before verifying
   </Step>
 </Steps>
 
-The signature is delivered in the `recurso-signature` header. See the
+The signature is delivered in the `X-Recurso-Signature` header. See the
 [Webhooks guide](/advanced/webhooks) for the full verification snippet in
 Node and Python.
 

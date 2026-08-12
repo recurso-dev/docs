@@ -308,11 +308,9 @@ Customer Credit (2300) ledger account. See
 [Customer credit statement](/api-reference/customers/credit-statement) for the
 full schema.
 
-## Webhooks
+## Watching credit-note activity
 
-| Event | Description |
-|-------|-------------|
-| `credit_note.created` | Credit note issued |
-| `credit_note.applied` | Applied to invoice |
-| `credit_note.refunded` | Refund processed |
-| `credit_note.voided` | Credit note canceled |
+There are no `credit_note.*` webhook event types. Credit-note activity is
+visible on the credit note itself (`status`, `balance`), in the
+[Events feed](/advanced/developer-settings), and in the invoice's applied
+credits — poll or read on demand rather than subscribing.

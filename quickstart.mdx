@@ -285,18 +285,24 @@ settings, auto-login, and an hourly reset.
 
     const app = express();
 
-    app.post('/webhooks/recurso', express.json(), (req, res) => {
-      const signature = req.headers['x-recurso-signature'];
+    // Use express.raw so the HMAC runs over the exact bytes Recurso
+    // signed — re-serializing with JSON.stringify breaks verification.
+    app.post('/webhooks/recurso', express.raw({ type: 'application/json' }), (req, res) => {
+      const signature = req.headers['x-recurso-signature'] ?? '';
       const expected = crypto
         .createHmac('sha256', process.env.WEBHOOK_SECRET)
-        .update(JSON.stringify(req.body))
+        .update(req.body) // raw Buffer
         .digest('hex');
 
-      if (signature !== expected) {
+      const valid =
+        signature.length === expected.length &&
+        crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+      if (!valid) {
         return res.status(401).json({ error: 'Invalid signature' });
       }
 
-      switch (req.body.type) {
+      const event = JSON.parse(req.body);
+      switch (event.type) {
         case 'subscription.created':
           // Grant access to your product
           break;

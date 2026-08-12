@@ -17,11 +17,12 @@ sequenceDiagram
     You->>R: 1. Create Plan
     You->>R: 2. Create Customer
     You->>R: 3. Create Subscription
+    R->>You: subscription.created webhook
     Note over R: First invoice issued on activation
     You-->>C: Hosted checkout link /checkout/{invoice_id}
     C->>G: Complete payment (gateway chosen by currency)
-    G->>R: payment.succeeded webhook
-    R->>You: subscription.created webhook
+    G->>R: Gateway confirms charge
+    R->>You: payment.succeeded + invoice.paid webhooks
     Note over R: Billing cycle begins
     R->>R: 4. Invoice auto-generated at period end
     R->>G: 5. Charge saved payment method

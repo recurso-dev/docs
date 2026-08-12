@@ -75,7 +75,7 @@ curl -X POST https://api.recurso.dev/v1/webhooks \
 
 Verify your endpoint:
 - Returns `200` status within 5 seconds
-- Validates the `recurso-signature` header (see [Webhooks guide](/advanced/webhooks))
+- Validates the `X-Recurso-Signature` header (see [Webhooks guide](/advanced/webhooks))
 - Handles duplicate deliveries idempotently
 
 <Tip>

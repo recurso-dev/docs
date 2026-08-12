@@ -35,16 +35,17 @@ const webhook = await recurso.webhooks.create({
 
 ```json
 {
-  "id": "evt_abc123",
+  "id": "3f8e2a91-7c4b-4d6e-9a1f-5b2c8d7e0f34",
   "type": "subscription.created",
-  "created_at": "2024-01-15T10:30:00Z",
+  "object_type": "subscription",
+  "object_id": "8b1f4e27-9c5a-4d3e-b8f2-6a7c9d0e1f23",
   "data": {
-    "id": "sub_xyz",
-    "object": "subscription",
+    "id": "8b1f4e27-9c5a-4d3e-b8f2-6a7c9d0e1f23",
     "customer_id": "cust_abc",
     "plan_id": "plan_pro",
     "status": "active"
-  }
+  },
+  "created_at": "2026-06-24T10:30:00Z"
 }
 ```
 
@@ -54,75 +55,81 @@ Always verify webhook signatures:
 
 <CodeGroup>
 ```typescript TypeScript
+import crypto from 'node:crypto';
 import express from 'express';
 
 app.post('/webhooks/recurso', 
   express.raw({ type: 'application/json' }),
   (req, res) => {
-    const signature = req.headers['recurso-signature'];
-    
-    try {
-      const event = recurso.webhooks.constructEvent(
-        req.body,
-        signature,
-        process.env.WEBHOOK_SECRET
-      );
-      
-      // Handle the event
-      switch (event.type) {
-        case 'subscription.created':
-          handleSubscriptionActivated(event.data);
-          break;
-        case 'payment.failed':
-          handlePaymentFailed(event.data);
-          break;
-      }
-      
-      res.sendStatus(200);
-    } catch (err) {
+    // Verify manually — the SDKs ship no constructEvent helper.
+    // Recompute HMAC-SHA256 (hex) over the RAW body with your
+    // endpoint's signing secret and compare in constant time.
+    const signature = req.headers['x-recurso-signature'];
+    const expected = crypto
+      .createHmac('sha256', process.env.WEBHOOK_SECRET)
+      .update(req.body) // raw Buffer — never JSON.stringify
+      .digest('hex');
+    const valid =
+      typeof signature === 'string' &&
+      signature.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+
+    if (!valid) {
       console.error('Webhook signature verification failed');
-      res.sendStatus(400);
+      return res.sendStatus(400);
     }
+
+    const event = JSON.parse(req.body);
+    switch (event.type) {
+      case 'subscription.created':
+        handleSubscriptionActivated(event.data);
+        break;
+      case 'payment.failed':
+        handlePaymentFailed(event.data);
+        break;
+    }
+
+    res.sendStatus(200);
   }
 );
 ```
 
 ```python Python
+import hashlib, hmac, json, os
 from flask import Flask, request
 
 @app.route('/webhooks/recurso', methods=['POST'])
 def webhook():
-    signature = request.headers.get('Recurso-Signature')
-    
-    try:
-        event = recurso.webhooks.construct_event(
-            request.data,
-            signature,
-            os.environ['WEBHOOK_SECRET']
-        )
-        
-        if event['type'] == 'subscription.created':
-            handle_activation(event['data'])
-            
-        return '', 200
-    except Exception as e:
+    # Verify manually — the SDKs ship no construct_event helper.
+    signature = request.headers.get('X-Recurso-Signature', '')
+    expected = hmac.new(
+        os.environ['WEBHOOK_SECRET'].encode(),
+        request.get_data(),  # raw body, before any JSON parsing
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(signature, expected):
         return 'Invalid signature', 400
+
+    event = json.loads(request.get_data())
+    if event['type'] == 'subscription.created':
+        handle_activation(event['data'])
+
+    return '', 200
 ```
 </CodeGroup>
 
 ## Event Types
 
+Recurso emits exactly these ten event types:
+
 ### Subscription Events
 
 | Event | Description |
 |-------|-------------|
-| `subscription.created` | New subscription |
-| `subscription.created` | First payment succeeded |
-| `subscription.updated` | Plan/quantity changed |
-| `subscription.paused` | Subscription paused |
-| `subscription.resumed` | Subscription resumed |
+| `subscription.created` | New subscription started |
+| `subscription.renewed` | Billing period advanced after successful renewal |
 | `subscription.canceled` | Subscription canceled |
-| `subscription.past_due` | Payment failed |
 
 ### Payment Events
 
@@ -130,18 +137,14 @@ def webhook():
 |-------|-------------|
 | `payment.succeeded` | Payment completed |
 | `payment.failed` | Payment attempt failed |
-| `payment.refunded` | Refund issued |
-| `payment.disputed` | Chargeback opened |
 
 ### Invoice Events
 
 | Event | Description |
 |-------|-------------|
 | `invoice.created` | New invoice generated |
-| `invoice.finalized` | Invoice finalized |
-| `invoice.paid` | Invoice paid |
-| `invoice.payment_failed` | Payment attempt failed |
-| `invoice.past_due` | Invoice overdue |
+| `invoice.paid` | Invoice paid in full |
+| `invoice.payment_failed` | Payment attempt on the invoice failed |
 
 ### Customer Events
 
@@ -149,7 +152,10 @@ def webhook():
 |-------|-------------|
 | `customer.created` | New customer |
 | `customer.updated` | Customer updated |
-| `customer.deleted` | Customer deleted |
+
+Pauses, refunds, and disputes are visible on their resources (and in the
+[Events feed](/advanced/developer-settings)) but do not have dedicated
+webhook types today — subscribe to the list above only.
 
 ## Retry Policy
 
