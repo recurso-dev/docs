@@ -52,7 +52,7 @@ is the single most common first-run error.
 **Fix**
 
 ```bash
-make migrate
+make run   # migrations run automatically at boot
 ```
 
 Then restart the API. `make demo` runs migrations for you; only standalone or
@@ -60,7 +60,8 @@ production deployments need this step explicitly.
 
 <Warning>
 If you later see missing columns after pulling new code, a migration was added
-upstream. Re-run `make migrate` — migrations are additive and safe to re-apply.
+upstream. Restart the API — migrations run automatically at boot, are
+additive, and are safe to re-apply.
 </Warning>
 
 </Accordion>
