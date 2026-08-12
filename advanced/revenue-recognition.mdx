@@ -16,7 +16,7 @@ flowchart LR
     A[Customer Pays ₹12,000/year] --> B[Deferred Revenue<br/>Account 2100]
     B --> C{Each Month}
     C --> D[₹1,000 recognized]
-    D --> E[Revenue<br/>Account 4000]
+    D --> E[Recognized Revenue<br/>Account 4100]
     C --> F[₹1,000 recognized]
     F --> E
 ```
@@ -46,7 +46,7 @@ Recurso implements the core ASC 606 framework automatically:
     For monthly subscriptions, the full invoice amount maps to one period. For annual subscriptions, the amount is divided equally across 12 months.
   </Step>
   <Step title="Recognize Revenue Over Time">
-    Recurso creates scheduled journal entries that move amounts from Deferred Revenue (account `2100`) to Revenue (account `4000`) as each period completes.
+    Recurso creates scheduled journal entries that move amounts from Deferred Revenue (account `2100`) to Recognized Revenue (account `4100`) as each period completes.
   </Step>
 </Steps>
 
@@ -59,13 +59,17 @@ When a subscription invoice is paid, Recurso creates a revenue recognition sched
 For a monthly plan at ₹4,999/month, revenue is recognized immediately at the end of the billing period because the service period matches the billing period:
 
 ```
+On invoice (Jan 1):
+  Debit   1100 (Accounts Receivable) ₹4,999.00
+  Credit  2100 (Deferred Revenue)    ₹4,999.00
+
 On payment (Jan 1):
-  Debit   1000 (Cash)               ₹4,999.00
+  Debit   1000 (Cash)                ₹4,999.00
   Credit  1100 (Accounts Receivable) ₹4,999.00
 
 On period end (Jan 31):
   Debit   2100 (Deferred Revenue)    ₹4,999.00
-  Credit  4000 (Revenue)             ₹4,999.00
+  Credit  4100 (Recognized Revenue)  ₹4,999.00
 ```
 
 ### Annual Subscription
@@ -73,23 +77,27 @@ On period end (Jan 31):
 For an annual plan at ₹49,990/year (equivalent to ₹4,165.83/month), revenue is recognized in 12 equal installments:
 
 ```
+On invoice (Jan 1):
+  Debit   1100 (Accounts Receivable) ₹49,990.00
+  Credit  2100 (Deferred Revenue)    ₹49,990.00
+
 On payment (Jan 1):
-  Debit   1000 (Cash)               ₹49,990.00
-  Credit  2100 (Deferred Revenue)   ₹49,990.00
+  Debit   1000 (Cash)                ₹49,990.00
+  Credit  1100 (Accounts Receivable) ₹49,990.00
 
 End of January:
   Debit   2100 (Deferred Revenue)    ₹4,165.83
-  Credit  4000 (Revenue)             ₹4,165.83
+  Credit  4100 (Recognized Revenue)             ₹4,165.83
 
 End of February:
   Debit   2100 (Deferred Revenue)    ₹4,165.83
-  Credit  4000 (Revenue)             ₹4,165.83
+  Credit  4100 (Recognized Revenue)             ₹4,165.83
 
 ... (repeated each month through December)
 
 End of December:
   Debit   2100 (Deferred Revenue)    ₹4,165.87
-  Credit  4000 (Revenue)             ₹4,165.87
+  Credit  4100 (Recognized Revenue)             ₹4,165.87
 ```
 
 <Info>
@@ -101,21 +109,25 @@ The final month absorbs any rounding difference to ensure the schedule totals ex
 For a quarterly plan at ₹13,499/quarter, revenue is recognized over 3 months:
 
 ```
+On invoice (Jan 1):
+  Debit   1100 (Accounts Receivable) ₹13,499.00
+  Credit  2100 (Deferred Revenue)    ₹13,499.00
+
 On payment (Jan 1):
-  Debit   1000 (Cash)               ₹13,499.00
-  Credit  2100 (Deferred Revenue)   ₹13,499.00
+  Debit   1000 (Cash)                ₹13,499.00
+  Credit  1100 (Accounts Receivable) ₹13,499.00
 
 End of January:
   Debit   2100 (Deferred Revenue)    ₹4,499.67
-  Credit  4000 (Revenue)             ₹4,499.67
+  Credit  4100 (Recognized Revenue)             ₹4,499.67
 
 End of February:
   Debit   2100 (Deferred Revenue)    ₹4,499.67
-  Credit  4000 (Revenue)             ₹4,499.67
+  Credit  4100 (Recognized Revenue)             ₹4,499.67
 
 End of March:
   Debit   2100 (Deferred Revenue)    ₹4,499.66
-  Credit  4000 (Revenue)             ₹4,499.66
+  Credit  4100 (Recognized Revenue)             ₹4,499.66
 ```
 
 ## Key Accounts
@@ -125,18 +137,18 @@ Revenue recognition uses two primary ledger accounts:
 | Account | Code | Type | Role |
 |---------|------|------|------|
 | Deferred Revenue | `2100` | `liability` | Holds prepaid amounts until the service period elapses |
-| Revenue | `4000` | `revenue` | Records income as it is earned |
+| Recognized Revenue | `4100` | `revenue` | Records subscription income as it is earned |
 
 The flow is always the same: money enters Deferred Revenue when collected, then moves to Revenue as the obligation is fulfilled.
 
 ```mermaid
 stateDiagram-v2
     [*] --> DeferredRevenue: Payment received
-    DeferredRevenue --> Revenue: Period elapses
-    Revenue --> [*]: Fully recognized
+    DeferredRevenue --> RecognizedRevenue: Period elapses
+    RecognizedRevenue --> [*]: Fully recognized
 
     DeferredRevenue: Account 2100
-    Revenue: Account 4000
+    RecognizedRevenue: Account 4100
 ```
 
 ## Revenue Recognition Report
@@ -189,23 +201,23 @@ curl https://api.recurso.dev/v1/ledger/accounts \
 
 <CodeGroup>
 ```typescript TypeScript
-const entries = await recurso.ledger.entries.list({
-  account_id: "lacc_rev4000",
-  start_date: "2025-06-01",
-  end_date: "2025-06-30"
+// Find the Recognized Revenue (4100) account, then list its postings.
+// code 2 = revenue-recognition postings; page with limit/offset.
+const { data: accounts } = await recurso.ledger.accounts();
+const recognized = accounts.find(a => a.code === 4100);
+
+const { data: entries } = await recurso.ledger.entries({
+  account_id: recognized.id,
+  code: 2,
 });
 
-// Each entry represents revenue recognized for a subscription period
-entries.data.forEach(entry => {
-  console.log(
-    `${entry.created_at}: ${entry.entries[0].amount / 100} ${entry.entries[0].currency}` +
-    ` — ${entry.description}`
-  );
+entries.forEach(entry => {
+  console.log(`${entry.created_at}: ${entry.amount} — ${entry.description}`);
 });
 ```
 
 ```bash cURL
-curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_rev4000&start_date=2025-06-01&end_date=2025-06-30" \
+curl "https://api.recurso.dev/v1/ledger/entries?account_id=<recognized-revenue-account-uuid>&code=2" \
   -H "Authorization: Bearer $API_KEY"
 ```
 </CodeGroup>
@@ -217,11 +229,18 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_rev4000&start_da
     When a subscription is canceled mid-period, any remaining deferred revenue for future months is reversed:
 
     ```
-    Debit   2100 (Deferred Revenue)    ₹33,327.00  (8 remaining months)
-    Credit  1000 (Cash)                ₹33,327.00  (refund issued)
+    Debit   5000 (Refunds)             ₹33,327.00  (money out)
+    Credit  1000 (Cash)                ₹33,327.00
+
+    Debit   2100 (Deferred Revenue)    ₹33,327.00  (unearned balance released)
+    Credit  5000 (Refunds)             ₹33,327.00
     ```
 
-    If no refund is issued (cancel at end of period), the remaining deferred revenue is recognized as earned at the cancellation date per your refund policy.
+    The two transfers net the Refunds account to zero when the refund is
+    fully covered by unearned revenue — cash goes out, the deferred
+    liability is extinguished, and no earned revenue is touched. If no
+    refund is issued (cancel at end of period), the remaining deferred
+    revenue simply finishes recognizing per your refund policy.
   </Accordion>
 
   <Accordion title="Plan upgrades and downgrades">
@@ -235,21 +254,20 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_rev4000&start_da
   </Accordion>
 
   <Accordion title="Refunds">
-    Refunds create a reversal entry that reduces both Cash and Revenue (or Deferred Revenue if the period has not yet been recognized):
+    A refund posts two transfers: money out, then the unearned balance
+    released against the Refunds account:
 
     ```
     Debit   5000 (Refunds)             ₹4,999.00
     Credit  1000 (Cash)                ₹4,999.00
+
+    Debit   2100 (Deferred Revenue)    ₹4,999.00
+    Credit  5000 (Refunds)             ₹4,999.00
     ```
   </Accordion>
 
   <Accordion title="Discounts and coupons">
-    Discounts reduce the transaction price before the recognition schedule is created. A ₹49,990 annual plan with a 20% discount creates a schedule based on ₹39,992 spread across 12 months. The discount itself is recorded as:
-
-    ```
-    Debit   5100 (Discounts)           ₹9,998.00
-    Credit  1100 (Accounts Receivable) ₹9,998.00
-    ```
+    Discounts reduce the transaction price before the recognition schedule is created. A ₹49,990 annual plan with a 20% discount creates a schedule based on ₹39,992 spread across 12 months. There is no separate discount posting — the invoice entry (Code 1) simply posts the smaller discounted gross, so the ledger and the schedule agree by construction.
   </Accordion>
 
   <Accordion title="Free trials">
@@ -271,28 +289,23 @@ Recurso on schedule. The two real events relevant to revenue tracking:
 
 ### Monthly Recognized Revenue
 
-Query ledger entries for account `4000` (Revenue) within a date range to calculate recognized revenue for any period:
+The report endpoint answers this directly — no ledger arithmetic needed
+(the SDKs don't wrap it yet; call it over HTTP):
 
 ```typescript
 async function getMonthlyRevenue(year: number, month: number) {
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-
-  const entries = await recurso.ledger.entries.list({
-    account_id: "lacc_rev4000",
-    start_date: startDate,
-    end_date: endDate
-  });
-
-  const totalRecognized = entries.data.reduce((sum, txn) => {
-    return sum + txn.entries
-      .filter(e => e.credit_account_id === "lacc_rev4000")
-      .reduce((s, e) => s + e.amount, 0);
-  }, 0);
-
-  return totalRecognized; // in minor units
+  const res = await fetch(
+    `https://api.recurso.dev/v1/finance/revrec/report?month=${month}&year=${year}`,
+    { headers: { Authorization: `Bearer ${process.env.RECURSO_API_KEY}` } },
+  );
+  const { data } = await res.json();
+  return data.recognized_amount; // in minor units
 }
 ```
+
+For posting-level detail, list the Recognized Revenue (4100) account's
+Code-2 entries and page through them — the ledger has no date filter, so
+sum client-side by `created_at`.
 
 ### Deferred Revenue Waterfall
 

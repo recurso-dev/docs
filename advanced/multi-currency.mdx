@@ -181,24 +181,25 @@ currency at read time.
 
 ## Currency Conversion in the Ledger
 
-Ledger accounts track balances in the currency of their transactions. When a payment in a foreign currency is received, Recurso creates entries in both the presentment currency and the base currency.
+The ledger posts each entry once, in the invoice's own currency's **minor
+units** — a €49.99 payment posts `4999`, exactly as billed. There are no
+duplicate base-currency entries and no per-currency account balances:
+currency normalization happens in **reporting** (MRR, revenue analytics),
+which converts to your reporting currency at read time.
 
-### Example: EUR Payment with INR Base Currency
+### Example: EUR Payment
 
-A customer pays €49.99 for a subscription. The FX rate is 1 EUR = 90.75 INR.
+A customer pays €49.99 for a subscription:
 
 ```
-Presentment currency entries (EUR):
-  Debit   1000 (Cash)                 €49.99
-  Credit  1100 (Accounts Receivable)  €49.99
-
-Base currency entries (INR):
-  Debit   1000 (Cash)                 ₹4,536.59
-  Credit  1100 (Accounts Receivable)  ₹4,536.59
+  Debit   1000 (Cash)                 4999   (EUR minor units)
+  Credit  1100 (Accounts Receivable)  4999
 ```
 
 <Info>
-Each ledger account maintains its balance per currency. When querying account balances, you can filter by currency to see positions in each denomination.
+Keep an eye on currency exponents: JPY has none (¥500 posts as `500`),
+KWD/BHD have three. Recurso stores every amount in the currency's own
+minor units.
 </Info>
 
 ## Reporting in Base Currency
@@ -269,17 +270,12 @@ Zero-decimal currencies like `JPY` have no minor unit. An amount of `5999` in JP
 
 ## Handling FX Gains and Losses
 
-When exchange rates fluctuate between the time an invoice is created and the time payment is received, an FX gain or loss may occur. Recurso records these as separate ledger entries to keep your books accurate.
-
-```
-Invoice created at 1 EUR = 90.75 INR:
-  Debit   1100 (Accounts Receivable)  ₹4,536.59
-
-Payment received at 1 EUR = 91.00 INR:
-  Debit   1000 (Cash)                 ₹4,549.09
-  Credit  1100 (Accounts Receivable)  ₹4,536.59
-  Credit  4500 (FX Gain)              ₹12.50
-```
+Because both the invoice and its payment post in the invoice's own currency,
+no FX gain or loss ever arises inside the ledger — the receivable and the
+cash that settles it are the same number of minor units. Rate movement
+between invoicing and payment shows up only in **reports**, which convert at
+read time. If you book realized FX gains/losses for statutory accounts, do
+it in your accounting system from the GL export, using your own rate policy.
 
 ## Best Practices
 

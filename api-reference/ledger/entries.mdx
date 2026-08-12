@@ -1,64 +1,62 @@
 ---
 title: "List Ledger Entries"
 openapi: "GET /v1/ledger/entries"
-description: "Retrieve ledger entries with optional filters for account, date range, and pagination."
+description: "Retrieve the postings that touch one ledger account, filtered by posting code and paged with limit/offset."
 ---
 
 ## Query Parameters
 
 | Parameter    | Type   | Required | Description                                                         |
 |--------------|--------|----------|---------------------------------------------------------------------|
-| `account_id` | string | No       | Filter entries to a specific ledger account (e.g., `acct_1aB2CdEfGh`). |
-| `start_date` | string | No       | ISO 8601 date for the beginning of the range (inclusive).           |
-| `end_date`   | string | No       | ISO 8601 date for the end of the range (inclusive).                 |
-| `limit`      | int    | No       | Maximum number of entries to return. Defaults to `50`, max `200`.   |
+| `account_id` | string (uuid) | **Yes** | The ledger account whose postings to list — rows where it is either the debit or the credit side. |
+| `code`       | int    | No       | Filter to one posting code (e.g. `1` invoice, `3` payment, `6` tax reclass). |
+| `limit`      | int    | No       | Maximum number of entries to return. Defaults to `50`.              |
 | `offset`     | int    | No       | Number of entries to skip for pagination. Defaults to `0`.          |
 
-Each ledger entry represents a double-entry transaction with one or more debit and credit movements. All amounts are expressed in the smallest currency unit.
+Each row is exactly one balanced transfer — a single debit account, a single
+credit account, and one amount in minor currency units. A business event that
+touches several accounts (an invoice with tax, say) posts several rows
+sharing the same `reference_id`. There is no date-range filter; results come
+back newest first, so page by `limit`/`offset`.
 
 ## Example Request
 
 ```bash
-curl -X GET "https://api.recurso.io/v1/ledger/entries?account_id=acct_1aB2CdEfGh&start_date=2026-06-01&end_date=2026-06-30&limit=2" \
-  -H "Authorization: Bearer sk_live_26PHem9AhJZvU..." \
-  -H "Content-Type: application/json"
+curl "https://api.recurso.dev/v1/ledger/entries?account_id=e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19&code=3&limit=2" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ## Response
 
 ```json
 {
-  "object": "list",
   "data": [
     {
-      "id": "txn_4kR7LmNpXs",
-      "description": "Invoice inv_9wXpKfMnBv finalized",
-      "posted_at": "2026-06-15T08:00:00Z",
-      "entries": [
-        {
-          "debit_account_id": "acct_1aB2CdEfGh",
-          "credit_account_id": "acct_3iJ4KlMnOp",
-          "amount": 26705,
-          "currency": "usd"
-        }
-      ]
+      "id": "4c7e1a93-5b2d-4f6e-8a0c-9d3f5b7e1a24",
+      "debit_account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+      "credit_account_id": "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+      "amount": 499900,
+      "ledger_id": 1,
+      "code": 3,
+      "reference_id": "7d2b9f41-8c3e-4a5d-b6f0-1e4a7c9d2b58",
+      "description": "Payment received",
+      "created_at": "2026-06-16T14:30:00Z"
     },
     {
-      "id": "txn_8mT2QvWrYu",
-      "description": "Payment pmt_5nU3RwXsZv applied",
-      "posted_at": "2026-06-16T14:30:00Z",
-      "entries": [
-        {
-          "debit_account_id": "acct_3iJ4KlMnOp",
-          "credit_account_id": "acct_5qR6StUvWx",
-          "amount": 26705,
-          "currency": "usd"
-        }
-      ]
+      "id": "9a2d5e71-3c8b-4f0e-a6d4-2b7f9c1e5a38",
+      "debit_account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+      "credit_account_id": "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+      "amount": 26705,
+      "ledger_id": 1,
+      "code": 3,
+      "reference_id": "5f8c2b96-1d4e-4a7c-9b3f-6e0a8d2c4f17",
+      "description": "Payment received",
+      "created_at": "2026-06-15T08:00:00Z"
     }
-  ],
-  "total_count": 47,
-  "limit": 2,
-  "offset": 0
+  ]
 }
 ```
+
+`reference_id` is the business object that caused the posting — the invoice
+for codes 1 and 6, the payment's invoice for code 3, the credit note or
+wallet transaction for the credit and wallet codes.

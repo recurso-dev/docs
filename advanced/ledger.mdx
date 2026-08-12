@@ -45,11 +45,15 @@ Recurso provisions the following accounts automatically for each tenant:
 |-------------|------|------|---------|
 | `1000` | Cash | `asset` | Funds received from payments |
 | `1100` | Accounts Receivable | `asset` | Outstanding invoice amounts |
-| `4000` | Revenue | `revenue` | Recognized subscription and charge revenue |
-| `2100` | Deferred Revenue | `liability` | Prepaid revenue not yet recognized |
-| `5000` | Refunds | `expense` | Refund amounts issued to customers |
+| `1200` | TDS Receivable | `asset` | Tax deducted at source by customers (India), recoverable |
+| `2100` | Deferred Revenue | `liability` | Billed subscription revenue not yet earned |
 | `2200` | Tax Payable | `liability` | Collected tax awaiting remittance |
-| `5100` | Credits & Adjustments | `expense` | Coupons, discounts, and issued/expired account credit |
+| `2300` | Customer Credit | `liability` | Account credit and wallet balance owed to customers |
+| `4000` | Revenue | `revenue` | One-off charges, earned immediately |
+| `4100` | Recognized Revenue | `revenue` | Subscription revenue earned on schedule out of Deferred |
+| `5000` | Refunds | `expense` | Refund amounts issued to customers |
+| `5100` | Credits & Adjustments | `expense` | Cost of issued/expired account credit |
+| `5200` | Bad Debt Expense | `expense` | Recognized revenue written off as uncollectible |
 
 <Info>
 Account codes follow standard chart-of-accounts conventions. Assets start with `1xxx`, liabilities with `2xxx`, revenue with `4xxx`, and expenses with `5xxx`.
@@ -94,12 +98,17 @@ flowchart LR
 
 ### Revenue Recognized
 
-As the subscription period elapses, deferred revenue is recognized:
+As the subscription period elapses, the scheduler earns deferred revenue
+month by month:
 
 ```
 Debit   2100 (Deferred Revenue)      ₹4,999.00
-Credit  4000 (Revenue)               ₹4,999.00
+Credit  4100 (Recognized Revenue)    ₹4,999.00
 ```
+
+One-off (non-subscription) invoices skip deferral entirely — their Code-1
+entry credits `4000 Revenue` directly, because the charge is earned the
+moment it is billed.
 
 ### Refund Issued
 
@@ -112,21 +121,23 @@ Credit  1000 (Cash)                  ₹4,999.00
 
 ### Tax Collected
 
-When an invoice includes tax:
+The invoice entry (Code 1) posts the GROSS total to Accounts Receivable, so
+the tax portion starts inside Deferred Revenue. A separate reclass entry
+(Code 6) moves it to its own liability — note it debits Deferred, **not**
+AR, which already carries the gross amount:
 
 ```
-Debit   1100 (Accounts Receivable)   ₹899.82
+Debit   2100 (Deferred Revenue)      ₹899.82
 Credit  2200 (Tax Payable)           ₹899.82
 ```
 
-### Discount Applied
+(For a one-off invoice the reclass debits `4000 Revenue` instead.)
 
-When a coupon or discount is applied to an invoice:
+### Discounts
 
-```
-Debit   5100 (Credits & Adjustments) ₹500.00
-Credit  1100 (Accounts Receivable)   ₹500.00
-```
+Discounts do not post their own entry. A coupon reduces the invoice total
+before Code 1 posts, so the ledger simply records the smaller gross amount —
+there is nothing separate to reclass.
 
 ## Querying the Ledger
 
@@ -136,36 +147,27 @@ Retrieve all ledger accounts and their current balances.
 
 <CodeGroup>
 ```typescript TypeScript
-const accounts = await recurso.ledger.accounts.list();
+const accounts = await recurso.ledger.accounts();
 
 // Response
 {
   data: [
     {
-      id: "lacc_abc123",
-      tenant_id: "ten_xyz",
-      code: "1000",
+      id: "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+      tenant_id: "b7d91c25-4e8a-4f3b-a6d2-9c0e1f5a7b83",
+      code: 1000,
       name: "Cash",
       type: "asset",
       balance: 2450000,
       currency: "INR"
     },
     {
-      id: "lacc_def456",
-      tenant_id: "ten_xyz",
-      code: "1100",
+      id: "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+      tenant_id: "b7d91c25-4e8a-4f3b-a6d2-9c0e1f5a7b83",
+      code: 1100,
       name: "Accounts Receivable",
       type: "asset",
       balance: 875000,
-      currency: "INR"
-    },
-    {
-      id: "lacc_ghi789",
-      tenant_id: "ten_xyz",
-      code: "4000",
-      name: "Revenue",
-      type: "revenue",
-      balance: 1250000,
       currency: "INR"
     }
   ]
@@ -180,41 +182,38 @@ curl https://api.recurso.dev/v1/ledger/accounts \
 
 ### List Journal Entries
 
-Query journal entries with optional filters for account, date range, and reference.
+Query the postings that touch one account. `account_id` is **required**;
+filter by posting `code` and page with `limit`/`offset`. Each row is one
+balanced transfer — a single debit account, a single credit account, one
+amount:
 
 <CodeGroup>
 ```typescript TypeScript
-const entries = await recurso.ledger.entries.list({
-  account_id: "lacc_abc123",
-  start_date: "2025-01-01",
-  end_date: "2025-01-31"
+const entries = await recurso.ledger.entries({
+  account_id: "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+  code: 3, // optional: only payment postings
 });
 
 // Response
 {
   data: [
     {
-      id: "ltxn_abc123",
-      tenant_id: "ten_xyz",
-      entries: [
-        {
-          debit_account_id: "lacc_abc123",
-          credit_account_id: "lacc_def456",
-          amount: 499900,
-          currency: "INR"
-        }
-      ],
-      description: "Payment received for inv_m8k29x",
-      reference_type: "payment",
-      reference_id: "pay_r4t78p",
-      created_at: "2025-01-15T10:30:00Z"
+      id: "4c7e1a93-5b2d-4f6e-8a0c-9d3f5b7e1a24",
+      debit_account_id: "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+      credit_account_id: "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+      amount: 499900,
+      ledger_id: 1,
+      code: 3,
+      reference_id: "7d2b9f41-8c3e-4a5d-b6f0-1e4a7c9d2b58",
+      description: "Payment received",
+      created_at: "2026-01-15T10:30:00Z"
     }
   ]
 }
 ```
 
 ```bash cURL
-curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_abc123&start_date=2025-01-01&end_date=2025-01-31" \
+curl "https://api.recurso.dev/v1/ledger/entries?account_id=e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19&code=3&limit=50" \
   -H "Authorization: Bearer $API_KEY"
 ```
 </CodeGroup>
@@ -223,17 +222,21 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_abc123&start_dat
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `account_id` | `string` | Filter entries involving a specific account |
-| `start_date` | `string` | ISO 8601 date, inclusive lower bound |
-| `end_date` | `string` | ISO 8601 date, inclusive upper bound |
+| `account_id` | `string (uuid)` | **Required.** The account whose postings to list (debit or credit side) |
+| `code` | `integer` | Optional posting-code filter (e.g. `1` invoice, `3` payment, `6` tax reclass) |
+| `limit` / `offset` | `integer` | Standard paging |
+
+`reference_id` is the business object that caused the posting (invoice,
+payment, credit note, wallet transaction, ...); there is no date-range
+filter — page through by `created_at` order instead.
 
 ### LedgerAccount Object
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `string` | Unique identifier (prefixed `lacc_`) |
-| `tenant_id` | `string` | Tenant this account belongs to |
-| `code` | `string` | Numeric account code (e.g., `1000`) |
+| `id` | `string (uuid)` | Unique identifier |
+| `tenant_id` | `string (uuid)` | Tenant this account belongs to |
+| `code` | `integer` | Numeric account code (e.g., `1000`) |
 | `name` | `string` | Human-readable account name |
 | `type` | `string` | One of `asset`, `liability`, `equity`, `revenue`, `expense` |
 | `balance` | `integer` | Current balance in minor units |
@@ -243,17 +246,20 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_abc123&start_dat
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | `string` | Unique identifier (prefixed `ltxn_`) |
-| `tenant_id` | `string` | Tenant this transaction belongs to |
-| `entries` | `array` | Array of entry lines (debit/credit pairs) |
-| `entries[].debit_account_id` | `string` | Account being debited |
-| `entries[].credit_account_id` | `string` | Account being credited |
-| `entries[].amount` | `integer` | Amount in minor currency units |
-| `entries[].currency` | `string` | ISO 4217 currency code |
-| `description` | `string` | Human-readable description of the transaction |
-| `reference_type` | `string` | Source object type (e.g., `payment`, `invoice`, `refund`) |
-| `reference_id` | `string` | ID of the source object |
+| `id` | `string (uuid)` | Unique identifier |
+| `debit_account_id` | `string (uuid)` | Account being debited |
+| `credit_account_id` | `string (uuid)` | Account being credited |
+| `amount` | `integer` | Amount in minor currency units |
+| `ledger_id` | `integer` | The entity's ledger (multi-entity books) |
+| `code` | `integer` | Posting code — what kind of event produced this row |
+| `reference_id` | `string (uuid)` | The business object that caused the posting |
+| `description` | `string` | Human-readable description |
 | `created_at` | `string` | ISO 8601 timestamp |
+
+Every transaction is exactly one debit and one credit — there is no
+multi-line `entries[]` array. A business event that touches several accounts
+(an invoice with tax, say) posts several rows sharing the same
+`reference_id`.
 
 ## TigerBeetle Backend
 
@@ -268,12 +274,10 @@ For high-throughput environments, Recurso supports an optional [TigerBeetle](htt
 TigerBeetle is optional. The default PostgreSQL-backed ledger handles most workloads. Consider TigerBeetle if you process more than 10,000 transactions per minute or need sub-millisecond ledger writes.
 </Tip>
 
-To enable TigerBeetle, set the following environment variables:
+To enable TigerBeetle, set its address (unset = Postgres only):
 
 ```bash .env
-LEDGER_BACKEND=tigerbeetle
-TIGERBEETLE_ADDRESSES=127.0.0.1:3001
-TIGERBEETLE_CLUSTER_ID=0
+TIGERBEETLE_ADDRESS=127.0.0.1:3001
 ```
 
 Every posting is **dual-written**: PostgreSQL is written first and is always
@@ -337,7 +341,19 @@ Two passes run:
 | `invoice_amount_mismatch` | Billing ↔ Postgres | Invoice postings do not sum to the invoice total |
 | `missing_payment_transaction` | Billing ↔ Postgres | A paid invoice has no payment posting |
 | `payment_amount_mismatch` | Billing ↔ Postgres | Payment postings do not sum to the amount paid |
+| `missing_credit_note_transaction` | Billing ↔ Postgres | An issued adjustment credit note has no issuance posting |
+| `missing_credit_application_transaction` | Billing ↔ Postgres | An applied credit has no application posting |
+| `credit_application_amount_mismatch` | Billing ↔ Postgres | Credit-application postings do not sum to the applied amount |
+| `missing_write_off_transaction` | Billing ↔ Postgres | A written-off invoice has no write-off posting |
+| `write_off_amount_mismatch` | Billing ↔ Postgres | Write-off postings do not sum to the written-off amount |
+| `missing_tax_transaction` | Billing ↔ Postgres | A taxed invoice has no tax-reclass posting |
+| `tax_amount_mismatch` | Billing ↔ Postgres | Tax postings do not sum to the invoice's tax |
 | `orphaned_transaction` | Billing ↔ Postgres | A ledger posting references an invoice that does not exist |
+| `ledger_unbalanced` | Ledger integrity | Total debits ≠ total credits (double-entry violated) |
+| `abnormal_account_balance` | Ledger integrity | An account carries a balance with the wrong sign |
+| `deferred_below_scheduled_revenue` | Ledger integrity | Deferred Revenue is lower than the recognition still scheduled against it (per entity) |
+| `recognized_exceeds_invoice` | Ledger integrity | A schedule recognized more than its invoice ever deferred |
+| `customer_credit_liability_mismatch` | Ledger integrity | Wallets + spendable credit notes ≠ the Customer Credit account balance |
 | `missing_in_tigerbeetle` | Postgres ↔ TigerBeetle | A Postgres ledger transaction has no TigerBeetle transfer |
 | `missing_in_postgres` | Postgres ↔ TigerBeetle | A TigerBeetle transfer has no Postgres ledger transaction |
 | `tb_amount_mismatch` | Postgres ↔ TigerBeetle | Same transaction ID, different amounts |
