@@ -161,7 +161,7 @@ Report usage events throughout the billing period. The `POST /v1/usage/events` e
 </ParamField>
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 await recurso.usage.record({
   subscription_id: 'sub_xyz',
   customer_id: 'cust_abc123',
@@ -426,7 +426,7 @@ an arbitrary window — the endpoint behind usage charts. Scope by
 dimension. The window defaults to the last 30 days.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const chart = await recurso.usage.query({
   subscription_id: 'sub_xyz',
   dimension: 'api_calls',

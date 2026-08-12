@@ -182,7 +182,7 @@ Use the ledger API to retrieve recognition entries for reporting.
 ### Deferred Revenue Balance
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const accounts = await recurso.ledger.accounts.list();
 const deferred = accounts.data.find(a => a.code === "2100");
 
@@ -201,7 +201,7 @@ curl https://api.recurso.dev/v1/ledger/accounts \
 ### Monthly Recognition Entries
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 // Find the Recognized Revenue (4100) account, then list its postings.
 // code 2 = revenue-recognition postings; page with limit/offset.
 const { data: accounts } = await recurso.ledger.accounts();

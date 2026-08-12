@@ -58,7 +58,7 @@ stateDiagram-v2
 The buyer specifies the plan, recipient email, and subscription duration. Recurso charges the buyer immediately and generates a gift code.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const gift = await recurso.gifts.purchase({
   buyer_customer_id: 'cust_abc123',
   plan_id: 'plan_pro',
@@ -102,7 +102,7 @@ The buyer is charged the full upfront cost for the gifted duration. For example,
 The recipient uses the gift code to activate their subscription. They must have (or create) a Recurso customer account.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const subscription = await recurso.gifts.redeem({
   code: 'GIFT-PRO-X7K9M2',
   recipient_customer_id: 'cust_def456'
@@ -157,7 +157,7 @@ Each gift code can only be redeemed once. Attempting to redeem an already-used c
 Retrieve all gifts with pagination.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const gifts = await recurso.gifts.list({
   page: 1,
   per_page: 20

@@ -42,7 +42,7 @@ sequenceDiagram
 Include the header on any request that creates or modifies resources:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const subscription = await recurso.subscriptions.create(
   {
     customer_id: "cust_8Tj3mKvR",
@@ -168,7 +168,7 @@ Content-Type: application/json
 The recommended retry strategy uses exponential backoff with jitter to avoid thundering-herd problems:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 async function requestWithRetry<T>(
   fn: () => Promise<T>,
   options: {

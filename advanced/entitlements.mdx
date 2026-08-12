@@ -49,7 +49,7 @@ Setting a plan's entitlements is a **full replacement** (PUT semantics):
 feature keys absent from the request are removed from the plan.
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 await recurso.entitlements.setForPlan(plan.id, [
   { feature_key: 'sso', kind: 'boolean', bool_value: true },
   { feature_key: 'api_access', kind: 'boolean', bool_value: true },
@@ -105,7 +105,7 @@ Fetch the effective set — each entry lists the `plan_ids` that contributed
 to it, so you can show *why* a customer has a feature:
 
 <CodeGroup>
-```typescript TypeScript
+```typescript Node
 const { data } = await recurso.entitlements.forCustomer(customer.id);
 ```
 
