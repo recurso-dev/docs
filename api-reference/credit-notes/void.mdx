@@ -1,0 +1,18 @@
+---
+title: "Void a Credit Note"
+openapi: "POST /v1/credit-notes/{id}/void"
+description: "Void an issued account-credit note and write off its unspent balance."
+---
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/credit-notes/6d3f9a82-4c1e-4b7d-a9f5-8e2c0b6d4a17/void \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Voiding cancels an issued **adjustment** (account-credit) note and writes
+off its **unspent** balance, posting the GL reversal. Credit the customer
+already applied stays real — only the remainder is reversed. Refund notes
+cannot be voided: the money already left through the payment gateway.
+Admins and owners only.

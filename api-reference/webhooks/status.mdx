@@ -1,0 +1,19 @@
+---
+title: "Pause or Resume a Webhook"
+openapi: "PUT /v1/webhooks/{id}/status"
+description: "Pause a webhook endpoint (deliveries stop) or resume it."
+---
+
+## Example request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/webhooks/4a7c2e91-6b3d-4f8a-9c5e-1d0b7f4a2c86/status \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "inactive" }'
+```
+
+An `inactive` endpoint receives no deliveries and is skipped by
+[redelivery](/api-reference/events/redeliver); set `active` to resume.
+Pausing is the right move while your receiver is down — events keep being
+recorded, and you can redeliver the missed ones after resuming.

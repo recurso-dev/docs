@@ -1,0 +1,18 @@
+---
+title: "Send an Invoice"
+openapi: "POST /v1/invoices/{id}/send"
+description: "Email the invoice to the customer."
+---
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/invoices/7d2b9f41-8c3e-4a5d-b6f0-1e4a7c9d2b58/send \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+(Re)sends the invoice email — the rendered invoice with a hosted **Pay
+Now** checkout link — to the customer's email on file. Invoices are also
+auto-emailed on generation; this endpoint is the on-demand resend. Returns
+`400` if the customer has no email address. Email delivery uses your SMTP
+settings — see [notifications setup](/setup/notifications).

@@ -425,6 +425,7 @@
                   "api-reference/invoices/list",
                   "api-reference/invoices/get",
                   "api-reference/invoices/pdf",
+                  "api-reference/invoices/send",
                   "api-reference/invoices/preview",
                   "api-reference/invoices/einvoice-status",
                   "api-reference/invoices/eu-einvoice",
@@ -484,7 +485,11 @@
                 "pages": [
                   "api-reference/credit-notes/create",
                   "api-reference/credit-notes/list",
-                  "api-reference/credit-notes/get"
+                  "api-reference/credit-notes/get",
+                  "api-reference/credit-notes/approve",
+                  "api-reference/credit-notes/reject",
+                  "api-reference/credit-notes/void",
+                  "api-reference/credit-notes/pdf"
                 ]
               },
               {
@@ -730,6 +735,7 @@
                   "api-reference/webhooks/create",
                   "api-reference/webhooks/list",
                   "api-reference/webhooks/delete",
+                  "api-reference/webhooks/status",
                   "api-reference/webhooks/deliveries",
                   "api-reference/webhooks/events",
                   "api-reference/webhooks/razorpay",
