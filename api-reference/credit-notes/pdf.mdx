@@ -1,0 +1,16 @@
+---
+title: "Download a Credit Note"
+openapi: "GET /v1/credit-notes/{id}/pdf"
+description: "Download a print-ready credit note document."
+---
+
+## Example request
+
+```bash
+curl -L "https://api.recurso.dev/v1/credit-notes/6d3f9a82-4c1e-4b7d-a9f5-8e2c0b6d4a17/pdf" \
+  -H "Authorization: Bearer $API_KEY" \
+  -o credit-note.pdf
+```
+
+Returns the print-ready document for the credit note — hand it to
+customers or auditors alongside the invoice it credits.

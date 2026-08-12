@@ -1,0 +1,16 @@
+---
+title: "Approve a Credit Note"
+openapi: "POST /v1/credit-notes/{id}/approve"
+description: "Approve a pending credit note so it becomes spendable (or refundable)."
+---
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/credit-notes/6d3f9a82-4c1e-4b7d-a9f5-8e2c0b6d4a17/approve \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Approval moves a `pending` note into its live state — an adjustment
+(account-credit) note becomes spendable against invoices, and its issuance
+posts to the ledger. Approving is idempotent for an already-approved note.

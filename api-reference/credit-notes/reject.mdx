@@ -1,0 +1,16 @@
+---
+title: "Reject a Credit Note"
+openapi: "POST /v1/credit-notes/{id}/reject"
+description: "Reject a pending credit note before it takes effect."
+---
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/credit-notes/6d3f9a82-4c1e-4b7d-a9f5-8e2c0b6d4a17/reject \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Rejection ends a `pending` note's lifecycle before it becomes spendable —
+nothing posts to the ledger and the customer's balance is untouched. Once a
+note is approved, use [void](/api-reference/credit-notes/void) instead.
