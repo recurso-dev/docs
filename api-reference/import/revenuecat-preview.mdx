@@ -1,0 +1,37 @@
+---
+title: "Preview a RevenueCat Import"
+openapi: "POST /v1/import/revenuecat/preview"
+description: "Dry-run a RevenueCat export — see what a commit would do, with no side effects."
+---
+
+Parses an uploaded RevenueCat export (subscribers with their subscriptions,
+and products) and returns the plan a
+[commit](/api-reference/import/revenuecat-commit) would execute — nothing is
+written. RevenueCat identifies subscribers by `app_user_id`; subscribers
+without an email surface as conflicts, because Recurso requires one.
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/revenuecat/preview \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subscribers": [
+      {
+        "app_user_id": "usr_8f2c1e846a3d4b7e",
+        "email": "maya@example.com",
+        "subscriptions": [
+          { "id": "rcsub_2b4e8a1d7c53", "product_id": "premium_monthly", "store": "app_store", "expires_at": "2026-09-01T00:00:00Z", "is_active": true, "is_trial": false }
+        ]
+      }
+    ],
+    "products": [
+      { "id": "premium_monthly", "title": "Premium Monthly", "price": 999, "currency": "USD", "period_unit": "month", "period_count": 1 }
+    ]
+  }'
+```
+
+The response is the dry-run plan: `items` (each with a kind, source id,
+label, and planned action), a `summary` of per-action counts, and
+`warnings`. Product `price` is minor units.

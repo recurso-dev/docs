@@ -1,0 +1,22 @@
+---
+title: "Delete an Entity"
+openapi: "DELETE /v1/entities/{id}"
+description: "Delete a non-primary legal entity."
+---
+
+The primary entity cannot be deleted — attempting to returns `400`.
+
+## Example request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/entities/e1a7c3f9-8b2d-4e6a-9f0c-3d5b7a1e8c42 \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example response
+
+```json
+{
+  "status": "deleted"
+}
+```

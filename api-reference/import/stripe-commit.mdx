@@ -1,0 +1,32 @@
+---
+title: "Commit a Stripe Import"
+openapi: "POST /v1/import/stripe/commit"
+description: "Import a Stripe export — customers, plans, and subscriptions — idempotently."
+---
+
+Takes the same payload as [preview](/api-reference/import/stripe-preview) and
+performs the import. Re-running is safe: already-imported Stripe ids and
+records that already exist (by email or plan code) are skipped.
+
+Subscriptions are imported in their current billing state via a direct
+insert — **no invoice, charge, or ledger entry is generated** — so Recurso
+takes over at the next renewal instead of re-billing the current cycle.
+Card payment methods are NOT imported: card data can't be migrated from a
+static export.
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/stripe/commit \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @stripe-export.json
+```
+
+The response contains the executed `plan`, a `created` map of per-kind
+counts, and a `failures` array (`kind`, `stripe_id`, `error`) — per-object
+failures are reported there rather than aborting the whole import.
+
+After committing, prove the migration with the
+[compare gate](/api-reference/import/stripe-compare) before pointing
+billing at Recurso.

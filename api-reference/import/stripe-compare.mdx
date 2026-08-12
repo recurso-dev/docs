@@ -1,0 +1,44 @@
+---
+title: "Compare a Stripe Import"
+openapi: "POST /v1/import/stripe/compare"
+description: "Compare gate — prove the Stripe migration against live data before cut-over."
+---
+
+Diffs the uploaded Stripe export (the same JSON the commit consumed) against
+the tenant's live Recurso data with zero writes. Three checks run per record:
+
+- **Coverage** — every importable source record exists in Recurso.
+- **Fidelity** — plan amount, currency, and interval; customer identity.
+- **Billing continuity** — a subscription whose `current_period_end` drifted
+  more than an hour is flagged: the double-billing / billing-gap risk.
+
+`ready: true` means zero issues. Run it after a
+[commit](/api-reference/import/stripe-commit), before pointing billing at
+Recurso. Each run is persisted as a citable
+[compare report](/api-reference/import/list-compare-reports).
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/stripe/compare \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @stripe-export.json
+```
+
+## Example response
+
+```json
+{
+  "source": "stripe",
+  "customers": { "source": 128, "matched": 128, "missing": 0 },
+  "plans": { "source": 6, "matched": 6, "missing": 0 },
+  "subscriptions": { "source": 117, "matched": 117, "missing": 0 },
+  "issues": [],
+  "ready": true,
+  "generated_at": "2026-08-12T10:30:00Z"
+}
+```
+
+Each entry in `issues` carries `kind`, `external_id`, `field`, `source`
+(the export's value), and `recurso` (the live value).

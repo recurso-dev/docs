@@ -1,0 +1,34 @@
+---
+title: "Update an Entity"
+openapi: "PUT /v1/entities/{id}"
+description: "Update a legal entity's name, legal name, invoice prefix, or country."
+---
+
+Takes the same body as [create](/api-reference/entities/create). The entity's
+ledger id and invoice sequence are system-managed and cannot be changed here.
+
+## Request body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | Display name. |
+| `legal_name` | string | No | Registered legal name. |
+| `invoice_prefix` | string | No | Prefix for this entity's invoice series. |
+| `country_code` | string | No | ISO 3166-1 alpha-2. `country` is accepted as an alias; `country_code` wins if both are sent. |
+
+## Example request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/entities/e1a7c3f9-8b2d-4e6a-9f0c-3d5b7a1e8c42 \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "ACME US",
+    "legal_name": "ACME North America Inc.",
+    "invoice_prefix": "ACME-US",
+    "country_code": "US"
+  }'
+```
+
+The updated entity comes back in the standard `data` envelope — same shape
+as [Get an Entity](/api-reference/entities/get).

@@ -1,0 +1,20 @@
+---
+title: "Get a Compare Report"
+openapi: "GET /v1/import/compare-reports/{id}"
+description: "Fetch one stored Compare run with its full report."
+---
+
+Returns the persisted run — including the full compare report the original
+run produced (coverage counts, issues, and the `ready` verdict) — in the
+standard `data` envelope.
+
+## Example request
+
+```bash
+curl https://api.recurso.dev/v1/import/compare-reports/b6d2f8a4-9c1e-4b3a-8e7f-5a2d9c0b6f14 \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+A missing or foreign ID returns `404`. For a shareable, print-ready version
+of the same run, use the
+[document endpoint](/api-reference/import/compare-report-document).

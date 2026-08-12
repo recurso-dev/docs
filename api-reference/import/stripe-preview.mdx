@@ -1,0 +1,52 @@
+---
+title: "Preview a Stripe Import"
+openapi: "POST /v1/import/stripe/preview"
+description: "Dry-run a Stripe export — see exactly what a commit would do, with no side effects."
+---
+
+Parses an uploaded Stripe export (customers, products, prices, subscriptions,
+payment methods) and returns a plan describing what a
+[commit](/api-reference/import/stripe-commit) would `create`, `link_existing`,
+`skip_already_imported`, mark as a `conflict`, or refuse as `unsupported` —
+nothing is written. Existing customers are matched by email and linked rather
+than duplicated. Amounts are minor units, as in Stripe.
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/stripe/preview \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customers": [
+      { "id": "cus_QxT4m2Kd9Lp0Ab", "email": "priya@example.com", "name": "Priya Sharma", "currency": "usd" }
+    ],
+    "products": [
+      { "id": "prod_R2kY8wNv5Xc1Qe", "name": "Pro", "active": true }
+    ],
+    "prices": [
+      { "id": "price_S7hJ3pMz6Wd2Rf", "product": "prod_R2kY8wNv5Xc1Qe", "unit_amount": 2900, "currency": "usd", "active": true, "recurring": { "interval": "month", "interval_count": 1 } }
+    ],
+    "subscriptions": [
+      { "id": "sub_T9gK5qLx7Ye3Sh", "customer": "cus_QxT4m2Kd9Lp0Ab", "status": "active", "current_period_start": 1754006400, "current_period_end": 1756684800, "items": { "data": [ { "price": { "id": "price_S7hJ3pMz6Wd2Rf" } } ] } }
+    ],
+    "payment_methods": []
+  }'
+```
+
+## Example response
+
+```json
+{
+  "items": [
+    { "kind": "customer", "stripe_id": "cus_QxT4m2Kd9Lp0Ab", "label": "Priya Sharma <priya@example.com>", "action": "create", "detail": "" },
+    { "kind": "plan", "stripe_id": "price_S7hJ3pMz6Wd2Rf", "label": "Pro — 2900 usd / month", "action": "create", "detail": "" },
+    { "kind": "subscription", "stripe_id": "sub_T9gK5qLx7Ye3Sh", "label": "active", "action": "create", "detail": "" }
+  ],
+  "summary": { "create": 3 },
+  "warnings": []
+}
+```
+
+Run this until the plan looks right, then send the same payload to
+[commit](/api-reference/import/stripe-commit).

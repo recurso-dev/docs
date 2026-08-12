@@ -1,0 +1,36 @@
+---
+title: "List Compare Reports"
+openapi: "GET /v1/import/compare-reports"
+description: "List every stored migration Compare run, newest first."
+---
+
+Every Compare run (Stripe, Chargebee, or RevenueCat) is persisted — each one
+a citable receipt that a migration was proven before cut-over. `limit`
+defaults to 50, capped at 200.
+
+## Example request
+
+```bash
+curl "https://api.recurso.dev/v1/import/compare-reports?limit=10" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example response
+
+```json
+{
+  "data": [
+    {
+      "id": "b6d2f8a4-9c1e-4b3a-8e7f-5a2d9c0b6f14",
+      "source": "stripe",
+      "ready": true,
+      "generated_at": "2026-08-12T10:30:00Z"
+    }
+  ]
+}
+```
+
+Fetch a run's full report with
+[Get a Compare Report](/api-reference/import/get-compare-report), or a
+printable receipt with
+[its document endpoint](/api-reference/import/compare-report-document).
