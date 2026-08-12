@@ -8,14 +8,16 @@ description: "Retrieve a list of plans"
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `active` | boolean | Filter by active status |
+| `q` | string | Search by plan name or code |
+| `currency` | string | Keep plans that have a price in this currency (e.g. `USD`) |
+| `interval_unit` | string | Filter by billing interval unit (e.g. `month`, `year`) |
 | `limit` | integer | Max results (default: 50, capped at 1000) |
-| `offset` | integer | Pagination offset |
+| `page` | integer | Page number (1-based) |
 
 ## Example Request
 
 ```bash
-curl https://api.recurso.dev/v1/plans?active=true&limit=20 \
+curl "https://api.recurso.dev/v1/plans?currency=USD&interval_unit=month" \
   -H "Authorization: Bearer $API_KEY"
 ```
 

@@ -8,16 +8,17 @@ description: "Retrieve a list of subscriptions"
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `customer_id` | string | Filter by customer |
-| `status` | string | Filter by status |
-| `plan_id` | string | Filter by plan |
+| `status` | string | Filter by status (`active`, `trialing`, `paused`, `past_due`, `canceled`) |
+| `plan_id` | string (uuid) | Filter to one plan's subscriptions |
+| `started_after` | string (RFC 3339) | Keep subscriptions whose current period started at or after this instant |
+| `q` | string | Search by customer name, email, or subscription id |
 | `limit` | integer | Max results (default: 50, capped at 1000) |
-| `offset` | integer | Pagination offset |
+| `page` | integer | Page number (1-based) |
 
 ## Example Request
 
 ```bash
-curl "https://api.recurso.dev/v1/subscriptions?customer_id=cust_abc&status=active" \
+curl "https://api.recurso.dev/v1/subscriptions?status=active&plan_id=8f14e45f-ceea-4e07-8c65-4c11a3f2fd60" \
   -H "Authorization: Bearer $API_KEY"
 ```
 
