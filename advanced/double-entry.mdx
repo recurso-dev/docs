@@ -79,28 +79,28 @@ buckets — amounts in minor units:
 
 **1. Invoice issued** (Code 1 — gross, ₹5,898.82):
 
-```
+```text
 Debit   1100 Accounts Receivable   589882    "the customer owes us"
 Credit  2100 Deferred Revenue      589882    "we owe them a month of service"
 ```
 
 **2. Tax carved out** (Code 6 — the GST isn't yours; move it to its own debt):
 
-```
+```text
 Debit   2100 Deferred Revenue       89982
 Credit  2200 Tax Payable            89982    "we owe the government this"
 ```
 
 **3. Payment received** (Code 3):
 
-```
+```text
 Debit   1000 Cash                  589882    "money arrived"
 Credit  1100 Accounts Receivable   589882    "they no longer owe us"
 ```
 
 **4. Revenue recognized** (Code 2 — the month elapses; you earned it):
 
-```
+```text
 Debit   2100 Deferred Revenue      499900
 Credit  4100 Recognized Revenue    499900    "now it's really income"
 ```

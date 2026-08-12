@@ -54,7 +54,7 @@ curl -X POST https://api.recurso.dev/v1/dunning-campaigns/{campaign_id}/steps \
 
 ### First Reminder (Day 1)
 
-```
+```text
 Subject: Action Required: Payment Failed
 
 Hi {CustomerName},
@@ -72,7 +72,7 @@ Please update your payment method to avoid service interruption.
 
 ### Second Reminder (Day 3)
 
-```
+```text
 Subject: ⚠️ Payment Still Pending
 
 Your payment of {Amount} is still outstanding.
@@ -85,7 +85,7 @@ To avoid service interruption on {SuspensionDate}:
 
 ### Final Notice (Day 7)
 
-```
+```text
 Subject: 🚨 Final Notice: Service Suspension
 
 This is your final notice before service suspension.

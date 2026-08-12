@@ -55,7 +55,7 @@ flowchart TD
   <Step title="Add Razorpay credentials">
     Configure the following in your Recurso tenant settings or environment:
 
-    ```
+    ```text
     RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxx
     RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxx
     ```
@@ -63,7 +63,7 @@ flowchart TD
   <Step title="Configure webhook endpoint">
     In the Razorpay Dashboard, add a webhook pointing to your Recurso instance:
 
-    ```
+    ```text
     URL: https://api.recurso.dev/webhooks/razorpay
     Events: payment.authorized, payment.captured, payment.failed, refund.created, subscription.charged
     ```
@@ -116,7 +116,7 @@ flowchart TD
   <Step title="Add Stripe credentials">
     Configure the following in your Recurso tenant settings or environment:
 
-    ```
+    ```text
     STRIPE_PUBLISHABLE_KEY=pk_live_xxxxxxxxxx
     STRIPE_SECRET_KEY=sk_live_xxxxxxxxxx
     ```
@@ -124,7 +124,7 @@ flowchart TD
   <Step title="Configure webhook endpoint">
     In the Stripe Dashboard, add a webhook endpoint:
 
-    ```
+    ```text
     URL: https://api.recurso.dev/webhooks/stripe
     Events: payment_intent.succeeded, payment_intent.payment_failed, charge.refunded, invoice.payment_succeeded, customer.subscription.updated
     ```

@@ -68,7 +68,7 @@ Recurso automatically creates journal entries when financial events occur. You n
 
 When an invoice is finalized, Recurso records the amount owed:
 
-```
+```text
 Debit   1100 (Accounts Receivable)   ₹4,999.00
 Credit  2100 (Deferred Revenue)      ₹4,999.00
 ```
@@ -77,7 +77,7 @@ Credit  2100 (Deferred Revenue)      ₹4,999.00
 
 When the customer pays the invoice:
 
-```
+```text
 Debit   1000 (Cash)                  ₹4,999.00
 Credit  1100 (Accounts Receivable)   ₹4,999.00
 ```
@@ -102,7 +102,7 @@ flowchart LR
 As the subscription period elapses, the scheduler earns deferred revenue
 month by month:
 
-```
+```text
 Debit   2100 (Deferred Revenue)      ₹4,999.00
 Credit  4100 (Recognized Revenue)    ₹4,999.00
 ```
@@ -115,7 +115,7 @@ moment it is billed.
 
 When a refund is processed:
 
-```
+```text
 Debit   5000 (Refunds)               ₹4,999.00
 Credit  1000 (Cash)                  ₹4,999.00
 ```
@@ -127,7 +127,7 @@ the tax portion starts inside Deferred Revenue. A separate reclass entry
 (Code 6) moves it to its own liability — note it debits Deferred, **not**
 AR, which already carries the gross amount:
 
-```
+```text
 Debit   2100 (Deferred Revenue)      ₹899.82
 Credit  2200 (Tax Payable)           ₹899.82
 ```
