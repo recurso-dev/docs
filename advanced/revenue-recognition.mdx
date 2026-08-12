@@ -148,8 +148,8 @@ The `GET /v1/finance/revrec/report` endpoint provides a consolidated revenue rec
 ```bash cURL
 curl -G https://api.recurso.dev/v1/finance/revrec/report \
   -H "Authorization: Bearer $API_KEY" \
-  -d start_date=2026-01-01 \
-  -d end_date=2026-06-30
+  -d month=6 \
+  -d year=2026
 ```
 </CodeGroup>
 
@@ -157,10 +157,10 @@ curl -G https://api.recurso.dev/v1/finance/revrec/report \
 
 | Field | Description |
 |-------|-------------|
-| `recognized_amount` | Revenue that has been earned and moved from Deferred Revenue (2100) to Revenue (4000) during the period |
-| `deferred_amount` | Revenue collected but not yet earned — still sitting in Deferred Revenue (2100) at the end of the period |
-| `total_recognized_amount` | Sum of `recognized_amount` across all subscriptions |
-| `total_deferred_amount` | Sum of `deferred_amount` across all subscriptions |
+| `recognized_amount` | Revenue earned in the requested month — moved from Deferred Revenue (2100) to Recognized Revenue (4100), in minor units |
+| `deferred_balance` | Revenue billed but not yet earned — still sitting in Deferred Revenue (2100), summed across currencies |
+| `upcoming` | The still-deferred balance grouped by the future month it is scheduled to recognize |
+| `by_currency` | The deferred balance split by each schedule's own currency |
 
 ## Querying Revenue Data
 

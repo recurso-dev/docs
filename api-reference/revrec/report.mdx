@@ -25,20 +25,29 @@ Returns the revenue recognition summary for the requested period. All monetary v
 ```json
 {
   "data": {
-    "recognized_amount": 4500000,
-    "deferred_amount": 1200000,
     "month": 6,
-    "year": 2026
+    "year": 2026,
+    "recognized_amount": 4500000,
+    "deferred_balance": 1200000,
+    "upcoming": [
+      { "month": 7, "year": 2026, "amount": 450000 },
+      { "month": 8, "year": 2026, "amount": 450000 }
+    ],
+    "by_currency": [
+      { "currency": "USD", "deferred": 1200000 }
+    ]
   }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `recognized_amount` | integer | Total revenue recognized in the period (in cents). |
-| `deferred_amount` | integer | Total deferred revenue still pending recognition (in cents). |
 | `month` | integer | The requested month. |
 | `year` | integer | The requested year. |
+| `recognized_amount` | integer | Revenue recognized in the period, in minor units. |
+| `deferred_balance` | integer | All still-pending recognition, in minor units (summed across currencies — see `by_currency`). |
+| `upcoming` | array | The still-pending balance grouped by the month it will recognize. |
+| `by_currency` | array | Deferred balance split by the schedule's currency. |
 
 <Tip>
 For a conceptual overview of how Recurso handles revenue recognition schedules and

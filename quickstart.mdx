@@ -44,10 +44,7 @@ Choose your preferred setup method:
     # Set up environment
     cp .env.example .env
 
-    # Run migrations
-    make migrate
-
-    # Start the server
+    # Start the server — migrations run automatically at boot
     make run
     ```
   </Tab>
@@ -79,7 +76,6 @@ DATABASE_URL=postgres://user:pass@localhost:5432/recurso
 
 # API
 PORT=8080
-API_KEY_SECRET=your-secret-key
 
 # Payment Gateways (optional)
 RAZORPAY_KEY_ID=rzp_test_xxx

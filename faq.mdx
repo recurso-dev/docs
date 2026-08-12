@@ -139,7 +139,8 @@ honest answer is "not yet" or "partially," it says so.
 
 <AccordionGroup>
   <Accordion title="How do upgrades and migrations work?">
-    Pull the new code and run `make migrate`. Schema migrations are additive and
+    Pull the new code and restart the API — migrations run automatically at
+boot (and refuse to start on a dirty schema). They are additive and
     safe to re-apply, so re-running after an upgrade only applies what's new.
     Take a database backup before upgrading production — billing data is
     critical. The [Going to Production](/going-to-production) checklist covers
