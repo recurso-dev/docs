@@ -1,0 +1,54 @@
+---
+title: "Create an Entity"
+openapi: "POST /v1/entities"
+description: "Create a new (non-primary) legal entity."
+---
+
+The new entity's isolated ledger id and gapless invoice-number sequence are
+allocated automatically — you never manage either directly.
+
+## Request body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | Display name, e.g. `"ACME US"`. |
+| `legal_name` | string | No | Registered legal name. |
+| `invoice_prefix` | string | No | Prefix for this entity's invoice series; defaults to a slug of the name. |
+| `country_code` | string | No | ISO 3166-1 alpha-2. `country` is accepted as an alias; `country_code` wins if both are sent. |
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/entities \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "ACME US",
+    "legal_name": "ACME Inc.",
+    "invoice_prefix": "ACME-US",
+    "country_code": "US"
+  }'
+```
+
+## Example response
+
+```json
+{
+  "data": {
+    "id": "e1a7c3f9-8b2d-4e6a-9f0c-3d5b7a1e8c42",
+    "tenant_id": "7d3e9a12-5b8c-4f6a-9e2d-1c7b4a8f0e35",
+    "name": "ACME US",
+    "legal_name": "ACME Inc.",
+    "is_primary": false,
+    "tb_ledger_id": 2,
+    "invoice_prefix": "ACME-US",
+    "country_code": "US",
+    "created_at": "2026-08-12T10:00:00Z",
+    "updated_at": "2026-08-12T10:00:00Z"
+  }
+}
+```
+
+Returns `201` on success. Resources created afterwards with this entity's
+`entity_id` post to its ledger and draw from its invoice series; resources
+with a `NULL`/omitted `entity_id` stay on the primary entity.

@@ -1,0 +1,26 @@
+---
+title: "Commit a RevenueCat Import"
+openapi: "POST /v1/import/revenuecat/commit"
+description: "Import a RevenueCat export — customers, plans, and active subscriptions — idempotently."
+---
+
+Takes the same payload as [preview](/api-reference/import/revenuecat-preview)
+and performs the import: subscribers with an email become customers, products
+become plans, and active subscriptions are inserted directly — **no billing
+side effect**, so Recurso takes over at the next renewal. Re-running is safe;
+per-object failures are returned rather than aborting the import.
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/revenuecat/commit \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @revenuecat-export.json
+```
+
+The response contains the executed `plan`, a `created` map of per-kind
+counts, and a `failures` array.
+
+After committing, prove the migration with the
+[compare gate](/api-reference/import/revenuecat-compare) before cut-over.

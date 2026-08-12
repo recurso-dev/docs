@@ -1,0 +1,40 @@
+---
+title: "Compare a Chargebee Import"
+openapi: "POST /v1/import/chargebee/compare"
+description: "Compare gate — prove the Chargebee migration against live data before cut-over."
+---
+
+Diffs the uploaded Chargebee export (the same JSON the commit consumed)
+against the tenant's live Recurso data with zero writes: coverage,
+money-critical fidelity (plan price, currency, period; customer identity),
+and billing continuity — a subscription whose `current_term_end` drifted
+more than an hour is flagged as a double-billing risk.
+
+`ready: true` means zero issues. Each run is persisted as a citable
+[compare report](/api-reference/import/list-compare-reports).
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/chargebee/compare \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @chargebee-export.json
+```
+
+## Example response
+
+```json
+{
+  "source": "chargebee",
+  "customers": { "source": 74, "matched": 74, "missing": 0 },
+  "plans": { "source": 4, "matched": 4, "missing": 0 },
+  "subscriptions": { "source": 69, "matched": 69, "missing": 0 },
+  "issues": [],
+  "ready": true,
+  "generated_at": "2026-08-12T10:30:00Z"
+}
+```
+
+Each entry in `issues` carries `kind`, `external_id`, `field`, `source`
+(the export's value), and `recurso` (the live value).

@@ -1,0 +1,38 @@
+---
+title: "Compare a RevenueCat Import"
+openapi: "POST /v1/import/revenuecat/compare"
+description: "Compare gate — prove the RevenueCat migration against live data before cut-over."
+---
+
+Diffs the uploaded RevenueCat export (the same JSON the commit consumed)
+against the tenant's live Recurso data with zero writes: coverage
+(subscribers with an email, active entitlements), fidelity (product price,
+currency, period; identity), and billing continuity — an entitlement whose
+`expires_at` drifted more than an hour from the imported period end is
+flagged.
+
+`ready: true` means zero issues. Each run is persisted as a citable
+[compare report](/api-reference/import/list-compare-reports).
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/revenuecat/compare \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @revenuecat-export.json
+```
+
+## Example response
+
+```json
+{
+  "source": "revenuecat",
+  "customers": { "source": 342, "matched": 342, "missing": 0 },
+  "plans": { "source": 3, "matched": 3, "missing": 0 },
+  "subscriptions": { "source": 297, "matched": 297, "missing": 0 },
+  "issues": [],
+  "ready": true,
+  "generated_at": "2026-08-12T10:30:00Z"
+}
+```

@@ -1,0 +1,44 @@
+---
+title: "Preview a Chargebee Import"
+openapi: "POST /v1/import/chargebee/preview"
+description: "Dry-run a Chargebee export — see what a commit would do, with no side effects."
+---
+
+Parses an uploaded Chargebee export (customers, plans, subscriptions) and
+returns a plan of what a [commit](/api-reference/import/chargebee-commit)
+would `create`, `link_existing`, `skip_already_imported`, mark as a
+`conflict`, or refuse as `unsupported` — nothing is written. Existing
+customers are matched by email. Plan `price` is minor units.
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/chargebee/preview \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customers": [
+      { "id": "cbcust_16CHqzTxUm4p2N", "email": "arjun@example.com", "first_name": "Arjun", "last_name": "Mehta", "company": "Mehta Labs" }
+    ],
+    "plans": [
+      { "id": "pro-monthly", "name": "Pro Monthly", "price": 149900, "period": 1, "period_unit": "month", "currency_code": "INR", "status": "active" }
+    ],
+    "subscriptions": [
+      { "id": "cbsub_19DKrwVyWn6q3P", "customer_id": "cbcust_16CHqzTxUm4p2N", "plan_id": "pro-monthly", "status": "active", "current_term_start": 1754006400, "current_term_end": 1756684800 }
+    ]
+  }'
+```
+
+## Example response
+
+```json
+{
+  "items": [
+    { "kind": "customer", "chargebee_id": "cbcust_16CHqzTxUm4p2N", "label": "Arjun Mehta <arjun@example.com>", "action": "create", "detail": "" },
+    { "kind": "plan", "chargebee_id": "pro-monthly", "label": "Pro Monthly — 149900 INR / month", "action": "create", "detail": "" },
+    { "kind": "subscription", "chargebee_id": "cbsub_19DKrwVyWn6q3P", "label": "active", "action": "create", "detail": "" }
+  ],
+  "summary": { "create": 3 },
+  "warnings": []
+}
+```

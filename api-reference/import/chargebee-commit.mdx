@@ -1,0 +1,27 @@
+---
+title: "Commit a Chargebee Import"
+openapi: "POST /v1/import/chargebee/commit"
+description: "Import a Chargebee export — customers, plans, and subscriptions — idempotently."
+---
+
+Takes the same payload as [preview](/api-reference/import/chargebee-preview)
+and performs the import, recording an idempotency mapping for every created
+record — re-running is safe. Subscriptions are imported in their current
+billing state via a direct insert: **no invoice, charge, or ledger side
+effect**, so Recurso takes over at the next renewal.
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/import/chargebee/commit \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @chargebee-export.json
+```
+
+The response contains the executed `plan`, a `created` map of per-kind
+counts, and a `failures` array — per-object failures are reported there
+rather than aborting the whole import.
+
+After committing, prove the migration with the
+[compare gate](/api-reference/import/chargebee-compare) before cut-over.
