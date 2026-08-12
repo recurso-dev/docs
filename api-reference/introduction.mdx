@@ -76,31 +76,31 @@ curl -X POST https://api.recurso.dev/v1/customers \
 
 ## Response Format
 
-Responses are JSON with consistent structure:
+Success responses wrap the result in a `data` envelope:
 
 ```json
 {
-  "id": "cust_abc123",
-  "object": "customer",
-  "name": "Acme Corp",
-  "email": "billing@acme.com",
-  "created_at": "2024-01-15T10:30:00Z"
+  "data": {
+    "id": "cust_abc123",
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "created_at": "2026-01-15T10:30:00Z"
+  }
 }
 ```
 
 ### List Responses
 
-Collections include pagination:
+Collections wrap the array the same way — page through with `limit`/`offset`
+(there is no cursor or `has_more` flag; an empty or short page means you
+reached the end):
 
 ```json
 {
-  "object": "list",
   "data": [
-    { "id": "cust_abc", ... },
-    { "id": "cust_def", ... }
-  ],
-  "has_more": true,
-  "total_count": 150
+    { "id": "cust_abc" },
+    { "id": "cust_def" }
+  ]
 }
 ```
 
@@ -114,8 +114,11 @@ GET /v1/customers?limit=20&offset=40
 
 | Parameter | Default | Max |
 |-----------|---------|-----|
-| `limit` | 10 | 100 |
+| `limit` | 50 | varies by endpoint (most lists cap at 100–1000) |
 | `offset` | 0 | - |
+
+Pass an explicit `limit` whenever you need the full set — defaults and caps
+vary across list endpoints.
 
 ## Errors
 
@@ -171,7 +174,9 @@ X-RateLimit-Reset: 1705312800
 
 ## Idempotency
 
-For POST requests, use idempotency keys to prevent duplicate operations:
+All mutating requests (POST, PUT, PATCH, DELETE) accept an `Idempotency-Key`
+header to prevent duplicate operations — keys are scoped per tenant, method,
+and path:
 
 ```bash
 curl -X POST https://api.recurso.dev/v1/subscriptions \
