@@ -1,0 +1,52 @@
+---
+title: "Set Auto-Recharge"
+openapi: "PUT /v1/wallets/{id}/auto-recharge"
+description: "Set or clear the wallet's auto-recharge rule."
+---
+
+## Path parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The wallet ID. |
+
+## Request body
+
+Send **both** fields to enable, **both null** to disable:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `auto_recharge_threshold` | integer \| null | Yes | Recharge when the balance falls below this (minor units). |
+| `auto_recharge_amount` | integer \| null | Yes | Amount charged to the saved payment method on each recharge. |
+
+## Example request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/wallets/5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53/auto-recharge \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "auto_recharge_threshold": 1000000,
+    "auto_recharge_amount": 5000000
+  }'
+```
+
+## Example response
+
+```json
+{
+  "data": {
+    "id": "5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53",
+    "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+    "currency": "INR",
+    "balance": 3820000,
+    "auto_recharge_threshold": 1000000,
+    "auto_recharge_amount": 5000000,
+    "created_at": "2026-05-02T09:00:00Z",
+    "updated_at": "2026-08-01T12:05:00Z"
+  }
+}
+```
+
+When the balance dips below the threshold, Recurso charges the saved
+payment method off-session and records the recharge like any other top-up.
