@@ -106,6 +106,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
 
+  /metrics:
+    get:
+      operationId: getMetrics
+      tags: [System]
+      summary: Prometheus metrics
+      description: >
+        Prometheus text-format metrics: HTTP request counts + latency
+        histograms (by method/route/status) and Go runtime gauges. Optionally
+        bearer-gated via the METRICS_TOKEN env; open when unset (scrape from a
+        trusted network).
+      responses:
+        '200':
+          description: Metrics in Prometheus text exposition format.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          description: METRICS_TOKEN is set and the bearer token did not match.
+
+  /platform/metrics:
+    get:
+      operationId: getPlatformMetrics
+      tags: [System]
+      summary: Founder-only cross-tenant funnel metrics
+      description: >
+        Operator-only snapshot across ALL tenants — signups (7d/30d), activation
+        (tenants with >=1 customer), trials expiring soon, plan/billing
+        breakdowns, and recent signups. Gated by the FOUNDER_TOKEN bearer;
+        returns 404 when FOUNDER_TOKEN is unset (feature off). Never reachable
+        via tenant auth.
+      responses:
+        '200':
+          description: Cross-tenant platform metrics.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: FOUNDER_TOKEN is set and the bearer token did not match.
+        '404':
+          description: FOUNDER_TOKEN is unset — the endpoint is disabled.
+
   /version:
     get:
       operationId: getVersion
@@ -554,6 +597,16 @@ paths:
       summary: List plans
       parameters:
         - $ref: '#/components/parameters/SearchQuery'
+        - name: currency
+          in: query
+          description: Keep plans that have a price in this currency.
+          schema:
+            type: string
+        - name: interval_unit
+          in: query
+          description: Filter by billing interval unit (e.g. `month`, `year`).
+          schema:
+            type: string
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Page'
       responses:
@@ -1404,6 +1457,20 @@ paths:
           description: Filter by subscription status.
           schema:
             $ref: '#/components/schemas/SubscriptionStatus'
+        - name: plan_id
+          in: query
+          description: Filter to one plan's subscriptions.
+          schema:
+            type: string
+            format: uuid
+        - name: started_after
+          in: query
+          description: >-
+            Keep subscriptions whose current period started at or after this
+            RFC 3339 instant.
+          schema:
+            type: string
+            format: date-time
         - $ref: '#/components/parameters/SearchQuery'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Page'
@@ -2831,16 +2898,9 @@ paths:
       summary: List deliveries for a webhook endpoint
       description: Recent delivery attempts to this endpoint, newest first.
       parameters:
+        - $ref: '#/components/parameters/PathID'
         - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 500 }, description: Max rows returned (default 50, capped at 500). }
         - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip. }
-        - $ref: '#/components/parameters/PathID'
-        - $ref: '#/components/parameters/Limit'
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
         - name: status
           in: query
           description: Filter by derived delivery status.
@@ -2873,15 +2933,9 @@ paths:
       summary: List events
       description: Chronological feed of billing events emitted for this tenant.
       parameters:
+        - { name: type, in: query, schema: { type: string }, description: Filter to one event type (e.g. `invoice.paid`). }
         - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 500 }, description: Max rows returned (default 50, capped at 500). }
         - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip. }
-        - $ref: '#/components/parameters/Limit'
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
       responses:
         '200':
           description: Events for the tenant.
@@ -3818,6 +3872,40 @@ paths:
                   message:
                     type: string
                   session_token:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: verifyPortalMagicLinkPost
+      tags: [Customer Portal]
+      summary: Verify a magic link (token in body) and start a session
+      description: >-
+        Preferred over the GET form: the token travels in the request body, not
+        the URL, so it is not written to Referer headers, browser history, or
+        access logs. Exchanges the token for a 7-day portal session set as the
+        `portal_session` cookie.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Session created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
                     type: string
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -4869,9 +4957,24 @@ paths:
       description: |
         Every posted transaction for the tenant, flattened with both account
         codes/names, amount, and provenance, as a CSV download. Read-only. Pass
-        `entity_id` to scope the export to one legal entity's ledger.
+        `entity_id` to scope the export to one legal entity's ledger. Pass
+        `month` and `year` together to export a single calendar month's
+        postings (the month-end close pack's period export); omit both for the
+        full ledger.
       parameters:
         - { $ref: '#/components/parameters/EntityIdQuery' }
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         '200':
           description: General ledger as CSV.
@@ -8900,6 +9003,7 @@ paths:
   # --- Phase 3 auth: OAuth social login (Google + GitHub) ---
   /auth/oauth/providers:
     get:
+      operationId: listOAuthProviders
       tags: [Auth]
       summary: List social-login providers and whether each is enabled
       description: >
@@ -8920,6 +9024,7 @@ paths:
                     items: { $ref: '#/components/schemas/OAuthProviderStatus' }
   /auth/oauth/{provider}/start:
     get:
+      operationId: startOAuthLogin
       tags: [Auth]
       summary: Begin an OAuth login (redirect to the provider)
       description: >
@@ -8935,6 +9040,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /auth/oauth/{provider}/callback:
     get:
+      operationId: oauthCallback
       tags: [Auth]
       summary: OAuth callback (provider redirects here)
       description: >
@@ -8960,6 +9066,7 @@ paths:
   # --- Phase 3 auth: SAML SSO (per-tenant admin config + SP endpoints) ---
   /v1/gateway-connections:
     get:
+      operationId: listGatewayConnections
       tags: [Gateway Connections]
       summary: List the tenant's BYO payment-gateway connections
       description: |
@@ -8986,6 +9093,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
+      operationId: createGatewayConnection
       tags: [Gateway Connections]
       summary: Connect (or replace) a payment gateway
       description: |
@@ -9035,6 +9143,7 @@ paths:
 
   /v1/gateway-connections/{provider}:
     delete:
+      operationId: deleteGatewayConnection
       tags: [Gateway Connections]
       summary: Disconnect a payment gateway
       description: Soft-disconnects the tenant's active connection for a provider. Owner/admin only.
@@ -9057,6 +9166,7 @@ paths:
 
   /v1/gateway-connections/{provider}/webhook-secret:
     put:
+      operationId: setGatewayWebhookSecret
       tags: [Gateway Connections]
       summary: Set the webhook signing secret on the active connection
       description: |
@@ -9094,6 +9204,7 @@ paths:
 
   /v1/integration-connections:
     get:
+      operationId: listIntegrationConnections
       tags: [Integration Connections]
       summary: List the tenant's BYO tax/CRM/storage integrations
       description: |
@@ -9120,6 +9231,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
+      operationId: createIntegrationConnection
       tags: [Integration Connections]
       summary: Connect (or replace) a tax/CRM/storage integration
       description: |
@@ -9139,7 +9251,7 @@ paths:
                   enum: [tax, crm, storage]
                 provider:
                   type: string
-                  description: taxjar / avalara / hubspot / s3.
+                  description: taxjar / avalara / ziptax / hubspot / s3.
                 config:
                   type: object
                   additionalProperties:
@@ -9166,6 +9278,7 @@ paths:
 
   /v1/integration-connections/{category}/{provider}:
     delete:
+      operationId: deleteIntegrationConnection
       tags: [Integration Connections]
       summary: Disconnect a tax/CRM/storage integration
       description: Soft-disconnects the tenant's active connection. Owner/admin only.
@@ -9193,6 +9306,7 @@ paths:
 
   /v1/sso/connection:
     get:
+      operationId: getSSOConnection
       tags: [Auth]
       summary: Get the caller tenant's SAML SSO connection
       security:
@@ -9210,6 +9324,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
+      operationId: upsertSSOConnection
       tags: [Auth]
       summary: Create or update the tenant's SAML IdP configuration (owner/admin only)
       description: >
@@ -9237,6 +9352,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
     delete:
+      operationId: deleteSSOConnection
       tags: [Auth]
       summary: Delete the tenant's SAML SSO connection (owner/admin only)
       security:
@@ -9256,6 +9372,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /auth/saml/{tenantID}/metadata:
     get:
+      operationId: getSAMLMetadata
       tags: [Auth]
       summary: SP metadata XML for a tenant
       description: Returns the Service Provider metadata document (application/samlmetadata+xml). 404 when the tenant has no SSO connection.
@@ -9270,6 +9387,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /auth/saml/{tenantID}/login:
     get:
+      operationId: samlLogin
       tags: [Auth]
       summary: SP-initiated SAML login (redirect to the IdP)
       description: 302-redirects to the IdP with a SAML AuthnRequest when the tenant's connection is enabled; 404 otherwise.
@@ -9281,6 +9399,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /auth/saml/{tenantID}/acs:
     post:
+      operationId: samlACS
       tags: [Auth]
       summary: Assertion Consumer Service (IdP posts the SAMLResponse here)
       description: >

@@ -545,7 +545,8 @@
                 "group": "Ledger",
                 "pages": [
                   "api-reference/ledger/list-accounts",
-                  "api-reference/ledger/entries"
+                  "api-reference/ledger/entries",
+                  "api-reference/ledger/export"
                 ]
               },
               {
