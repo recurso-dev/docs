@@ -70,7 +70,7 @@ Uses Bayesian probability distributions to model uncertainty. Actions with less 
 
 Selects the action with the highest upper confidence bound, calculated as:
 
-```
+```text
 UCB = AverageReward + sqrt(2 * ln(totalTrials) / actionTrials)
 ```
 
@@ -80,7 +80,7 @@ Actions tried fewer times get a larger confidence bonus, ensuring underexplored 
 
 Every retry decision is made within a context. The context key captures the relevant dimensions of a payment situation:
 
-```
+```text
 currency:error_code:payment_method:amount_bucket:day_of_week:customer_age
 ```
 
@@ -114,7 +114,7 @@ currency:error_code:payment_method:amount_bucket:day_of_week:customer_age
 
 **Example context key:**
 
-```
+```text
 USD:insufficient_funds:card:medium:3:established
 ```
 
@@ -143,7 +143,7 @@ Every retry outcome is recorded and used to update the algorithm's weights.
 
 Weights are updated using an incremental averaging formula:
 
-```
+```text
 NewAverage = OldAverage + (Reward - OldAverage) / NewSampleCount
 ```
 

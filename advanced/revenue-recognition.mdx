@@ -59,7 +59,7 @@ When a subscription invoice is paid, Recurso creates a revenue recognition sched
 
 For a monthly plan at ₹4,999/month, revenue is recognized immediately at the end of the billing period because the service period matches the billing period:
 
-```
+```text
 On invoice (Jan 1):
   Debit   1100 (Accounts Receivable) ₹4,999.00
   Credit  2100 (Deferred Revenue)    ₹4,999.00
@@ -77,7 +77,7 @@ On period end (Jan 31):
 
 For an annual plan at ₹49,990/year (equivalent to ₹4,165.83/month), revenue is recognized in 12 equal installments:
 
-```
+```text
 On invoice (Jan 1):
   Debit   1100 (Accounts Receivable) ₹49,990.00
   Credit  2100 (Deferred Revenue)    ₹49,990.00
@@ -109,7 +109,7 @@ The final month absorbs any rounding difference to ensure the schedule totals ex
 
 For a quarterly plan at ₹13,499/quarter, revenue is recognized over 3 months:
 
-```
+```text
 On invoice (Jan 1):
   Debit   1100 (Accounts Receivable) ₹13,499.00
   Credit  2100 (Deferred Revenue)    ₹13,499.00
@@ -229,7 +229,7 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=<recognized-revenue-a
   <Accordion title="Mid-cycle cancellations">
     When a subscription is canceled mid-period, any remaining deferred revenue for future months is reversed:
 
-    ```
+    ```text
     Debit   5000 (Refunds)             ₹33,327.00  (money out)
     Credit  1000 (Cash)                ₹33,327.00
 
@@ -258,7 +258,7 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=<recognized-revenue-a
     A refund posts two transfers: money out, then the unearned balance
     released against the Refunds account:
 
-    ```
+    ```text
     Debit   5000 (Refunds)             ₹4,999.00
     Credit  1000 (Cash)                ₹4,999.00
 

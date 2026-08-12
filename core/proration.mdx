@@ -24,7 +24,7 @@ whole days. Each side is **truncated** (never rounded up) to a whole minor unit.
 
 For a plan change at time `t` inside a cycle running `[start, end]`:
 
-```
+```text
 total      = end − start                          (cycle length)
 remaining  = max(0, end − t)                       (time left)
 
@@ -42,7 +42,7 @@ billed now; a negative `net` becomes a credit note.
 A customer on **$20/mo** upgrades to **$50/mo** on **day 10 of a 30-day cycle**.
 Prices are stored in minor units: `$20.00 → 2000`, `$50.00 → 5000`.
 
-```
+```text
 remaining / total = 20 / 30  =  0.6667   (⅔ of the cycle left)
 
 credit  = trunc( 2000 × 20/30 )  = trunc(1333.33)  = 1333   →  $13.33
