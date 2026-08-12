@@ -15,7 +15,7 @@ See [Dunning](/dashboard/dunning) for the KPIs and arm-performance detail, and
 end-to-end flow.
 </Info>
 
-## Step 1: Make sure a gateway and email are configured
+## Prerequisites
 
 <Frame caption="Smart Dunning — recovered revenue, retries, and success rate">
   <img src="/images/setup/dunning-overview.jpg" alt="The Smart Dunning dashboard" />
@@ -26,20 +26,20 @@ Dunning acts on real payment failures and sends reminder emails, so first:
 - A [payment gateway](/setup/payment-gateway) is connected (failures come from it).
 - Email delivery is configured (reminders go out by email).
 
-## Step 2: Create a dunning campaign
+## Step 1: Create a dunning campaign
 
 A campaign is an ordered set of steps, each firing after a delay when an invoice
 is past due. In the dashboard, go to **Dunning → Campaigns → Create a campaign**,
 then add steps (delay + message). Steps escalate — a gentle nudge, then firmer
 reminders, then a final notice.
 
-## Step 3: Let smart retries do the timing
+## Step 2: Let smart retries do the timing
 
 Alongside campaigns, the smart-retry engine reschedules the actual charge attempt
 on the timing most likely to succeed for that failure type, and attributes
 recovered revenue so you can see what's working (**Dunning → Smart Dunning**).
 
-## Step 4: Watch recovery
+## Step 3: Watch recovery
 
 The Dunning dashboard shows recovered revenue by month, arm performance by
 context, and recent retry history — your proof that involuntary churn is being

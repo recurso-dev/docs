@@ -18,6 +18,12 @@ another country (e.g. India) will reject `us_bank_account` payment methods —
 see [payment gateways](/setup/payment-gateway) for connecting Stripe.
 </Info>
 
+## Prerequisites
+
+- A **US-registered** Stripe account connected — [payment gateway](/setup/payment-gateway); non-US Stripe accounts reject `us_bank_account`.
+- The [customer portal](/setup/customer-portal) set up — customers add their bank account there.
+- A [customer](/core/customers) with invoices to collect.
+
 ## Step 1: Connect a US Stripe account
 
 Set your Stripe secret key, publishable key, and webhook secret from a

@@ -13,6 +13,11 @@ their invoices — offline collection without manual reconciliation.
 Concept + webhook detail: [Virtual Accounts](/advanced/virtual-accounts).
 </Info>
 
+## Prerequisites
+
+- A connected [payment gateway](/setup/payment-gateway) that provides virtual accounts, with its webhook pointed at Recurso — the webhook drives reconciliation.
+- An existing [customer](/core/customers) to assign the account to.
+
 ## Step 1: Provision a virtual account
 
 Create a virtual account for the customer (dashboard or API). They receive the
