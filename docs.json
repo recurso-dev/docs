@@ -435,6 +435,7 @@
                 "group": "Invoices",
                 "pages": [
                   "api-reference/invoices/list",
+                  "api-reference/invoices/get",
                   "api-reference/invoices/pdf",
                   "api-reference/invoices/preview",
                   "api-reference/invoices/einvoice-status",
@@ -493,7 +494,8 @@
                 "group": "Credit Notes",
                 "pages": [
                   "api-reference/credit-notes/create",
-                  "api-reference/credit-notes/list"
+                  "api-reference/credit-notes/list",
+                  "api-reference/credit-notes/get"
                 ]
               },
               {

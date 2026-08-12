@@ -10,6 +10,7 @@ description: "Retrieve a list of subscriptions"
 |-----------|------|-------------|
 | `status` | string | Filter by status (`active`, `trialing`, `paused`, `past_due`, `canceled`) |
 | `plan_id` | string (uuid) | Filter to one plan's subscriptions |
+| `customer_id` | string (uuid) | Filter to one customer's subscriptions |
 | `started_after` | string (RFC 3339) | Keep subscriptions whose current period started at or after this instant |
 | `q` | string | Search by customer name, email, or subscription id |
 | `limit` | integer | Max results (default: 50, capped at 1000) |
