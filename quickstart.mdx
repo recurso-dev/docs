@@ -252,6 +252,18 @@ settings, auto-login, and an hourly reset.
     period, usage rates onto the same invoice, and every posting lands on
     the ledger.
     </Check>
+
+    See the first invoice it just issued:
+
+    ```bash
+    curl "http://localhost:8080/v1/invoices?subscription_id=<subscription-id>" \
+      -H "Authorization: Bearer your-api-key"
+    ```
+
+    To collect it, send the customer to the hosted checkout page at
+    `http://localhost:8080/checkout/<invoice-id>` (see
+    [Payments](/core/payments)) — or bill accrued usage immediately with
+    [`POST /v1/subscriptions/{id}/bill-usage`](/api-reference/subscriptions/bill-usage).
   </Step>
 
   <Step title="Record usage (metered pricing)">
