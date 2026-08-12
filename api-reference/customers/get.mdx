@@ -1,0 +1,16 @@
+---
+title: "Get a Customer"
+openapi: "GET /v1/customers/{id}"
+description: "Fetch one customer by ID."
+---
+
+## Example request
+
+```bash
+curl https://api.recurso.dev/v1/customers/9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01 \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Customers are tenant-scoped: a foreign or missing ID returns a flat `404`.
+The response wraps the customer in the standard `data` envelope — the full
+field list is in the schema panel on the right.

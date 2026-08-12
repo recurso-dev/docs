@@ -1,0 +1,16 @@
+---
+title: "Get a Plan"
+openapi: "GET /v1/plans/{id}"
+description: "Fetch one plan by ID, including its prices and usage charges."
+---
+
+## Example request
+
+```bash
+curl https://api.recurso.dev/v1/plans/3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14 \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+The response includes the plan's per-currency prices; amounts are minor
+units. Usage charges attached to the plan are managed separately with
+[Set Plan Charges](/api-reference/billing/set-charges).

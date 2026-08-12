@@ -1,0 +1,16 @@
+---
+title: "Get a Subscription"
+openapi: "GET /v1/subscriptions/{id}"
+description: "Fetch one subscription by ID."
+---
+
+## Example request
+
+```bash
+curl https://api.recurso.dev/v1/subscriptions/8b1f4e27-9c5a-4d3e-b8f2-6a7c9d0e1f23 \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Subscriptions are tenant-scoped: a foreign or missing ID returns a flat
+`404`. To see the invoices this subscription has produced, list them with
+[`GET /v1/invoices?subscription_id=...`](/api-reference/invoices/list).

@@ -1,0 +1,38 @@
+---
+title: "Record Usage Events (Batch)"
+openapi: "POST /v1/usage/events/batch"
+description: "Record up to 500 usage events in one call, with per-item outcomes."
+---
+
+## Example request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/usage/events/batch \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": [
+      {
+        "subscription_id": "8b1f4e27-9c5a-4d3e-b8f2-6a7c9d0e1f23",
+        "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+        "dimension": "api_calls",
+        "quantity": 1250,
+        "transaction_id": "batch-2026-08-13-000001"
+      },
+      {
+        "subscription_id": "8b1f4e27-9c5a-4d3e-b8f2-6a7c9d0e1f23",
+        "customer_id": "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+        "dimension": "api_calls",
+        "quantity": 830,
+        "transaction_id": "batch-2026-08-13-000002"
+      }
+    ]
+  }'
+```
+
+The response is **index-aligned** with the request: item N's outcome is at
+position N, so a partial failure tells you exactly which events to retry.
+Give every event a `transaction_id` — retries with the same ID are
+deduplicated, so a crashed batch can be resent whole.
+
+Batches cap at **500 events**; above that, split the batch.
