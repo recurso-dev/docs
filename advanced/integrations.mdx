@@ -9,7 +9,7 @@ description: "Payments, accounting, tax, CRM, storage, and automation around Rec
 |---|---|---|---|
 | Payments | Stripe | Stable | Dashboard (bring your own) or `STRIPE_SECRET_KEY` |
 | Payments | Razorpay + UPI AutoPay | Stable | Dashboard (bring your own) or `RAZORPAY_KEY_ID`/`_SECRET` |
-| Payments | GoCardless (SEPA/BACS bank debit) | Experimental | `GOCARDLESS_ACCESS_TOKEN` + [currency overrides](/advanced/payment-gateways#gocardless--adyen-experimental) |
+| Payments | GoCardless (SEPA/BACS bank debit) | Experimental | `GOCARDLESS_ACCESS_TOKEN` + [currency overrides](/advanced/payment-gateways#gocardless--adyen) |
 | Payments | Adyen (cards/wallets) | Experimental | `ADYEN_API_KEY`, `ADYEN_MERCHANT_ACCOUNT` |
 | Accounting | QuickBooks Online | Stable | OAuth from the dashboard |
 | Accounting | Xero | Stable | OAuth from the dashboard |
@@ -38,7 +38,7 @@ Stripe/Razorpay account. Tax providers (TaxJar/Avalara), CRM (HubSpot), storage
 
 ## Residency guarantees
 
-Under [`RESIDENCY_MODE=self_hosted`](/compliance/data-residency), SaaS
+Under [`RESIDENCY_MODE=self_hosted`](/compliance/gst-returns), SaaS
 egress — QuickBooks, Xero, NetSuite, TaxJar, Avalara, HubSpot — is hard
 disabled at construction. Payment gateways, your SMTP server, your S3
 bucket, and your webhook endpoints remain available: they are

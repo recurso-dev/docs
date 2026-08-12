@@ -32,7 +32,7 @@ flowchart TD
     E -->|Yes| F[Status: Retained]
     E -->|No| G[Step 3: Confirmation]
     G --> H[Status: Completed]
-    H --> I[Subscription Cancelled]
+    H --> I[Subscription Canceled]
     F --> J[Apply Offer to Subscription]
 ```
 
@@ -137,7 +137,7 @@ curl -X POST https://api.recurso.dev/v1/cancel-flows/sessions/cfs_session_001/su
 |--------|-------------|
 | `in_progress` | Customer is stepping through the flow |
 | `completed` | Customer confirmed cancellation |
-| `cancelled` | Customer abandoned the flow |
+| `canceled` | Customer abandoned the flow |
 | `retained` | Customer accepted a retention offer |
 
 ### Get Session

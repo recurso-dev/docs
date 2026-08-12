@@ -46,7 +46,7 @@ curl -X POST https://api.recurso.dev/v1/consents/revoke \
 
 - Revoking consent sets the `revoked_at` timestamp and updates `granted` to `false` on the most recent matching consent record.
 - If no active consent exists for the given `customer_id`, `type`, and `channel` combination, a `404` error is returned.
-- Revocation is effective immediately. Any scheduled communications for this customer on this channel will be cancelled.
+- Revocation is effective immediately. Any scheduled communications for this customer on this channel will be canceled.
 - The original consent record is preserved for audit purposes. A new event is appended to the consent history.
 
 <Warning>

@@ -116,7 +116,7 @@ Each step fires `delay_hours` after the trigger event. `POST /v1/dunning-campaig
 
 Steps execute in `step_order`, escalating from a gentle reminder to a hard
 payment wall. If the invoice is paid at any point, the campaign stops
-immediately and any remaining steps are cancelled:
+immediately and any remaining steps are canceled:
 
 ```mermaid
 flowchart LR
@@ -314,7 +314,7 @@ campaigns.
 
 <AccordionGroup>
   <Accordion title="What happens if a payment is recovered mid-campaign?">
-    The campaign stops immediately. Pending steps are cancelled and any active payment wall is deactivated automatically.
+    The campaign stops immediately. Pending steps are canceled and any active payment wall is deactivated automatically.
   </Accordion>
   <Accordion title="Can I run different campaigns for different plans?">
     Yes. Only one campaign can be the default, but you can assign specific campaigns to subscriptions or customer segments. The default is a fallback for invoices without an explicit assignment.
