@@ -1,0 +1,56 @@
+---
+title: "Get Revenue by Geography"
+openapi: "GET /v1/analytics/revenue-by-geography"
+description: "Current MRR broken down by the customer's billing country, largest first, with each country's share of total."
+---
+
+Breaks current MRR down by the customer's billing country, largest first, with each country's share of the total. Amounts are FX-normalized to the reporting currency, in minor units. Customers without a billing country fall into an `Unknown` segment.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/revenue-by-geography" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "reporting_currency": "USD",
+    "total_mrr": 4850000,
+    "segments": [
+      {
+        "key": "US",
+        "label": "United States",
+        "mrr": 2650000,
+        "subscriptions": 118,
+        "share_pct": 54.6
+      },
+      {
+        "key": "IN",
+        "label": "India",
+        "mrr": 1620000,
+        "subscriptions": 176,
+        "share_pct": 33.4
+      },
+      {
+        "key": "",
+        "label": "Unknown",
+        "mrr": 580000,
+        "subscriptions": 40,
+        "share_pct": 12.0
+      }
+    ]
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reporting_currency` | string | Currency every amount is normalized into |
+| `total_mrr` | integer | Total MRR across all countries, minor units |
+| `segments[]` | array | One entry per country, sorted by MRR descending: `key` (ISO 3166 alpha-2 code, empty for unknown), `label` (country display name or `Unknown`), `mrr` (minor units), active `subscriptions`, `share_pct` (percent of total) |

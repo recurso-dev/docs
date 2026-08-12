@@ -1,0 +1,38 @@
+---
+title: "Start Bank Account Setup"
+openapi: "POST /portal/api/payment-method/bank-setup-intent"
+description: "Start an ACH bank-account setup (Stripe Financial Connections) for the logged-in portal customer"
+---
+
+<Note>
+Portal endpoints authenticate via the `portal_session` cookie issued by [magic-link verification](/api-reference/portal/auth-verify) — not a Bearer API key. State-changing portal calls must additionally echo the `portal_csrf` cookie's value in the `X-CSRF-Token` header (double-submit CSRF).
+</Note>
+
+Creates a `us_bank_account` SetupIntent via Stripe Financial Connections for the authenticated portal customer (instant bank verification) and returns the `client_secret` the browser's `collectBankAccountForSetup` confirms, plus the publishable key. Bank data goes **browser → Stripe directly** — none of it reaches Recurso.
+
+After the browser confirms the SetupIntent, finalize the saved account with [`POST /portal/api/payment-method/confirm`](/api-reference/portal/payment-method-confirm).
+
+Returns `503` on deployments where Stripe/ACH is unavailable.
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/portal/api/payment-method/bank-setup-intent" \
+  -b "portal_session=$PORTAL_SESSION; portal_csrf=$CSRF_TOKEN" \
+  -H "X-CSRF-Token: $CSRF_TOKEN"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "client_secret": "seti_1Tra..._secret_...",
+    "publishable_key": "pk_live_..."
+  }
+}
+```
+
+<Tip>
+For card updates use [Start Card Update](/api-reference/portal/payment-method-setup-intent) instead; both flows finalize through the same [confirm endpoint](/api-reference/portal/payment-method-confirm).
+</Tip>

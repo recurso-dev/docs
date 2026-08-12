@@ -1,0 +1,42 @@
+---
+title: "Get Collections Funnel"
+openapi: "GET /v1/analytics/collections/funnel"
+description: "The failed → resolved journey of billed revenue: past due, written off, and recovered."
+---
+
+Tracks billed revenue through the collections funnel: `past_due` (still being chased), `uncollectible` (written off), and `recovered` (all-time), FX-normalized to the reporting currency, plus a recovery rate over recently concluded cases. Responses are cached for up to 5 minutes.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/collections/funnel" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "reporting_currency": "USD",
+    "past_due": { "count": 51, "amount": 655400 },
+    "uncollectible": { "count": 9, "amount": 82300 },
+    "recovered": { "count": 187, "amount": 2241800 },
+    "recovery_rate": 0.81,
+    "rate_window_days": 90,
+    "fx_excluded_currencies": []
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reporting_currency` | string | Currency every `amount` is normalized into |
+| `past_due` | object | Invoices still being chased: `count` and `amount` (minor units) |
+| `uncollectible` | object | Invoices written off: `count` and `amount` (minor units) |
+| `recovered` | object | Invoices recovered, all-time: `count` and `amount` (minor units) |
+| `recovery_rate` | number | Of cases concluded (recovered or written off) in the trailing `rate_window_days`, the fraction recovered |
+| `rate_window_days` | integer | Trailing window (days) the `recovery_rate` is computed over |
+| `fx_excluded_currencies` | array | Currencies whose amounts could not be converted into the reporting currency and are excluded from the bucket amounts (their invoices still count). Non-empty means the money figures are understated. |

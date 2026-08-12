@@ -1,0 +1,49 @@
+---
+title: "Get Dunning Timing Insights"
+openapi: "GET /v1/analytics/dunning/timing"
+description: "Historical retry success rates by hour of day and day of week, with the best-performing slots."
+---
+
+Returns historical retry success rates by hour-of-day (0–23) and day-of-week (0–6, Sunday = 0), in UTC, plus the best-performing hour and day among buckets with enough samples. This endpoint is read-only — it reports what history shows and does not change the live retry scheduler. Responses are cached for up to 5 minutes.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/dunning/timing" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "by_hour": [
+      { "bucket": 9, "total": 112, "successes": 81, "success_rate": 0.723 },
+      { "bucket": 14, "total": 96, "successes": 60, "success_rate": 0.625 },
+      { "bucket": 22, "total": 41, "successes": 19, "success_rate": 0.463 }
+    ],
+    "by_day_of_week": [
+      { "bucket": 1, "total": 203, "successes": 142, "success_rate": 0.7 },
+      { "bucket": 5, "total": 168, "successes": 99, "success_rate": 0.589 }
+    ],
+    "best_hour": 9,
+    "best_day": 1,
+    "sample_size": 1247
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `by_hour[]` | array | One entry per hour bucket: `bucket` (0–23, UTC), `total` attempts, `successes`, `success_rate` |
+| `by_day_of_week[]` | array | One entry per day bucket: `bucket` (0–6, Sunday = 0, UTC), `total`, `successes`, `success_rate` |
+| `best_hour` | integer \| null | Best-performing hour among buckets with enough samples; `null` when there is not enough data |
+| `best_day` | integer \| null | Best-performing day of week among buckets with enough samples; `null` when there is not enough data |
+| `sample_size` | integer | Total retry attempts the insights are computed from |
+
+<Tip>
+See the [dunning overview](/api-reference/analytics/dunning-overview) and [dunning weights](/api-reference/analytics/dunning-weights) endpoints for what the retry system is doing and learning right now.
+</Tip>

@@ -1,0 +1,63 @@
+---
+title: "Get MRR Waterfall"
+openapi: "GET /v1/analytics/mrr/waterfall"
+description: "MRR movement between two dates — new, expansion, contraction, churned, reactivation — plus NDR and GDR."
+---
+
+Explains MRR movement between two dates: new, expansion, contraction, churned, and reactivation MRR, plus Net and Gross Dollar Retention. Defaults to the trailing month. All amounts are in the reporting currency, minor units; `contraction` and `churned` are reported as positive magnitudes, so:
+
+```
+ending_mrr = starting_mrr + new + expansion + reactivation - contraction - churned
+```
+
+Movement is only accurate for periods after MRR snapshots began — `has_start_history` is `false` when no snapshot exists on or before the start date (then `starting_mrr` is 0 and every ending subscription counts as new).
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `start` | string (date) | No | Period start (`YYYY-MM-DD`). Defaults to one month before `end`. Must be before `end`. |
+| `end` | string (date) | No | Period end (`YYYY-MM-DD`). Defaults to today. |
+| `entity_id` | string (uuid) | No | Scope the waterfall to one legal entity (Multi-Entity Books). Omit for all entities. |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/mrr/waterfall?start=2026-07-01&end=2026-08-01" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "start_date": "2026-07-01T00:00:00Z",
+    "end_date": "2026-08-01T00:00:00Z",
+    "starting_mrr": 4200000,
+    "new": 350000,
+    "expansion": 120000,
+    "contraction": 80000,
+    "churned": 140000,
+    "reactivation": 30000,
+    "ending_mrr": 4480000,
+    "reporting_currency": "USD",
+    "net_dollar_retention": 97.62,
+    "gross_dollar_retention": 94.76,
+    "has_start_history": true
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `starting_mrr` / `ending_mrr` | integer | MRR at the period boundaries, minor units |
+| `new` | integer | MRR from subscriptions that did not exist at the start |
+| `expansion` / `contraction` | integer | MRR gained/lost from existing subscriptions changing size (both positive magnitudes) |
+| `churned` | integer | MRR lost to subscriptions that ended (positive magnitude) |
+| `reactivation` | integer | MRR from previously-churned subscriptions that came back |
+| `net_dollar_retention` | number | `(starting + expansion - contraction - churned) / starting × 100`; new and reactivation are excluded (not part of the starting cohort). `0` when `starting_mrr` is 0. |
+| `gross_dollar_retention` | number | `(starting - contraction - churned) / starting × 100` (≤ 100). `0` when `starting_mrr` is 0. |
+| `has_start_history` | boolean | `false` when MRR snapshots begin after `start_date` — movement figures are then unreliable |

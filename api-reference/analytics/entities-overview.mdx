@@ -1,0 +1,55 @@
+---
+title: "Get Entities Overview"
+openapi: "GET /v1/analytics/entities-overview"
+description: "Every legal entity with its MRR and open receivables side by side, plus consolidated totals."
+---
+
+The multi-entity control tower: every legal entity (Multi-Entity Books) with its MRR and open accounts receivable side by side, plus consolidated totals, normalized to the reporting currency. The `entities` array is empty for single-entity tenants — use the consolidated dashboards instead. Responses are cached for up to 5 minutes.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/analytics/entities-overview" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "reporting_currency": "USD",
+    "total_mrr": 4850000,
+    "total_ar_outstanding": 655400,
+    "entities": [
+      {
+        "entity_id": "c4f8b2a6-1d9e-4c3a-8b7f-5e2a9d0c6f41",
+        "entity_name": "Acme Inc (US)",
+        "is_primary": true,
+        "mrr": 3000000,
+        "arr": 36000000,
+        "ar_outstanding": 402100,
+        "subscriptions": 120
+      },
+      {
+        "entity_id": "7d2e9a15-4c8b-4f6a-a3d1-9b0e5c7f2a84",
+        "entity_name": "Acme India Pvt Ltd",
+        "is_primary": false,
+        "mrr": 1850000,
+        "arr": 22200000,
+        "ar_outstanding": 253300,
+        "subscriptions": 214
+      }
+    ]
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reporting_currency` | string | Currency every amount is normalized into |
+| `total_mrr` | integer | Consolidated MRR across all entities, minor units |
+| `total_ar_outstanding` | integer | Consolidated open receivables across all entities, minor units |
+| `entities[]` | array | One row per legal entity: `entity_id`, `entity_name`, `is_primary`, `mrr`, `arr`, `ar_outstanding`, active `subscriptions` |
