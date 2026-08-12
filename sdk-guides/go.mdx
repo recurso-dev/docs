@@ -188,7 +188,7 @@ if errors.As(err, &apiErr) {
 }
 ```
 
-Non-API failures (network errors, a cancelled `context`) come back as ordinary
+Non-API failures (network errors, a canceled `context`) come back as ordinary
 errors, so always check `err != nil` before using the result.
 
 ## Pagination

@@ -192,9 +192,9 @@ await recurso.subscriptions.cancel('sub_xyz', {
 
 For advanced cancellation flows with retention offers, see the [Cancel Flows guide](/advanced/cancel-flows).
 
-## Reactivate a Cancelled Subscription
+## Reactivate a Canceled Subscription
 
-If a subscription was cancelled with `cancel_at_period_end: true` and the period has not yet ended, you can reactivate it:
+If a subscription was canceled with `cancel_at_period_end: true` and the period has not yet ended, you can reactivate it:
 
 <CodeGroup>
 ```typescript TypeScript
@@ -349,5 +349,5 @@ Subscribe to subscription events:
 | `subscription.created` | New subscription |
 | `subscription.created` | First payment succeeded |
 | `subscription.updated` | Plan changed |
-| `subscription.canceled` | Subscription cancelled |
+| `subscription.canceled` | Subscription canceled |
 | `subscription.past_due` | Payment failed |

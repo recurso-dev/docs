@@ -63,7 +63,7 @@ func main() {
 		if errors.As(err, &apiErr) {
 			fmt.Println(apiErr.StatusCode, apiErr.Code, apiErr.Message)
 		} else {
-			panic(err) // transport error (DNS, connection, context cancelled)
+			panic(err) // transport error (DNS, connection, context canceled)
 		}
 	}
 }

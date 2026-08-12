@@ -224,7 +224,7 @@ curl -X POST https://api.recurso.dev/v1/subscriptions/sub_xyz/advance \
 | `periods` | `integer` | Yes | Number of future billing periods to invoice (minimum: `1`) |
 
 <Warning>
-Advance invoicing does not change the subscription's billing cycle. Regular invoices will be skipped for the pre-billed periods. If the subscription is cancelled before the advance-billed periods are consumed, the remaining amount becomes eligible for credit or refund per your cancellation policy.
+Advance invoicing does not change the subscription's billing cycle. Regular invoices will be skipped for the pre-billed periods. If the subscription is canceled before the advance-billed periods are consumed, the remaining amount becomes eligible for credit or refund per your cancellation policy.
 </Warning>
 
 ### How Advance Invoicing Interacts with Revenue Recognition

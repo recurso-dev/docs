@@ -151,7 +151,7 @@ curl https://api.recurso.dev/v1/invoices/inv_001/einvoice \
 | `pending` | Invoice finalized; submission to IRP queued |
 | `generated` | IRN generated successfully |
 | `failed` | Submission failed (check error details) |
-| `cancelled` | E-invoice cancelled on the IRP |
+| `canceled` | E-invoice canceled on the IRP |
 
 ## Retry Failed E-Invoices
 
@@ -177,7 +177,7 @@ Common failure reasons include incorrect GSTIN, missing mandatory fields (buyer 
 
 ## Cancel an E-Invoice
 
-E-invoices can be cancelled within 24 hours of generation on the IRP. You must provide a cancellation code and reason.
+E-invoices can be canceled within 24 hours of generation on the IRP. You must provide a cancellation code and reason.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -204,7 +204,7 @@ curl -X POST https://api.recurso.dev/v1/invoices/inv_001/einvoice/cancel \
 |------|-------------|
 | `1` | Duplicate |
 | `2` | Data entry mistake |
-| `3` | Order cancelled |
+| `3` | Order canceled |
 | `4` | Others |
 
 <Warning>
@@ -217,7 +217,7 @@ E-invoice cancellation must be done within 24 hours of IRN generation. After 24 
 |-------|-------------|
 | `einvoice.generated` | IRN successfully generated for an invoice |
 | `einvoice.failed` | E-invoice submission to IRP failed |
-| `einvoice.void` | E-invoice was cancelled on the IRP |
+| `einvoice.void` | E-invoice was canceled on the IRP |
 
 ### Example Webhook Payload
 
