@@ -15,19 +15,19 @@ Dashboard-side controls: [Customer portal](/dashboard/customer-portal) · overvi
 [Portal](/portal/overview).
 </Info>
 
+## Prerequisites
+
+The portal signs customers in by **magic link** (needs [email](/setup/notifications))
+and lets them update cards (needs a [payment gateway](/setup/payment-gateway) — a
+Stripe SetupIntent, or a UPI mandate re-auth).
+
 ## Step 1: Configure the portal
 
 In the dashboard, go to the **Customer portal** settings and choose what customers
 can do (update card, change plan, view invoices, cancel). Set your branding and
 the return URL.
 
-## Step 2: Make sure email + a gateway are set
-
-The portal signs customers in by **magic link** (needs [email](/setup/notifications))
-and lets them update cards (needs a [payment gateway](/setup/payment-gateway) — a
-Stripe SetupIntent, or a UPI mandate re-auth).
-
-## Step 3: Send customers to the portal
+## Step 2: Send customers to the portal
 
 Link customers to the portal from your app or from billing emails. They request a
 magic link, sign in, and self-serve.
