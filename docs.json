@@ -375,7 +375,9 @@
                 "group": "Plans",
                 "pages": [
                   "api-reference/plans/create",
-                  "api-reference/plans/list"
+                  "api-reference/plans/list",
+                  "api-reference/plans/get",
+                  "api-reference/plans/update"
                 ]
               },
               {
@@ -383,8 +385,10 @@
                 "pages": [
                   "api-reference/customers/create",
                   "api-reference/customers/list",
-                  "api-reference/customers/update-payment-method",
-                  "api-reference/customers/credit-statement"
+                  "api-reference/customers/get",
+                  "api-reference/customers/update",
+                  "api-reference/customers/credit-statement",
+                  "api-reference/customers/update-payment-method"
                 ]
               },
               {
@@ -392,6 +396,7 @@
                 "pages": [
                   "api-reference/subscriptions/create",
                   "api-reference/subscriptions/list",
+                  "api-reference/subscriptions/get",
                   "api-reference/subscriptions/update",
                   "api-reference/subscriptions/cancel",
                   "api-reference/subscriptions/pause",
@@ -448,6 +453,7 @@
                 "group": "Usage",
                 "pages": [
                   "api-reference/usage/record-event",
+                  "api-reference/usage/batch",
                   "api-reference/usage/query",
                   "api-reference/usage/dimensions",
                   "api-reference/subscriptions/usage-amount"
