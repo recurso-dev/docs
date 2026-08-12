@@ -1463,6 +1463,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: customer_id
+          in: query
+          description: Filter to one customer's subscriptions.
+          schema:
+            type: string
+            format: uuid
         - name: started_after
           in: query
           description: >-
@@ -1886,6 +1892,23 @@ paths:
       operationId: listInvoices
       tags: [Invoices]
       summary: List invoices
+      parameters:
+        - name: customer_id
+          in: query
+          description: >-
+            Filter to one customer's invoices (tenant-scoped; a foreign
+            customer id yields an empty page).
+          schema:
+            type: string
+            format: uuid
+        - name: subscription_id
+          in: query
+          description: >-
+            Filter to one subscription's invoices (tenant-scoped). Ignored
+            when customer_id is also provided.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Invoices for the tenant.
@@ -1898,6 +1921,31 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Invoice'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [Invoices]
+      summary: Get an invoice by id
+      description: >-
+        One invoice, tenant-scoped. A foreign or missing invoice is a flat
+        404. Serves the dashboard's addressable /invoices/:id route.
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      responses:
+        '200':
+          description: The invoice.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Invoice'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -2474,6 +2522,31 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /v1/credit-notes/{id}:
+    get:
+      operationId: getCreditNote
+      tags: [Credit Notes]
+      summary: Get a credit note by id
+      description: >-
+        One credit note, tenant-scoped. A foreign or missing note is a flat
+        404. Serves the dashboard's addressable /credit-notes/:id route.
+      parameters:
+        - $ref: '#/components/parameters/PathID'
+      responses:
+        '200':
+          description: The credit note.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CreditNote'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /v1/credit-notes/{id}/approve:
     post:
       operationId: approveCreditNote
@@ -2934,6 +3007,7 @@ paths:
       description: Chronological feed of billing events emitted for this tenant.
       parameters:
         - { name: type, in: query, schema: { type: string }, description: Filter to one event type (e.g. `invoice.paid`). }
+        - { name: object_id, in: query, schema: { type: string, format: uuid }, description: Filter to one object's events (per-object timeline); takes precedence over `type`. }
         - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 500 }, description: Max rows returned (default 50, capped at 500). }
         - { name: offset, in: query, schema: { type: integer, minimum: 0 }, description: Rows to skip. }
       responses:

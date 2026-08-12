@@ -8,11 +8,10 @@ description: "Retrieve a list of invoices"
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `customer_id` | string | Filter by customer |
-| `subscription_id` | string | Filter by subscription |
-| `status` | string | `draft`, `open`, `paid`, `past_due`, `void` |
-| `limit` | integer | Max results (default: 50, capped at 250) |
-| `offset` | integer | Pagination offset |
+| `customer_id` | uuid | Filter to one customer's invoices (tenant-scoped) |
+| `subscription_id` | uuid | Filter to one subscription's invoices. Ignored when `customer_id` is also set |
+| `page` | integer | Page number (default: 1) |
+| `per_page` | integer | Rows per page (default: 50, capped at 250) |
 
 ## Example Request
 

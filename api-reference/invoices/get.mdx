@@ -1,0 +1,39 @@
+---
+title: "Get Invoice"
+openapi: "GET /v1/invoices/{id}"
+description: "Retrieve a single invoice by id"
+---
+
+One invoice, scoped to the authenticated tenant. A foreign or missing id
+returns a flat `404` — existence is never confirmed across tenants.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/invoices/inv_abc123" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "id": "inv_abc123",
+    "invoice_number": "REC/2026/0042",
+    "customer_id": "cust_abc123",
+    "subscription_id": "sub_def456",
+    "status": "open",
+    "currency": "USD",
+    "subtotal": 29900,
+    "tax_amount": 0,
+    "total": 29900,
+    "amount_paid": 0,
+    "amount_due": 29900,
+    "due_date": "2026-09-11T00:00:00Z",
+    "line_items": [
+      { "description": "Scale subscription", "quantity": 1, "amount": 29900 }
+    ]
+  }
+}
+```
