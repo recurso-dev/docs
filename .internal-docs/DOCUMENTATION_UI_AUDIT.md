@@ -82,8 +82,8 @@ internal amount inconsistency: plan `499900` (Step 1) vs invoice
 
 289 MDX on disk; 326 nav entries; all resolve. 17 pages missing
 `description` (16 api-reference stubs: billing/set-charges, simulate-charges,
-gateways/{connect,disconnect,list}, metrics/{create,delete,get,list,update},
-subscriptions/{bill-usage,usage-amount}, usage-alerts/{create,delete,list} +
+`gateways/{connect,disconnect,list}`, `metrics/{create,delete,get,list,update}`,
+`subscriptions/{bill-usage,usage-amount}`, `usage-alerts/{create,delete,list}` +
 snippets/snippet-intro.mdx which has no frontmatter). Title casing splits by
 tab: core/setup/compliance/advanced 100% Title Case; dashboard mixed 21
 sentence / 15 Title; api-reference 171 Title + 5 stragglers. Images: 71 files
