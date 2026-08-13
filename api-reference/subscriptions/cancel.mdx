@@ -54,6 +54,7 @@ When `cancel_at_period_end` is true, the subscription remains active until `curr
 |--------|------|------|-----|
 | 400 | `validation_failed` | `id` is not a valid UUID, or the request body is malformed JSON. | Pass the subscription's UUID and a valid JSON body (an empty `{}` is fine). |
 | 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
-| 500 | `internal_error` | The subscription does not exist in your tenant, or cancellation failed mid-flight ("Failed to cancel subscription"). | Verify the subscription ID with `GET /v1/subscriptions/{id}`, then retry. |
+| 404 | `not_found` | The subscription does not exist in your tenant. | Verify the ID with `GET /v1/subscriptions/{id}`. |
+| 500 | `internal_error` | Cancellation failed mid-flight. | Retry — canceling an already-canceled subscription is a safe no-op. |
 
 See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.
