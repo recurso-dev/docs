@@ -1029,9 +1029,6 @@
     },
     "body": {
       "family": "Inter"
-    },
-    "codeFont": {
-      "family": "JetBrains Mono"
     }
   }
 }
