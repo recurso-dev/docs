@@ -53,3 +53,12 @@ Naming a dimension identically to an entitlement `feature_key` (e.g.
 `api_calls`) lets [`GET /v1/subscriptions/{id}/usage`](/api-reference/subscriptions/usage)
 join the entitlement's limit in and report remaining headroom automatically.
 </Tip>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Unexpected server failure | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -46,3 +46,17 @@ curl -X POST https://api.recurso.dev/v1/credit-notes \
 <Note>
 The credit note amount cannot exceed the original invoice total. The `amount_remaining` decreases as the credit is applied to future invoices.
 </Note>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Malformed body: `customer_id`, positive `amount`, and `currency` are required; `type` must be `adjustment` or `refund` | Correct the payload (amount is minor units, > 0) |
+| `400` | `validation_failed` | Customer doesn't exist or belongs to another tenant | Check the `customer_id` |
+| `400` | `validation_failed` | Refund rules broken: a `refund` note requires `invoice_id`; the invoice must be **paid**, belong to the customer, and match the note's `currency` | Issue refunds only against the customer's paid invoices, in the invoice currency |
+| `400` | `validation_failed` | Refund `amount` exceeds what's still refundable on the invoice (paid amount minus prior refunds) | Lower the amount — cumulative refunds can't exceed what was paid |
+| `500` | `internal_error` | Unexpected failure persisting the note | Retry; contact support if it persists |
+
+A note created by a non-admin/owner user isn't an error — it lands in
+`pending` and needs [approval](/api-reference/credit-notes/approve). Errors
+use the standard envelope — see [Errors](/api-reference/errors).

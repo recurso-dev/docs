@@ -14,3 +14,13 @@ curl -L "https://api.recurso.dev/v1/credit-notes/6d3f9a82-4c1e-4b7d-a9f5-8e2c0b6
 
 Returns the print-ready document for the credit note — hand it to
 customers or auditors alongside the invoice it credits.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the credit note's UUID |
+| `404` | `not_found` | Credit note doesn't exist or belongs to another tenant — or document rendering isn't enabled on this deployment (`credit note documents are not enabled`) | Check the ID; on self-hosted, ensure the PDF service is configured |
+| `500` | `internal_error` | Document generation failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

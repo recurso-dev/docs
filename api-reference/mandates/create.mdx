@@ -57,3 +57,16 @@ After creating the mandate, redirect the customer to the `mandate_url` to comple
 authorization via their UPI app. The mandate status will transition from `created`
 to `authorized` once the customer approves.
 </Tip>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Malformed body: positive `max_amount` and a `frequency` of `weekly`/`monthly`/`quarterly`/`yearly` are required; `currency`, if sent, must be a valid ISO code | Correct the payload |
+| `400` | `validation_failed` | `customer_id` or `subscription_id` is not a valid UUID | Use the object UUIDs, not display codes |
+| `400` | `validation_failed` | `vpa is required for a UPI mandate` — UPI (INR) mandates need the customer's VPA; bank-debit mandates authorize on the gateway's hosted page instead | Send `vpa` for INR mandates |
+| `400` | `validation_failed` | `customer phone number is required for a UPI mandate` | Add a phone number to the customer record first |
+| `401` | `unauthorized` | Missing or invalid API key | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Customer lookup failed or the gateway (Razorpay / GoCardless) rejected the mandate | Verify the customer exists and the [gateway connection](/api-reference/gateways/connect) is configured for the right mode |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

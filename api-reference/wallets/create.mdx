@@ -47,3 +47,15 @@ curl -X POST https://api.recurso.dev/v1/wallets \
 Returns `409` when a wallet for this customer, entity, and currency
 already exists. New wallets start at a zero balance — fund them with a
 [top-up](/api-reference/wallets/top-up).
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Malformed body, `customer_id` is not a UUID, or `currency` is not an ISO 3-letter code | Correct the payload; send the currency as e.g. `INR`, `USD` |
+| `400` | `validation_failed` | `entity_id` is invalid or names an entity that doesn't exist in this workspace | Use an entity ID from your Entities list, or omit it for the primary entity |
+| `400` | `validation_failed` | `auto_recharge_threshold` and `auto_recharge_amount` are not set together, or are not positive | Send both fields (both positive), or neither |
+| `404` | `not_found` | `customer_id` doesn't exist (or belongs to another tenant) | Create the customer first, or check the ID |
+| `409` | `conflict` | An open wallet already exists for this customer, entity, and currency | Reuse that wallet — [top it up](/api-reference/wallets/top-up) instead of creating another |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

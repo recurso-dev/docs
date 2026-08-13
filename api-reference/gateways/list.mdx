@@ -3,3 +3,15 @@ title: "List Gateway Connections"
 openapi: "GET /v1/gateway-connections"
 description: "List the workspace's gateway connections and their status."
 ---
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Unexpected server failure | Retry; contact support if it persists |
+
+The response's `vault_ready: false` flags that connecting is impossible
+(`GATEWAY_ENCRYPTION_KEY` unset) before you hit the `503` on
+[Connect](/api-reference/gateways/connect). Errors use the standard
+envelope — see [Errors](/api-reference/errors).

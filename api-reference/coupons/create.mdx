@@ -50,3 +50,14 @@ curl -X POST https://api.recurso.dev/v1/coupons \
   "created_at": "2024-04-01T09:00:00Z"
 }
 ```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Missing/invalid fields: `code`, `discount_type`, positive `discount_value`, and `duration` are required; `discount_type` must be `percent` or `amount`, `duration` one of `forever`, `once`, `repeating` | Correct the payload — the wire values are `percent`/`amount`, not `percentage`/`fixed` |
+| `400` | `validation_failed` | A `percent` coupon with `discount_value` above `100` | A discount can't exceed 100% — cap the value at 100 |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Persisting the coupon failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -49,3 +49,15 @@ curl -X POST https://api.recurso.dev/v1/wallets/5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d
 Every top-up posts balanced ledger legs: a `manual` top-up debits Cash and
 credits Customer Credit (Code 11); a `promotional` top-up debits Credits &
 Adjustments instead (Code 8) — no cash moved.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID, or the body is malformed | Use the wallet's UUID and valid JSON |
+| `400` | `validation_failed` | `amount` is missing or not greater than zero | Send a positive amount in minor units |
+| `400` | `validation_failed` | `source` is neither `manual` nor `promotional` | Pick one of the two sources (default is `manual`) |
+| `400` | `validation_failed` | `expires_at` set on a non-promotional top-up, or not in the future | Only `promotional` credit may expire, and only at a future time |
+| `404` | `not_found` | Wallet doesn't exist (or belongs to another tenant) | Check the wallet ID via [List Wallets](/api-reference/wallets/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

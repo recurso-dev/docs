@@ -3,3 +3,15 @@ title: "Connect a Gateway"
 openapi: "POST /v1/gateway-connections"
 description: "Connect your own Stripe, Razorpay, or GoCardless account to process this workspace's payments."
 ---
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Unknown `provider`, or `mode` is neither `test` nor `live` | Use a supported provider; omit `mode` to default to `test` |
+| `400` | `validation_failed` | `secret_key` missing, `public_key` (key_id) missing for Razorpay, or a credential contains non-ASCII/control characters | Re-copy the keys from the provider dashboard |
+| `400` | `validation_failed` | GoCardless token/mode mismatch (`live_` token in `test` mode or `sandbox_` token in `live` mode) | Match the token to the mode — sandbox tokens come from manage-sandbox.gocardless.com |
+| `403` | `forbidden` | The session user is not an owner or admin | Gateway credentials are money-path config — ask an owner/admin |
+| `503` | `internal_error` | Credential vault unavailable (`GATEWAY_ENCRYPTION_KEY` not configured on the API) | Self-hosted: set `GATEWAY_ENCRYPTION_KEY` and restart |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

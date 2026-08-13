@@ -31,3 +31,12 @@ curl "https://api.recurso.dev/v1/credit-notes/cn_abc123" \
   }
 }
 ```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the credit note's UUID |
+| `404` | `not_found` | Credit note doesn't exist, or belongs to another tenant (existence is never confirmed across tenants) | Check the ID via [List Credit Notes](/api-reference/credit-notes/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

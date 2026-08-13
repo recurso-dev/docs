@@ -57,3 +57,13 @@ curl "https://api.recurso.dev/v1/credit-notes?customer_id=cust_abc123&limit=10" 
   "total_count": 2
 }
 ```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Unexpected server failure | Retry; contact support if it persists |
+
+A malformed `customer_id` filter is ignored rather than rejected. Errors use
+the standard envelope — see [Errors](/api-reference/errors).

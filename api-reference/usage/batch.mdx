@@ -36,3 +36,17 @@ Give every event a `transaction_id` — retries with the same ID are
 deduplicated, so a crashed batch can be resent whole.
 
 Batches cap at **500 events**; above that, split the batch.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `events` is missing or empty | Send at least one event in `events` |
+| `400` | `validation_failed` | More than 500 events in one call (`at most 500 events per batch`) | Split into multiple batches |
+| `401` | `unauthorized` | Missing or invalid API key | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | The batch write failed as a whole | Resend the whole batch with the same `transaction_id`s — dedup makes it safe |
+
+Bad **individual** events don't fail the request: the call returns `200` and
+the offending index carries `"status": "error"` with its reason (bad UUIDs,
+non-positive quantity, unknown subscription, customer mismatch). Errors use
+the standard envelope — see [Errors](/api-reference/errors).
