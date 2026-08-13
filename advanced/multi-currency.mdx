@@ -171,8 +171,6 @@ Recurso supports multiple approaches for exchange rates:
 
 ### Configuring FX Rate Source
 
-<CodeGroup>
-
 The FX rate source (live provider vs. fixed rates) is a **deployment
 setting**, not a runtime API — configure it via environment / dashboard,
 not a `/v1` call. FX affects reporting only: invoices always bill in the
@@ -210,44 +208,33 @@ All financial reports aggregate to your base currency, giving you a single unifi
 
 <CodeGroup>
 ```typescript Node
-const accounts = await recurso.ledger.accounts.list();
-const revenueAccount = accounts.data.find(a => a.code === "4000");
-
-// Revenue account balance is always in base currency
-console.log(`Total Revenue: ${revenueAccount.currency} ${revenueAccount.balance / 100}`);
-// Total Revenue: INR 1250000.00
+// MRR, FX-normalized to your reporting currency at read time
+const { data } = await recurso.analytics.mrr();
 ```
 
 ```bash cURL
-curl https://api.recurso.dev/v1/ledger/accounts \
+curl https://api.recurso.dev/v1/analytics/mrr \
   -H "Authorization: Bearer $API_KEY"
-
-# The revenue account (code 4000) balance reflects
-# all revenue converted to your base currency
 ```
 </CodeGroup>
 
+The ledger itself stays in each invoice's own currency — conversion is a
+reporting concern, so use the analytics endpoints (revenue by plan /
+geography, MRR) for base-currency views.
+
 ### Breakdown by Presentment Currency
 
-To see revenue broken down by the currencies your customers paid in, query ledger entries and group by currency:
+To see deferred revenue broken down by the currencies your customers pay
+in, the revenue-recognition report returns a per-currency split directly:
 
 ```typescript
-const entries = await recurso.ledger.entries.list({
-  account_id: "lacc_rev4000",
-  start_date: "2025-06-01",
-  end_date: "2025-06-30"
-});
-
-const byCurrency: Record<string, number> = {};
-entries.data.forEach(txn => {
-  txn.entries.forEach(entry => {
-    const currency = entry.currency;
-    byCurrency[currency] = (byCurrency[currency] || 0) + entry.amount;
-  });
-});
-
-console.log(byCurrency);
-// { INR: 15000000, USD: 119980, EUR: 49990 }
+// GET /v1/finance/revrec/report?month=6&year=2026 -> data.by_currency
+const res = await fetch(
+  'https://api.recurso.dev/v1/finance/revrec/report?month=6&year=2026',
+  { headers: { Authorization: `Bearer ${process.env.RECURSO_API_KEY}` } },
+);
+const { data } = await res.json();
+console.log(data.by_currency); // [{ currency: 'EUR', deferred: 449900 }, ...]
 ```
 
 ## Supported Currencies

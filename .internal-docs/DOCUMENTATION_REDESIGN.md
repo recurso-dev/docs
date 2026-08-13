@@ -126,7 +126,7 @@ deploy — without asking the team basic questions.
 
 ## Final design-director test
 
-Find any answer <30s · copy the example · understand WHY it works · understand
+Find any answer in under 30s · copy the example · understand WHY it works · understand
 failure behavior · AI agent retrieves unambiguously · one coherent product ·
 trustworthy enough for financial infrastructure. Any NO → fix.
 
