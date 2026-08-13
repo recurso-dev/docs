@@ -14,3 +14,16 @@ curl -X POST https://api.recurso.dev/v1/credit-notes/6d3f9a82-4c1e-4b7d-a9f5-8e2
 Rejection ends a `pending` note's lifecycle before it becomes spendable —
 nothing posts to the ledger and the customer's balance is untouched. Once a
 note is approved, use [void](/api-reference/credit-notes/void) instead.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID, or the credit note doesn't exist in this workspace | Check the ID via [List Credit Notes](/api-reference/credit-notes/list) |
+| `400` | `validation_failed` | The rejector created the note (`creator cannot reject their own credit note` — maker-checker) | Have a **different** admin/owner reject it |
+| `403` | `validation_failed` | The session user is not an admin or owner | Ask an admin/owner to reject it |
+| `500` | `internal_error` | The status update failed unexpectedly | Retry; contact support if it persists |
+
+Rejecting a note that is no longer `pending` is **not** an error — the note
+is returned unchanged. Errors use the standard envelope — see
+[Errors](/api-reference/errors).

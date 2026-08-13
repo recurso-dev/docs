@@ -51,3 +51,14 @@ curl -X POST https://api.recurso.dev/v1/webhooks \
 <Warning>
 Store the `secret` securely. It's only shown once at creation.
 </Warning>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Malformed body (`url` and `events` are required) | Correct the payload |
+| `400` | `validation_failed` | `invalid webhook URL` — not `http(s)`, or the host resolves to a private/internal/link-local address (SSRF guard: localhost, cloud metadata, VPC hosts are rejected) | Use a publicly reachable HTTPS endpoint |
+| `400` | `validation_failed` | `at least one event type must be subscribed` — `events` is empty | Subscribe to at least one event from [List Event Types](/api-reference/webhooks/events) |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

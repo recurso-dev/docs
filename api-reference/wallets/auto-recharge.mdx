@@ -50,3 +50,14 @@ curl -X PUT https://api.recurso.dev/v1/wallets/5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7
 
 When the balance dips below the threshold, Recurso charges the saved
 payment method off-session and records the recharge like any other top-up.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID, or the body is malformed | Use the wallet's UUID and valid JSON |
+| `400` | `validation_failed` | Only one of `auto_recharge_threshold` / `auto_recharge_amount` was sent | Send both fields to enable, or both `null` to disable |
+| `400` | `validation_failed` | Threshold or amount is zero or negative | Both values must be positive minor-unit amounts |
+| `404` | `not_found` | Wallet doesn't exist (or belongs to another tenant) | Check the wallet ID via [List Wallets](/api-reference/wallets/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

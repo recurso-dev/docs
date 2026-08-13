@@ -57,10 +57,15 @@ omitted rather than zero-filled.
 
 ## Errors
 
-| Status | When |
-|--------|------|
-| `400` | Neither `subscription_id` nor `customer_id` given, malformed IDs or timestamps, `from` not before `to`, unknown `granularity` |
-| `401` | Missing or invalid API key |
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Neither `subscription_id` nor `customer_id` given | Scope the query to at least one of the two |
+| `400` | `validation_failed` | `subscription_id` / `customer_id` not valid UUIDs, or `from`/`to` not RFC 3339 timestamps | Fix the formats (e.g. `2026-06-01T00:00:00Z`) |
+| `400` | `validation_failed` | `from` is not before `to` | Swap or widen the window |
+| `400` | `validation_failed` | `granularity` is neither `day` nor `month` | Use one of the two (default `day`) |
+| `401` | `unauthorized` | Missing or invalid API key | Send `Authorization: Bearer $API_KEY` |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).
 
 <Note>
 Usage is tenant-scoped through the subscription: you can only ever see

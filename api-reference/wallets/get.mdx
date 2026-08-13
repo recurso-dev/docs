@@ -36,3 +36,12 @@ curl https://api.recurso.dev/v1/wallets/5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53 \
 ```
 
 A foreign or missing ID returns a flat `404` — wallets are tenant-scoped.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the wallet's UUID |
+| `404` | `not_found` | Wallet doesn't exist, or belongs to another tenant (existence is never confirmed across tenants) | Check the ID via [List Wallets](/api-reference/wallets/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

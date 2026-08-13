@@ -16,3 +16,17 @@ off its **unspent** balance, posting the GL reversal. Credit the customer
 already applied stays real — only the remainder is reversed. Refund notes
 cannot be voided: the money already left through the payment gateway.
 Admins and owners only.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID, or the credit note doesn't exist in this workspace | Check the ID via [List Credit Notes](/api-reference/credit-notes/list) |
+| `400` | `validation_failed` | The note is a **refund**, not an adjustment (`only account-credit notes can be voided; a refund is reversed through the payment gateway`) | Refunds moved real money — reverse them at the gateway, not with a void |
+| `400` | `validation_failed` | The note is not in `issued` status (e.g. still `pending` or `rejected`) | Only issued adjustment credit can be voided; [reject](/api-reference/credit-notes/reject) a pending note instead |
+| `403` | `validation_failed` | The session user is not an admin or owner | Ask an admin/owner to void it |
+| `500` | `internal_error` | The void write failed unexpectedly | Retry; contact support if it persists |
+
+Voiding an already-void note is **not** an error — it returns the note
+unchanged (idempotent). Errors use the standard envelope — see
+[Errors](/api-reference/errors).

@@ -44,3 +44,14 @@ This can't be undone. Once closed, the wallet's balance is zero and it can no
 longer be topped up or drained. Amounts are in the wallet currency's smallest
 unit.
 </Warning>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the wallet's UUID |
+| `400` | `validation_failed` | The wallet is already closed (message: `wallet is already closed`) | Nothing to do — the balance was settled when it closed; treat as success |
+| `403` | `forbidden` | The session user is not an owner or admin — closing refunds money out | Have an owner/admin close it (API keys are not role-gated) |
+| `404` | `not_found` | Wallet doesn't exist (or belongs to another tenant) | Check the wallet ID via [List Wallets](/api-reference/wallets/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

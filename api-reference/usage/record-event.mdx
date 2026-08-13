@@ -56,11 +56,18 @@ curl -X POST https://api.recurso.dev/v1/usage/events \
 
 ## Errors
 
-| Status | When |
-|--------|------|
-| `400` | Missing/malformed fields, or `customer_id` does not match the subscription's customer |
-| `401` | Missing or invalid API key |
-| `404` | Subscription not found (or belongs to another tenant) |
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | Missing/malformed fields: `subscription_id`, `customer_id`, `dimension`, `quantity` are required; `quantity` must be > 0 and `dynamic_amount` ≥ 0 | Correct the payload |
+| `400` | `validation_failed` | `customer_id` does not match the subscription's customer | Send the customer the subscription actually belongs to |
+| `400` | `validation_failed` | Limits exceeded: `transaction_id` too long, or too many / oversized `properties` | Trim the idempotency key and property map |
+| `401` | `unauthorized` | Missing or invalid API key | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | Subscription not found (or belongs to another tenant — existence is never leaked) | Check the `subscription_id` |
+| `500` | `internal_error` | Persisting the event failed | Retry with the same `transaction_id` — dedup makes it safe |
+
+A replayed `transaction_id` is **not** an error: it returns `200` with
+`"status": "duplicate"`. Errors use the standard envelope — see
+[Errors](/api-reference/errors).
 
 <Note>
 To read usage back, see [Query Usage](/api-reference/usage/query) for

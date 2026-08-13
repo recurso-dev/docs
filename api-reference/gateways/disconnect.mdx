@@ -3,3 +3,13 @@ title: "Disconnect a Gateway"
 openapi: "DELETE /v1/gateway-connections/{provider}"
 description: "Disconnect a payment-gateway connection; billing falls back to the remaining connections."
 ---
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `provider` in the path is not a supported gateway | Use the provider name shown by [List Gateway Connections](/api-reference/gateways/list) |
+| `403` | `forbidden` | The session user is not an owner or admin | Ask an owner/admin to disconnect |
+| `404` | `not_found` | No active connection exists for that provider | Nothing to disconnect — check [List Gateway Connections](/api-reference/gateways/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

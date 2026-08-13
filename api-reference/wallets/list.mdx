@@ -38,3 +38,13 @@ curl "https://api.recurso.dev/v1/wallets?limit=50" \
 Amounts are minor units in the wallet's own currency. A wallet drains
 **first** at invoice time — before adjustment credit notes and before the
 payment gateway — and is spendable only on its own entity's invoices.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Unexpected server failure | Retry; contact support if it persists |
+
+An out-of-range `limit` is clamped, not rejected. Errors use the standard
+envelope — see [Errors](/api-reference/errors).

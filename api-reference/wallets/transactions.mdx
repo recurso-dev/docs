@@ -54,3 +54,13 @@ curl "https://api.recurso.dev/v1/wallets/5a8c2f91-3e7b-4d0a-9c6f-2b4e8a1d7c53/tr
 A `drain` is the wallet settling an invoice (it posts DR Customer Credit /
 CR Accounts Receivable, Code 12); `invoice_id` is the invoice it paid.
 On `top_up` rows, `remaining` is the undrained residue of that top-up.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the wallet's UUID |
+| `404` | `not_found` | Wallet doesn't exist (or belongs to another tenant) | Check the ID via [List Wallets](/api-reference/wallets/list) |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

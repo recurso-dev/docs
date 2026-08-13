@@ -14,3 +14,16 @@ curl -X POST https://api.recurso.dev/v1/credit-notes/6d3f9a82-4c1e-4b7d-a9f5-8e2
 Approval moves a `pending` note into its live state — an adjustment
 (account-credit) note becomes spendable against invoices, and its issuance
 posts to the ledger. Approving is idempotent for an already-approved note.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID, or the credit note doesn't exist in this workspace | Check the ID via [List Credit Notes](/api-reference/credit-notes/list) |
+| `400` | `validation_failed` | The approver created the note (`creator cannot approve their own credit note` — maker-checker) | Have a **different** admin/owner approve it |
+| `403` | `validation_failed` | The session user is not an admin or owner | Approvals are money-out sign-off — ask an admin/owner |
+| `500` | `internal_error` | The status update or (for refund notes) the gateway refund execution failed | Retry; check the note's `refund_status`, and contact support if it persists |
+
+Approving a note that is no longer `pending` is **not** an error — the note
+is returned unchanged (idempotent). Errors use the standard envelope — see
+[Errors](/api-reference/errors).

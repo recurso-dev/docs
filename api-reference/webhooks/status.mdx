@@ -17,3 +17,14 @@ An `inactive` endpoint receives no deliveries and is skipped by
 [redelivery](/api-reference/events/redeliver); set `active` to resume.
 Pausing is the right move while your receiver is down — events keep being
 recorded, and you can redeliver the missed ones after resuming.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the endpoint's UUID from [List Webhooks](/api-reference/webhooks/list) |
+| `400` | `validation_failed` | `status` is neither `"active"` nor `"inactive"` (or the body is malformed) | Send exactly `{"status": "active"}` or `{"status": "inactive"}` |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | Endpoint doesn't exist (or belongs to another tenant) | Check the ID via [List Webhooks](/api-reference/webhooks/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).
