@@ -42,10 +42,34 @@ const customer = await recurso.customers.create({
 });
 ```
 
+```python Python
+from recurso.api.customers import create_customer
+from recurso.models import CreateCustomerRequest
+
+customer = create_customer.sync(
+    client=client,
+    body=CreateCustomerRequest(
+        name="Acme Corporation",
+        email="billing@acme.com",
+        phone="+919876543210",
+        line1="123 MG Road",
+        city="Bangalore",
+        state="Karnataka",
+        zip_="560001",  # trailing underscore: `zip` is a Python builtin
+        country="IN",
+    ),
+)
+```
+
 ```go Go
 customer, _ := client.Customers.Create(ctx, &recurso.CustomerCreateParams{
   Name:    "Acme Corporation",
   Email:   "billing@acme.com",
+  Phone:   "+919876543210",
+  Line1:   "123 MG Road",
+  City:    "Bangalore",
+  State:   "Karnataka",
+  Zip:     "560001",
   Country: "IN",
 })
 ```
@@ -116,6 +140,31 @@ const customers = await recurso.customers.list({
   country: 'IN',
   status: 'active',
 });
+```
+
+```python Python
+from recurso.api.customers import list_customers
+from recurso.models import ListCustomersStatus
+
+result = list_customers.sync(
+    client=client,
+    q="acme",
+    country="IN",
+    status=ListCustomersStatus.ACTIVE,
+    limit=20,
+    page=1,
+)
+customers = result.data
+```
+
+```go Go
+customers, _ := client.Customers.List(ctx, &recurso.CustomerListParams{
+  Q:       "acme",
+  Country: "IN",
+  Status:  "active",
+  Limit:   20,
+  Page:    1,
+})
 ```
 </CodeGroup>
 

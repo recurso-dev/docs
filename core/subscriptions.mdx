@@ -41,6 +41,39 @@ curl -X POST https://api.recurso.dev/v1/subscriptions \
     "plan_id": "3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14"
   }'
 ```
+
+```python Python
+from uuid import UUID
+
+from recurso.api.invoices import list_invoices
+from recurso.api.subscriptions import create_subscription
+from recurso.models import CreateSubscriptionRequest
+
+subscription = create_subscription.sync(
+    client=client,
+    body=CreateSubscriptionRequest(
+        customer_id=UUID("9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01"),
+        plan_id=UUID("3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14"),
+    ),
+)
+
+# The first invoice is issued when the subscription activates.
+invoices = list_invoices.sync(client=client, subscription_id=subscription.id)
+pay_link = f"https://api.recurso.dev/checkout/{invoices.data[0].id}"
+```
+
+```go Go
+subscription, _ := client.Subscriptions.Create(ctx, &recurso.SubscriptionCreateParams{
+  CustomerID: "9f2c1e84-6a3d-4b7e-9c21-8f4a5d6e7b01",
+  PlanID:     "3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14",
+})
+
+// The first invoice is issued when the subscription activates.
+invoices, _ := client.Invoices.List(ctx, &recurso.InvoiceListParams{
+  SubscriptionID: subscription.ID,
+})
+payLink := "https://api.recurso.dev/checkout/" + invoices[0].ID
+```
 </CodeGroup>
 
 There is no gateway parameter here: Recurso routes each payment to the right
@@ -213,6 +246,21 @@ await recurso.subscriptions.reactivate('sub_xyz');
 ```bash cURL
 curl -X POST https://api.recurso.dev/v1/subscriptions/sub_xyz/reactivate \
   -H "Authorization: Bearer $API_KEY"
+```
+
+```python Python
+from recurso.api.subscriptions import reactivate_subscription
+
+# id is the subscription's UUID
+result = reactivate_subscription.sync(subscription.id, client=client)
+
+# cancel_at_period_end is cleared; billing resumes at next renewal
+```
+
+```go Go
+result, _ := client.Subscriptions.Reactivate(ctx, "sub_xyz")
+
+// cancel_at_period_end is cleared; billing resumes at next renewal
 ```
 </CodeGroup>
 

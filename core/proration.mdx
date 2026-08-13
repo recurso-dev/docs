@@ -114,6 +114,22 @@ const preview = await recurso.subscriptions.previewChange('sub_abc123', {
 });
 console.log(preview.net_amount, preview.total_amount); // minor units
 ```
+
+```python Python
+from recurso.api.subscriptions import preview_plan_change
+
+preview = preview_plan_change.sync(
+    subscription.id,       # the subscription's UUID
+    client=client,
+    plan_id=new_plan.id,   # the target plan's UUID
+)
+print(preview.net_amount, preview.total_amount)  # minor units
+```
+
+```go Go
+preview, _ := client.Subscriptions.PreviewChange(ctx, "sub_abc123", "plan_pro")
+fmt.Println(preview.NetAmount, preview.TotalAmount) // minor units
+```
 </CodeGroup>
 
 The response is the read-only breakdown — every field in the currency's smallest
