@@ -1,0 +1,36 @@
+name: docs-ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # mint CLI requires Node LTS
+      - name: docs.json is valid JSON and nav resolves
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          d = json.load(open('docs.json'))
+          missing = []
+          def walk(p):
+              if isinstance(p, str):
+                  if not os.path.exists(p + '.mdx'):
+                      missing.append(p)
+              elif isinstance(p, dict):
+                  for x in p.get('pages', []):
+                      walk(x)
+          for t in d['navigation']['tabs']:
+              for g in t.get('groups', []):
+                  walk(g)
+          if missing:
+              print('nav entries with no file:', missing)
+              sys.exit(1)
+          print('nav OK')
+          PY
+      - name: mint broken-links
+        run: npx --yes mint broken-links
