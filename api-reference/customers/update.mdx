@@ -25,3 +25,15 @@ curl -X PUT https://api.recurso.dev/v1/customers/9f2c1e84-6a3d-4b7e-9c21-8f4a5d6
 Only the fields you send change. `billing_address` is accepted as a nested
 alias for the flat address fields — a flat field wins when both are
 supplied, and `postal_code`/`zip` are synonyms.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID, or the request body is malformed JSON. | Pass the customer's UUID and a valid JSON body. |
+| 400 | `validation_failed` | `tax_exemption_expires_at` is not a valid date. | Use an ISO 8601 date (e.g. `2027-01-31`). |
+| 400 | `validation_failed` | A field failed service-side validation — notably deactivating (`active: false`) a customer who still has active subscriptions. | Cancel or migrate the customer's subscriptions before archiving them. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 404 | `not_found` | No customer with that ID exists in your tenant. | Check the ID, and that the key belongs to the tenant that owns the customer. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

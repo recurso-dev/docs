@@ -46,3 +46,15 @@ Content-Type: text/html; charset=utf-8
 <Tip>
 Embed the preview URL in customer-facing emails or portals so customers can view their invoices without logging in.
 </Tip>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass the invoice's UUID. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 404 | `not_found` | No invoice with that ID exists in your tenant. | Check the ID, and that the key belongs to the tenant that owns the invoice. |
+| 429 | `rate_limited` | Rendering is an expensive endpoint and has a stricter rate limit. | Back off and retry after the limit window; cache rendered output where possible. |
+| 500 | `internal_error` | The invoice or its customer could not be loaded, or rendering failed. | Retry; if it persists, contact support with the invoice ID. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

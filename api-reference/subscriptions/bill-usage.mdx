@@ -3,3 +3,15 @@ title: "Bill Usage Now"
 openapi: "POST /v1/subscriptions/{id}/bill-usage"
 description: "Bill a subscription's accrued usage immediately instead of waiting for the period close."
 ---
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass the subscription's UUID. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 500 | `internal_error` | The subscription could not be loaded, or interim invoice generation failed. | Verify the subscription ID and retry; check that the subscription's plan has usage charges. |
+
+A `200` with `"data": null` is not an error — it means nothing is due (the subscription is not on progressive billing, or accrued usage is below the threshold).
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

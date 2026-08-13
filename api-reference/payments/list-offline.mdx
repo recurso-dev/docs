@@ -73,3 +73,12 @@ Returns a paginated list of offline payment objects.
 <Tip>
 Combine `customer_id` and `invoice_id` filters to find all offline payments a customer has made toward a specific invoice.
 </Tip>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 500 | `internal_error` | The list query failed server-side. | Retry; if it persists, contact support with the request timestamp. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

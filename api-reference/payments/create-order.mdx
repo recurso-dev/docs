@@ -44,3 +44,15 @@ the corresponding client-side checkout SDK.
 This is a public endpoint used by the checkout flow. The `key` returned is the
 gateway's publishable/public key, safe to use on the client side.
 </Tip>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | The request body is malformed, or the invoice ID is not a valid UUID. | Send a well-formed JSON body with a valid invoice UUID. |
+| 400 | `invoice_already_paid` | The invoice is already paid — no new payment order is needed. | Treat as success for collection purposes; fetch the invoice to confirm its `status`. |
+| 404 | `not_found` | No invoice with that ID exists. | Verify the invoice ID. |
+| 429 | `rate_limited` | This public endpoint has its own rate limit. | Back off and retry after the limit window. |
+| 500 | `internal_error` | The invoice lookup failed, or the payment gateway rejected order creation. | Retry; check the tenant's gateway connection if it persists. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

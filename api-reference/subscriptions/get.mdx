@@ -14,3 +14,13 @@ curl https://api.recurso.dev/v1/subscriptions/8b1f4e27-9c5a-4d3e-b8f2-6a7c9d0e1f
 Subscriptions are tenant-scoped: a foreign or missing ID returns a flat
 `404`. To see the invoices this subscription has produced, list them with
 [`GET /v1/invoices?subscription_id=...`](/api-reference/invoices/list).
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass the subscription's UUID. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 404 | `not_found` | No subscription with that ID exists in your tenant (IDs from another tenant also return 404). | Check the ID, and that the key belongs to the tenant that owns the subscription. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

@@ -44,3 +44,16 @@ curl -X POST https://api.recurso.dev/checkout/8b7a9358-.../razorpay/verify \
   }
 }
 ```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid invoice UUID, or `razorpay_order_id`/`razorpay_payment_id`/`razorpay_signature` are missing. | Send all three fields from the Razorpay checkout callback. |
+| 400 | `validation_failed` | Signature verification failed (`payment verification failed`). | Pass the untouched values from Razorpay's handler callback — any mutation invalidates the signature. |
+| 400 | `validation_failed` | The payment's order does not belong to this invoice (`payment does not belong to this invoice`). | Verify against the same invoice that created the Razorpay order. |
+| 404 | `not_found` | No invoice with that ID exists. | Verify the checkout URL. |
+| 502 | `internal_error` | Razorpay could not confirm the payment when queried (`could not confirm the payment`). | Retry; webhooks will also reconcile the payment once Razorpay settles it. |
+| 503 | `internal_error` | Razorpay checkout is not configured on this deployment. | The merchant must connect Razorpay credentials first. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

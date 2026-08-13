@@ -31,3 +31,13 @@ curl https://api.recurso.dev/v1/invoices/inv_005/payment-wall \
 <Info>
 A payment wall restricts customer access to your product when an invoice is overdue. `payment_wall_active` is `true` once the campaign's grace period has expired with the invoice still unpaid — gate access in your product on this flag. Grace-period settings live on the [dunning campaign](/advanced/dunning-campaigns).
 </Info>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass the invoice's UUID. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 500 | `internal_error` | The payment-wall status could not be computed (e.g. the invoice could not be loaded). | Verify the invoice ID and retry. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

@@ -67,3 +67,14 @@ curl -X POST https://api.recurso.dev/v1/customers \
   "created_at": "2024-01-15T10:30:00Z"
 }
 ```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | The request body is not valid JSON or fails binding. | Send a well-formed JSON body with the required fields. |
+| 400 | `validation_failed` | `tax_exemption_expires_at` is not a valid date. | Use an ISO 8601 date (e.g. `2027-01-31`). |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 500 | `internal_error` | The customer could not be persisted. | Retry; if it persists, contact support with the request timestamp. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

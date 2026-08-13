@@ -37,3 +37,13 @@ curl "https://api.recurso.dev/v1/invoices/inv_abc123" \
   }
 }
 ```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass the invoice's UUID. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 404 | `not_found` | No invoice with that ID exists in your tenant (IDs from another tenant also return 404). | Check the ID, and that the key belongs to the tenant that owns the invoice. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

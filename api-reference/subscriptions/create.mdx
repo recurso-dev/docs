@@ -52,3 +52,13 @@ checkout page — `https://api.recurso.dev/checkout/{invoice_id}` (gateway
 chosen from the invoice currency) — or automatically via a saved mandate.
 Find the invoice with `GET /v1/invoices?subscription_id=...`.
 </Info>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | The request body is not valid JSON or fails binding. | Send a well-formed JSON body with `customer_id` and `plan_id`. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 500 | `internal_error` | The referenced customer, plan, or coupon could not be resolved — a nonexistent or malformed `customer_id`/`plan_id` currently surfaces as 500. | Verify the customer and plan exist in your tenant and the coupon code is valid before creating. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

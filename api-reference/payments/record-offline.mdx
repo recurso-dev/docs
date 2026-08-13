@@ -63,3 +63,13 @@ When an `invoice_id` is provided and the payment amount matches the invoice bala
 the invoice is automatically marked as `paid`. Partial payments update the invoice
 balance without closing it.
 </Tip>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | The request body is malformed or fails binding, `customer_id` is not a valid UUID, or `invoice_id` (when provided) is not a valid UUID. | Send a well-formed JSON body with valid UUIDs. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 500 | `internal_error` | Recording failed — e.g. the referenced customer or invoice does not exist in your tenant. | Verify the customer and invoice IDs, then retry. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

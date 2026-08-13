@@ -66,3 +66,16 @@ curl -X POST https://api.recurso.dev/checkout/9b2f6c1e-.../pay
 <Warning>
 Already-paid invoices return `400`. A `503` means the deployment is missing the gateway's browser-side key (`STRIPE_PUBLISHABLE_KEY` or `RAZORPAY_KEY_ID`) — fix the configuration rather than retrying.
 </Warning>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid invoice UUID. | Use the invoice UUID from the checkout link. |
+| 400 | `invoice_already_paid` | The invoice is already paid. | Nothing to collect — show the success state instead. |
+| 404 | `not_found` | No invoice with that ID exists. | Verify the checkout URL. |
+| 429 | `rate_limited` | This public endpoint has its own rate limit. | Back off and retry after the limit window. |
+| 500 | `internal_error` | The invoice lookup failed, or the gateway rejected payment-order creation. | Retry; the merchant should check their gateway connection if it persists. |
+| 503 | `internal_error` | Checkout is not fully configured for the invoice currency (missing Stripe publishable key or Razorpay key ID). | The merchant must finish their gateway configuration (dashboard → Gateway Connections). |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

@@ -38,3 +38,14 @@ Content-Type: text/html; charset=utf-8
 <Tip>
 Include the checkout URL in emails or redirect customers to it from your application. The URL format is `https://api.recurso.dev/checkout/{invoice_id}`.
 </Tip>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid invoice UUID. | Use the invoice UUID from the checkout link. |
+| 404 | `not_found` | No invoice with that ID exists. | Verify the checkout URL — the invoice may have been voided or the link is stale. |
+| 429 | `rate_limited` | This public endpoint has its own rate limit. | Back off and retry after the limit window. |
+| 500 | `internal_error` | The invoice could not be loaded. | Retry; if it persists, contact the merchant. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.
