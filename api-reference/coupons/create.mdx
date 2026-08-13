@@ -9,9 +9,9 @@ description: "Create a new discount coupon"
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `code` | string | Yes | Unique coupon code |
-| `discount_type` | string | Yes | `percentage` or `fixed` |
-| `discount_value` | number | Yes | Discount amount (percentage or fixed amount in smallest currency unit) |
-| `currency` | string | No | Three-letter ISO currency code (required for `fixed` discount type) |
+| `discount_type` | string | Yes | `percent` or `amount` |
+| `discount_value` | number | Yes | Percent (for `percent`) or the amount in minor currency units (for `amount`) |
+| `currency` | string | No | Three-letter ISO currency code (required for the `amount` discount type) |
 | `duration` | string | Yes | `once`, `repeating`, or `forever` |
 | `duration_in_months` | integer | No | Number of months the coupon applies (required when duration is `repeating`) |
 | `max_redemptions` | integer | No | Maximum number of times this coupon can be redeemed |
@@ -24,7 +24,7 @@ curl -X POST https://api.recurso.dev/v1/coupons \
   -H "Content-Type: application/json" \
   -d '{
     "code": "SUMMER25",
-    "discount_type": "percentage",
+    "discount_type": "percent",
     "discount_value": 25,
     "duration": "repeating",
     "duration_in_months": 3,
@@ -39,7 +39,7 @@ curl -X POST https://api.recurso.dev/v1/coupons \
   "id": "cpn_s25_3mo",
   "object": "coupon",
   "code": "SUMMER25",
-  "discount_type": "percentage",
+  "discount_type": "percent",
   "discount_value": 25,
   "currency": null,
   "duration": "repeating",
