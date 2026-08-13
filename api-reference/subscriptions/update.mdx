@@ -60,3 +60,13 @@ curl -X PUT https://api.recurso.dev/v1/subscriptions/sub_xyz789 \
 <Note>
 When changing plans with `proration_behavior` set to `create_prorations`, a credit is issued for the unused portion of the current plan and a charge is created for the new plan.
 </Note>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID, or the request body is malformed JSON. | Pass the subscription's UUID and a valid JSON body. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 500 | `internal_error` | The subscription or the target plan does not exist in your tenant — a nonexistent or malformed `plan_id` currently surfaces as 500. | Verify both IDs; preview the change first with `GET /v1/subscriptions/{id}/preview-change?plan_id=...`. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

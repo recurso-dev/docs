@@ -51,3 +51,14 @@ curl -X POST https://api.recurso.dev/v1/subscriptions/sub_xyz789/pause \
 <Note>
 While paused, no invoices are generated and the customer is not charged. The subscription resumes automatically at `resume_at` if provided.
 </Note>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass the subscription's UUID. |
+| 400 | `validation_failed` | The subscription does not exist in your tenant (`subscription not found`). | Verify the ID with `GET /v1/subscriptions/{id}`. |
+| 400 | `validation_failed` | The subscription is not `active` — trialing, paused, or canceled subscriptions cannot be paused (`only active subscriptions can be paused`). | Only pause subscriptions whose `status` is `active`. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

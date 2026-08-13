@@ -16,3 +16,15 @@ Now** checkout link — to the customer's email on file. Invoices are also
 auto-emailed on generation; this endpoint is the on-demand resend. Returns
 `400` if the customer has no email address. Email delivery uses your SMTP
 settings — see [notifications setup](/setup/notifications).
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass the invoice's UUID. |
+| 400 | `validation_failed` | The invoice does not exist in your tenant (`invoice not found`). | Verify the ID with `GET /v1/invoices/{id}`. |
+| 400 | `validation_failed` | The invoice's customer is missing or has no email address on file (`customer has no email address on file`). | Set the customer's `email` via `PUT /v1/customers/{id}`, then resend. |
+| 400 | `validation_failed` | The server has no email provider configured (`email notifications are not configured`). | Configure SMTP on the deployment before sending invoice emails. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.

@@ -40,3 +40,15 @@ curl "https://api.recurso.dev/checkout/9b2f6c1e-.../success?payment_intent=pi_3T
   }
 }
 ```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid invoice UUID. | Use the invoice UUID from the checkout link. |
+| 400 | `validation_failed` | The `payment_intent`/payment reference in the query does not belong to this invoice. | Pass the payment reference returned by this invoice's pay step. |
+| 404 | `not_found` | No invoice with that ID exists. | Verify the checkout URL. |
+| 429 | `rate_limited` | This public endpoint has its own rate limit. | Back off and retry after the limit window. |
+| 500 | `internal_error` | The invoice could not be loaded, or settling the invoice after a confirmed payment failed. | Retry — settlement is safe to re-request; webhooks will also reconcile the payment. |
+
+See [Errors](/api-reference/errors) for the error envelope and the full code taxonomy.
