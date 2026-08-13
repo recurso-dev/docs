@@ -276,15 +276,20 @@ Archived plans can't be used for new subscriptions but existing subscriptions co
 
 <CodeGroup>
 ```typescript Node
-// Archiving is a dashboard operation (Plans → ⋯ → Archive). There is no
-// archive API endpoint today — the /v1/plans surface is create + list only.
+await recurso.plans.archive('3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14');
+// restore later with: recurso.plans.update(id, { active: true })
 ```
 
 ```bash cURL
-# No archive endpoint — archive from the dashboard, or simply stop
-# subscribing customers to the old plan. Existing subscribers bill on.
+curl -X PUT https://api.recurso.dev/v1/plans/3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14 \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "active": false }'
 ```
 </CodeGroup>
+
+Archiving is also available in the dashboard (Plans → ⋯ → Archive). See
+[Update a Plan](/api-reference/plans/update).
 
 <Warning>
 Archiving is not reversible. If you need the same plan again, create a new one. Existing subscribers on the archived plan continue billing normally — only new sign-ups are blocked.
