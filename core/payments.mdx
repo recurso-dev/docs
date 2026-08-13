@@ -189,6 +189,25 @@ curl -G https://api.recurso.dev/v1/payments/offline \
   -H "Authorization: Bearer $API_KEY" \
   -d invoice_id=inv_001
 ```
+
+```python Python
+from recurso.api.offline_payments import list_offline_payments
+
+result = list_offline_payments.sync(client=client)
+# The SDK has no server-side invoice filter — match client-side:
+for_invoice = [p for p in result.data if p.invoice_id == invoice_id]
+```
+
+```go Go
+payments, _ := client.OfflinePayments.List(ctx)
+
+// The SDK has no server-side invoice filter — match client-side:
+for _, p := range payments {
+  if p.InvoiceID != nil && *p.InvoiceID == invoiceID {
+    // ...
+  }
+}
+```
 </CodeGroup>
 
 ## Virtual Accounts for Bank Transfers

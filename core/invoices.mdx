@@ -131,6 +131,21 @@ curl https://api.recurso.dev/v1/invoices/9b2f6c1e-.../pdf \
   -H "Authorization: Bearer $API_KEY" \
   -o invoice.html
 ```
+
+```python Python
+from uuid import UUID
+
+from recurso.api.invoices import download_invoice_pdf
+
+# Print-ready document (HTML; print-to-PDF in the browser)
+doc = download_invoice_pdf.sync(UUID("9b2f6c1e-..."), client=client)
+```
+
+```go Go
+// The Go SDK exposes the document URL; fetch it with your own
+// HTTP request, sending "Authorization: Bearer <api key>".
+url := client.Invoices.PDFURL("9b2f6c1e-...")
+```
 </CodeGroup>
 
 The rendering is jurisdiction-aware (India-GST tax invoice vs. plain invoice) and requires authentication — see the [endpoint reference](/api-reference/invoices/pdf).

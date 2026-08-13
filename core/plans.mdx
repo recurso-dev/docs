@@ -43,14 +43,33 @@ const plan = await recurso.plans.create({
 });
 ```
 
+```python Python
+from recurso.api.plans import create_plan
+from recurso.models import CreatePlanRequest, CreatePlanRequestIntervalUnit
+
+plan = create_plan.sync(
+    client=client,
+    body=CreatePlanRequest(
+        name="Pro Plan",
+        code="pro-monthly-inr",
+        interval_unit=CreatePlanRequestIntervalUnit.MONTH,
+        interval_count=1,
+        amount=499900,  # minor units: ₹4,999.00
+        currency="INR",
+        hsn_code="998314",  # optional; falls back to the tenant SAC
+    ),
+)
+```
+
 ```go Go
 plan, _ := client.Plans.Create(ctx, &recurso.PlanCreateParams{
   Name:         "Pro Plan",
   Code:         "pro-monthly-inr",
   IntervalUnit: "month",
   IntervalCount: 1,
-  Amount:       499900,
+  Amount:       499900, // minor units: ₹4,999.00
   Currency:     "INR",
+  HSNCode:      "998314", // optional; falls back to the tenant SAC
 })
 ```
 </CodeGroup>
@@ -200,6 +219,20 @@ curl -G https://api.recurso.dev/v1/plans \
 
 ```typescript Node
 const plans = await recurso.plans.list({ search: 'pro', limit: 10 });
+```
+
+```python Python
+from recurso.api.plans import list_plans
+
+result = list_plans.sync(client=client, q="pro", limit=10)
+plans = result.data
+```
+
+```go Go
+plans, _ := client.Plans.List(ctx, &recurso.PlanListParams{
+  Q:     "pro",
+  Limit: 10,
+})
 ```
 </CodeGroup>
 
