@@ -158,26 +158,34 @@ stateDiagram-v2
 
 ## Revenue Recognition Report
 
-The `GET /v1/finance/revrec/report` endpoint provides a consolidated revenue recognition report for a given period. It returns both recognized and deferred amounts, broken down by subscription.
-
-<CodeGroup>
+The `GET /v1/finance/revrec/report` endpoint returns a tenant-level deferred-revenue
+rollforward for a **single month**: what was recognized that month, the deferred
+balance still on the books, when that balance is scheduled to release, and how it
+splits by currency. It takes required `month` (1–12) and `year` query parameters —
+not a date range:
 
 ```bash cURL
 curl -G https://api.recurso.dev/v1/finance/revrec/report \
   -H "Authorization: Bearer $API_KEY" \
-  -d start_date=2026-01-01 \
-  -d end_date=2026-06-30
+  -d month=6 \
+  -d year=2026
 ```
-</CodeGroup>
 
 ### Report Fields
 
 | Field | Description |
 |-------|-------------|
-| `recognized_amount` | Revenue that has been earned and moved from Deferred Revenue (2100) to Recognized Revenue (4100) during the period |
-| `deferred_amount` | Revenue collected but not yet earned — still sitting in Deferred Revenue (2100) at the end of the period |
-| `total_recognized_amount` | Sum of `recognized_amount` across all subscriptions |
-| `total_deferred_amount` | Sum of `deferred_amount` across all subscriptions |
+| `month` / `year` | The period the report covers |
+| `recognized_amount` | Revenue recognized during `month`/`year` (minor units) |
+| `deferred_balance` | All still-pending recognition on the books (minor units, summed across currencies) |
+| `upcoming` | The deferred balance grouped by the month it is scheduled to recognize (`month`, `year`, `amount`) |
+| `by_currency` | The deferred balance split by schedule currency (`currency`, `deferred`) |
+
+<Note>
+  The report is a tenant-wide rollforward, not a per-subscription breakdown, and
+  it does not take a date range — call it once per month you want to inspect. For
+  a full recognized-plus-scheduled curve, use the revenue waterfall.
+</Note>
 
 ## Querying Revenue Data
 
@@ -231,8 +239,8 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_recrev4100&code=
 </CodeGroup>
 
 <Tip>
-  For period totals, prefer `GET /v1/finance/revrec/report` (above) — it already
-  aggregates recognized and deferred amounts for a date range, so you don't have
+  For a month's recognized total, prefer `GET /v1/finance/revrec/report` (above) —
+  it returns `recognized_amount` for a `month`/`year` directly, so you don't have
   to page and sum ledger postings yourself.
 </Tip>
 
@@ -308,8 +316,8 @@ Subscribe to these events for revenue tracking:
 ### Monthly Recognized Revenue
 
 The cleanest source is the revrec report (`GET /v1/finance/revrec/report`), which
-takes a date range and returns `total_recognized_amount` directly. If you'd rather
-sum ledger postings, list **Recognized Revenue** (`4100`) — the entries endpoint has
+takes a `month`/`year` and returns that month's `recognized_amount` directly. If
+you'd rather sum ledger postings, list **Recognized Revenue** (`4100`) — the entries endpoint has
 no date filter, so bound the period on `created_at` in your own code, and each row
 is a single transfer (no nested `entries[]`):
 
