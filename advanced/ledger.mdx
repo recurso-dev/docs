@@ -45,15 +45,27 @@ Recurso provisions the following accounts automatically for each tenant:
 |-------------|------|------|---------|
 | `1000` | Cash | `asset` | Funds received from payments |
 | `1100` | Accounts Receivable | `asset` | Outstanding invoice amounts |
-| `4000` | Revenue | `revenue` | Recognized subscription and charge revenue |
-| `2100` | Deferred Revenue | `liability` | Prepaid revenue not yet recognized |
-| `5000` | Refunds | `expense` | Refund amounts issued to customers |
+| `1200` | TDS Receivable | `asset` | Tax withheld at source, recoverable |
+| `2100` | Deferred Revenue | `liability` | Billed revenue not yet earned |
 | `2200` | Tax Payable | `liability` | Collected tax awaiting remittance |
-| `5100` | Credits & Adjustments | `expense` | Coupons, discounts, and issued/expired account credit |
+| `2300` | Customer Credit | `liability` | Account credit owed back to a customer |
+| `4000` | Revenue | `revenue` | Revenue billed on issuance (one-off charges credit here directly) |
+| `4100` | Recognized Revenue | `revenue` | Deferred revenue earned as the service period elapses |
+| `5000` | Refunds | `expense` | Refund amounts issued to customers |
+| `5100` | Credits & Adjustments | `expense` | Issued, expired, or written-off account credit |
+| `5200` | Bad Debt Expense | `expense` | Invoices written off as uncollectible |
 
 <Info>
 Account codes follow standard chart-of-accounts conventions. Assets start with `1xxx`, liabilities with `2xxx`, revenue with `4xxx`, and expenses with `5xxx`.
 </Info>
+
+<Note>
+  Recurso's ledger is **transfer-based**: every posting is exactly one debit
+  account, one credit account, and a positive amount in minor units — never a
+  multi-leg compound entry. A multi-account event (an invoice with tax, say) is
+  recorded as *several* single-debit/single-credit transfers, each with its own
+  `code`. The tables below show each transfer on its own line.
+</Note>
 
 ## How Transactions Are Created
 
@@ -61,7 +73,12 @@ Recurso automatically creates journal entries when financial events occur. You n
 
 ### Invoice Finalized
 
-When an invoice is finalized, Recurso records the amount owed:
+When an invoice is finalized, Recurso records the amount owed as a single
+transfer (posting `code` `1`) at the **gross** invoice total. The credit side
+depends on what was billed:
+
+- **Subscription invoice** → credit `2100` Deferred Revenue (earned over the period)
+- **One-off charge** → credit `4000` Revenue directly (earned on issuance)
 
 ```
 Debit   1100 (Accounts Receivable)   ₹4,999.00
@@ -94,39 +111,51 @@ flowchart LR
 
 ### Revenue Recognized
 
-As the subscription period elapses, deferred revenue is recognized:
+As the subscription period elapses, deferred revenue moves into **Recognized
+Revenue** (posting `code` `2`) — recognition credits `4100`, not `4000`:
 
 ```
-Debit   2100 (Deferred Revenue)      ₹4,999.00
-Credit  4000 (Revenue)               ₹4,999.00
+Debit   2100 (Deferred Revenue)       ₹4,999.00
+Credit  4100 (Recognized Revenue)     ₹4,999.00
 ```
 
 ### Refund Issued
 
-When a refund is processed:
+When a refund is processed (posting `code` `4`):
 
 ```
 Debit   5000 (Refunds)               ₹4,999.00
 Credit  1000 (Cash)                  ₹4,999.00
 ```
 
-### Tax Collected
+### Tax on an Invoice
 
-When an invoice includes tax:
+Recurso does **not** post tax as a separate debit to Accounts Receivable — the
+Code-1 issuance transfer already books the **gross** amount (net + tax) to AR.
+A second transfer (posting `code` `6`) then reclassifies the tax portion out of
+revenue and into Tax Payable, so revenue reflects only the taxable value.
 
-```
-Debit   1100 (Accounts Receivable)   ₹899.82
-Credit  2200 (Tax Payable)           ₹899.82
-```
-
-### Discount Applied
-
-When a coupon or discount is applied to an invoice:
+For a subscription invoice of ₹4,999 gross that includes ₹762.55 of tax:
 
 ```
-Debit   5100 (Credits & Adjustments) ₹500.00
-Credit  1100 (Accounts Receivable)   ₹500.00
+Code 1  Debit  1100 (Accounts Receivable)  ₹4,999.00
+        Credit 2100 (Deferred Revenue)     ₹4,999.00
+
+Code 6  Debit  2100 (Deferred Revenue)     ₹762.55
+        Credit 2200 (Tax Payable)          ₹762.55
 ```
+
+Net effect: AR ₹4,999 (gross), Deferred Revenue ₹4,236.45 (taxable value), Tax
+Payable ₹762.55. For a one-off charge the Code-6 debit falls on `4000` Revenue
+instead of `2100` Deferred Revenue.
+
+### Discounts and Coupons
+
+There is **no** separate discount posting. A coupon or discount reduces the
+invoice total *before* the Code-1 transfer, so the ledger simply books the
+already-discounted gross to Accounts Receivable. (Account `5100` Credits &
+Adjustments is used for *account credit* — issued, expired, or written off — not
+for line-item discounts.)
 
 ## Querying the Ledger
 
@@ -180,14 +209,18 @@ curl https://api.recurso.dev/v1/ledger/accounts \
 
 ### List Journal Entries
 
-Query journal entries with optional filters for account, date range, and reference.
+The ledger is queried **one account at a time**, so `account_id` is required.
+Each row is a single balanced transfer (one debit account, one credit account,
+one positive amount). Narrow to a posting kind with `code`, and page with
+`limit` / `offset`. See the [List Ledger Entries reference](/api-reference/ledger/entries)
+for the full parameter and field list.
 
 <CodeGroup>
 ```typescript TypeScript
 const entries = await recurso.ledger.entries.list({
   account_id: "lacc_abc123",
-  start_date: "2025-01-01",
-  end_date: "2025-01-31"
+  code: 3,          // optional: only payment postings
+  limit: 50
 });
 
 // Response
@@ -196,14 +229,10 @@ const entries = await recurso.ledger.entries.list({
     {
       id: "ltxn_abc123",
       tenant_id: "ten_xyz",
-      entries: [
-        {
-          debit_account_id: "lacc_abc123",
-          credit_account_id: "lacc_def456",
-          amount: 499900,
-          currency: "INR"
-        }
-      ],
+      debit_account_id: "lacc_cash1000",
+      credit_account_id: "lacc_ar1100",
+      amount: 499900,
+      code: 3,
       description: "Payment received for inv_m8k29x",
       reference_type: "payment",
       reference_id: "pay_r4t78p",
@@ -214,18 +243,25 @@ const entries = await recurso.ledger.entries.list({
 ```
 
 ```bash cURL
-curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_abc123&start_date=2025-01-01&end_date=2025-01-31" \
+curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_abc123&code=3&limit=50" \
   -H "Authorization: Bearer $API_KEY"
 ```
 </CodeGroup>
+
+<Note>
+  There are no `start_date` / `end_date` filters on this endpoint. To pull a full
+  period across every account, use the [General Ledger export](/api-reference/ledger/export);
+  to read every posting behind one invoice, use its journal entries.
+</Note>
 
 ### Entry Filter Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `account_id` | `string` | Filter entries involving a specific account |
-| `start_date` | `string` | ISO 8601 date, inclusive lower bound |
-| `end_date` | `string` | ISO 8601 date, inclusive upper bound |
+| `account_id` | `string` | **Required.** The account whose postings to list |
+| `code` | `integer` | Optional. Restrict to one posting kind (`1` = issuance, `3` = payment, `6` = tax reclass, …) |
+| `limit` | `integer` | Optional. Page size |
+| `offset` | `integer` | Optional. Page offset |
 
 ### LedgerAccount Object
 
@@ -241,15 +277,17 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_abc123&start_dat
 
 ### LedgerTransaction Object
 
+Each transaction is one balanced transfer — a single debit account, a single
+credit account, and a positive amount. There is no nested `entries[]` array.
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | `string` | Unique identifier (prefixed `ltxn_`) |
 | `tenant_id` | `string` | Tenant this transaction belongs to |
-| `entries` | `array` | Array of entry lines (debit/credit pairs) |
-| `entries[].debit_account_id` | `string` | Account being debited |
-| `entries[].credit_account_id` | `string` | Account being credited |
-| `entries[].amount` | `integer` | Amount in minor currency units |
-| `entries[].currency` | `string` | ISO 4217 currency code |
+| `debit_account_id` | `string` | Account being debited |
+| `credit_account_id` | `string` | Account being credited |
+| `amount` | `integer` | Amount in minor currency units (always positive) |
+| `code` | `integer` | Posting kind (`1` = issuance, `2` = recognition, `3` = payment, `6` = tax reclass, …) |
 | `description` | `string` | Human-readable description of the transaction |
 | `reference_type` | `string` | Source object type (e.g., `payment`, `invoice`, `refund`) |
 | `reference_id` | `string` | ID of the source object |
@@ -297,9 +335,12 @@ The reconciliation report answers "does the ledger agree with the billing
 records?" for your tenant. Run it on demand with
 [`GET /v1/finance/reconciliation`](/api-reference/finance/reconciliation);
 a scheduler also runs it **daily** and logs
-`Ledger reconciliation found discrepancies` when drift appears. The report
-is computed fresh on every run and never persisted — it only reads, fixing
-drift is a human decision.
+`Ledger reconciliation found discrepancies` when drift appears. The plain
+`GET` report is computed fresh and read-only — it never writes to the ledger,
+and fixing drift is a human decision. If you want an audit trail of *when*
+reconciliation ran and what it found, `POST /v1/finance/reconciliation/runs`
+runs the same check and records a summary row you can list later; the
+underlying report is still read-only.
 
 ```bash
 curl https://api.recurso.dev/v1/finance/reconciliation \
@@ -364,12 +405,14 @@ exist); `total_discrepancies` always carries the full count.
 
 ## Webhook Events
 
-The ledger emits events you can subscribe to:
-
-| Event | Description |
-|-------|-------------|
-| `ledger.entry.created` | A new journal entry was recorded |
-| `ledger.account.balance_updated` | An account balance changed |
+<Note>
+  The ledger does **not** emit its own webhook events — there are no
+  `ledger.entry.created` or `ledger.account.balance_updated` events. Recurso
+  emits ten event types (invoice, subscription, customer, and payment
+  lifecycle); see the [Webhook Events reference](/api-reference/webhooks/events).
+  To watch ledger movement, poll an account's postings or the reconciliation
+  report.
+</Note>
 
 ## Best Practices
 
@@ -383,8 +426,8 @@ The ledger emits events you can subscribe to:
   <Card title="Monitor Imbalances" icon="triangle-exclamation">
     Set alerts on the trial balance. Any non-zero difference indicates a bug or data corruption
   </Card>
-  <Card title="Archive Old Entries" icon="box-archive">
-    Query with date ranges to keep responses fast. Export older entries to your data warehouse for long-term storage
+  <Card title="Export for the Warehouse" icon="box-archive">
+    Use the [General Ledger export](/api-reference/ledger/export) to pull a full period across all accounts into your data warehouse for long-term storage and reporting
   </Card>
 </CardGroup>
 

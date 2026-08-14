@@ -16,7 +16,7 @@ flowchart LR
     A[Customer Pays ₹12,000/year] --> B[Deferred Revenue<br/>Account 2100]
     B --> C{Each Month}
     C --> D[₹1,000 recognized]
-    D --> E[Revenue<br/>Account 4000]
+    D --> E[Recognized Revenue<br/>Account 4100]
     C --> F[₹1,000 recognized]
     F --> E
 ```
@@ -46,7 +46,7 @@ Recurso implements the core ASC 606 framework automatically:
     For monthly subscriptions, the full invoice amount maps to one period. For annual subscriptions, the amount is divided equally across 12 months.
   </Step>
   <Step title="Recognize Revenue Over Time">
-    Recurso creates scheduled journal entries that move amounts from Deferred Revenue (account `2100`) to Revenue (account `4000`) as each period completes.
+    Recurso creates scheduled journal entries that move amounts from Deferred Revenue (account `2100`) to Recognized Revenue (account `4100`) as each period completes.
   </Step>
 </Steps>
 
@@ -56,16 +56,22 @@ When a subscription invoice is paid, Recurso creates a revenue recognition sched
 
 ### Monthly Subscription
 
-For a monthly plan at ₹4,999/month, revenue is recognized immediately at the end of the billing period because the service period matches the billing period:
+For a monthly plan at ₹4,999/month, the invoice books deferred revenue on
+issuance, the payment clears the receivable, and recognition earns it at the end
+of the billing period because the service period matches the billing period:
 
 ```
-On payment (Jan 1):
-  Debit   1000 (Cash)               ₹4,999.00
+On issuance (Jan 1) — posting code 1:
+  Debit   1100 (Accounts Receivable) ₹4,999.00
+  Credit  2100 (Deferred Revenue)    ₹4,999.00
+
+On payment (Jan 1) — posting code 3:
+  Debit   1000 (Cash)                ₹4,999.00
   Credit  1100 (Accounts Receivable) ₹4,999.00
 
-On period end (Jan 31):
+On period end (Jan 31) — posting code 2:
   Debit   2100 (Deferred Revenue)    ₹4,999.00
-  Credit  4000 (Revenue)             ₹4,999.00
+  Credit  4100 (Recognized Revenue)  ₹4,999.00
 ```
 
 ### Annual Subscription
@@ -73,23 +79,27 @@ On period end (Jan 31):
 For an annual plan at ₹49,990/year (equivalent to ₹4,165.83/month), revenue is recognized in 12 equal installments:
 
 ```
-On payment (Jan 1):
-  Debit   1000 (Cash)               ₹49,990.00
-  Credit  2100 (Deferred Revenue)   ₹49,990.00
+On issuance (Jan 1) — code 1:
+  Debit   1100 (Accounts Receivable) ₹49,990.00
+  Credit  2100 (Deferred Revenue)    ₹49,990.00
 
-End of January:
-  Debit   2100 (Deferred Revenue)    ₹4,165.83
-  Credit  4000 (Revenue)             ₹4,165.83
+On payment (Jan 1) — code 3:
+  Debit   1000 (Cash)                ₹49,990.00
+  Credit  1100 (Accounts Receivable) ₹49,990.00
 
-End of February:
+End of January — code 2:
   Debit   2100 (Deferred Revenue)    ₹4,165.83
-  Credit  4000 (Revenue)             ₹4,165.83
+  Credit  4100 (Recognized Revenue)  ₹4,165.83
+
+End of February — code 2:
+  Debit   2100 (Deferred Revenue)    ₹4,165.83
+  Credit  4100 (Recognized Revenue)  ₹4,165.83
 
 ... (repeated each month through December)
 
-End of December:
+End of December — code 2:
   Debit   2100 (Deferred Revenue)    ₹4,165.87
-  Credit  4000 (Revenue)             ₹4,165.87
+  Credit  4100 (Recognized Revenue)  ₹4,165.87
 ```
 
 <Info>
@@ -101,21 +111,25 @@ The final month absorbs any rounding difference to ensure the schedule totals ex
 For a quarterly plan at ₹13,499/quarter, revenue is recognized over 3 months:
 
 ```
-On payment (Jan 1):
-  Debit   1000 (Cash)               ₹13,499.00
-  Credit  2100 (Deferred Revenue)   ₹13,499.00
+On issuance (Jan 1) — code 1:
+  Debit   1100 (Accounts Receivable) ₹13,499.00
+  Credit  2100 (Deferred Revenue)    ₹13,499.00
 
-End of January:
+On payment (Jan 1) — code 3:
+  Debit   1000 (Cash)                ₹13,499.00
+  Credit  1100 (Accounts Receivable) ₹13,499.00
+
+End of January — code 2:
   Debit   2100 (Deferred Revenue)    ₹4,499.67
-  Credit  4000 (Revenue)             ₹4,499.67
+  Credit  4100 (Recognized Revenue)  ₹4,499.67
 
-End of February:
+End of February — code 2:
   Debit   2100 (Deferred Revenue)    ₹4,499.67
-  Credit  4000 (Revenue)             ₹4,499.67
+  Credit  4100 (Recognized Revenue)  ₹4,499.67
 
-End of March:
+End of March — code 2:
   Debit   2100 (Deferred Revenue)    ₹4,499.66
-  Credit  4000 (Revenue)             ₹4,499.66
+  Credit  4100 (Recognized Revenue)  ₹4,499.66
 ```
 
 ## Key Accounts
@@ -124,19 +138,22 @@ Revenue recognition uses two primary ledger accounts:
 
 | Account | Code | Type | Role |
 |---------|------|------|------|
-| Deferred Revenue | `2100` | `liability` | Holds prepaid amounts until the service period elapses |
-| Revenue | `4000` | `revenue` | Records income as it is earned |
+| Deferred Revenue | `2100` | `liability` | Holds billed amounts until the service period elapses |
+| Recognized Revenue | `4100` | `revenue` | Records income as each period is earned |
 
-The flow is always the same: money enters Deferred Revenue when collected, then moves to Revenue as the obligation is fulfilled.
+The flow is always the same: an invoice books the amount into Deferred Revenue on
+issuance, then it moves to Recognized Revenue as the obligation is fulfilled. (Account
+`4000` Revenue is used for one-off charges, which are earned on issuance and never pass
+through Deferred Revenue.)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> DeferredRevenue: Payment received
-    DeferredRevenue --> Revenue: Period elapses
-    Revenue --> [*]: Fully recognized
+    [*] --> DeferredRevenue: Invoice issued
+    DeferredRevenue --> RecognizedRevenue: Period elapses
+    RecognizedRevenue --> [*]: Fully recognized
 
     DeferredRevenue: Account 2100
-    Revenue: Account 4000
+    RecognizedRevenue: Account 4100
 ```
 
 ## Revenue Recognition Report
@@ -157,7 +174,7 @@ curl -G https://api.recurso.dev/v1/finance/revrec/report \
 
 | Field | Description |
 |-------|-------------|
-| `recognized_amount` | Revenue that has been earned and moved from Deferred Revenue (2100) to Revenue (4000) during the period |
+| `recognized_amount` | Revenue that has been earned and moved from Deferred Revenue (2100) to Recognized Revenue (4100) during the period |
 | `deferred_amount` | Revenue collected but not yet earned — still sitting in Deferred Revenue (2100) at the end of the period |
 | `total_recognized_amount` | Sum of `recognized_amount` across all subscriptions |
 | `total_deferred_amount` | Sum of `deferred_amount` across all subscriptions |
@@ -185,40 +202,54 @@ curl https://api.recurso.dev/v1/ledger/accounts \
 ```
 </CodeGroup>
 
-### Monthly Recognition Entries
+### Recognition Entries
+
+Recognition postings land in **Recognized Revenue** (`4100`). List that account's
+postings — the entries endpoint has no date filters, so filter by `created_at`
+client-side, or use the revrec report / GL export for period totals:
 
 <CodeGroup>
 ```typescript TypeScript
 const entries = await recurso.ledger.entries.list({
-  account_id: "lacc_rev4000",
-  start_date: "2025-06-01",
-  end_date: "2025-06-30"
+  account_id: "lacc_recrev4100",
+  code: 2,          // recognition postings only
+  limit: 100
 });
 
-// Each entry represents revenue recognized for a subscription period
-entries.data.forEach(entry => {
-  console.log(
-    `${entry.created_at}: ${entry.entries[0].amount / 100} ${entry.entries[0].currency}` +
-    ` — ${entry.description}`
-  );
-});
+// Each row is a single transfer: one recognized period for one subscription
+entries.data
+  .filter(txn => txn.created_at >= "2025-06-01" && txn.created_at <= "2025-06-30")
+  .forEach(txn => {
+    console.log(`${txn.created_at}: ${txn.amount / 100} — ${txn.description}`);
+  });
 ```
 
 ```bash cURL
-curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_rev4000&start_date=2025-06-01&end_date=2025-06-30" \
+curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_recrev4100&code=2&limit=100" \
   -H "Authorization: Bearer $API_KEY"
 ```
 </CodeGroup>
+
+<Tip>
+  For period totals, prefer `GET /v1/finance/revrec/report` (above) — it already
+  aggregates recognized and deferred amounts for a date range, so you don't have
+  to page and sum ledger postings yourself.
+</Tip>
 
 ## Handling Edge Cases
 
 <AccordionGroup>
   <Accordion title="Mid-cycle cancellations">
-    When a subscription is cancelled mid-period, any remaining deferred revenue for future months is reversed:
+    When a subscription is canceled mid-period with a refund, the unearned
+    deferred revenue is reversed (posting code `5`) and the cash refund is paid
+    out (posting code `4`) — two single transfers, not one:
 
     ```
-    Debit   2100 (Deferred Revenue)    ₹33,327.00  (8 remaining months)
-    Credit  1000 (Cash)                ₹33,327.00  (refund issued)
+    Code 5  Debit   2100 (Deferred Revenue)  ₹33,327.00  (8 remaining months)
+            Credit  5000 (Refunds)           ₹33,327.00
+
+    Code 4  Debit   5000 (Refunds)           ₹33,327.00
+            Credit  1000 (Cash)              ₹33,327.00
     ```
 
     If no refund is issued (cancel at end of period), the remaining deferred revenue is recognized as earned at the cancellation date per your refund policy.
@@ -244,12 +275,11 @@ curl "https://api.recurso.dev/v1/ledger/entries?account_id=lacc_rev4000&start_da
   </Accordion>
 
   <Accordion title="Discounts and coupons">
-    Discounts reduce the transaction price before the recognition schedule is created. A ₹49,990 annual plan with a 20% discount creates a schedule based on ₹39,992 spread across 12 months. The discount itself is recorded as:
-
-    ```
-    Debit   5100 (Discounts)           ₹9,998.00
-    Credit  1100 (Accounts Receivable) ₹9,998.00
-    ```
+    Discounts reduce the transaction price *before* any posting is made. A ₹49,990
+    annual plan with a 20% discount produces an invoice for ₹39,992, so the Code-1
+    issuance transfer books ₹39,992 to Deferred Revenue and the recognition schedule
+    is built on that amount. There is **no** separate discount posting — the ledger
+    never sees the ₹9,998; it only ever books the discounted total.
   </Accordion>
 
   <Accordion title="Free trials">
@@ -263,15 +293,25 @@ Subscribe to these events for revenue tracking:
 
 | Event | Description |
 |-------|-------------|
-| `ledger.entry.created` | Fires for every journal entry, including recognition entries |
-| `invoice.paid` | Indicates a new recognition schedule has been created |
-| `subscription.canceled` | May trigger deferred revenue reversal |
+| `invoice.paid` | A subscription invoice was paid — its recognition schedule is now active |
+| `subscription.canceled` | May trigger a deferred revenue reversal |
+
+<Note>
+  There is no `ledger.entry.created` (or any `ledger.*`) event. Recognition
+  happens on a schedule inside Recurso and does not emit its own webhook — read
+  recognized amounts from the [revrec report](#revenue-recognition-report) or the
+  ledger API instead. See the full [event list](/api-reference/webhooks/events).
+</Note>
 
 ## Building Revenue Reports
 
 ### Monthly Recognized Revenue
 
-Query ledger entries for account `4000` (Revenue) within a date range to calculate recognized revenue for any period:
+The cleanest source is the revrec report (`GET /v1/finance/revrec/report`), which
+takes a date range and returns `total_recognized_amount` directly. If you'd rather
+sum ledger postings, list **Recognized Revenue** (`4100`) — the entries endpoint has
+no date filter, so bound the period on `created_at` in your own code, and each row
+is a single transfer (no nested `entries[]`):
 
 ```typescript
 async function getMonthlyRevenue(year: number, month: number) {
@@ -279,16 +319,14 @@ async function getMonthlyRevenue(year: number, month: number) {
   const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
   const entries = await recurso.ledger.entries.list({
-    account_id: "lacc_rev4000",
-    start_date: startDate,
-    end_date: endDate
+    account_id: "lacc_recrev4100",
+    code: 2,          // recognition postings
+    limit: 1000
   });
 
-  const totalRecognized = entries.data.reduce((sum, txn) => {
-    return sum + txn.entries
-      .filter(e => e.credit_account_id === "lacc_rev4000")
-      .reduce((s, e) => s + e.amount, 0);
-  }, 0);
+  const totalRecognized = entries.data
+    .filter(txn => txn.created_at >= startDate && txn.created_at <= `${endDate}T23:59:59Z`)
+    .reduce((sum, txn) => sum + txn.amount, 0);
 
   return totalRecognized; // in minor units
 }

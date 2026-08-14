@@ -232,13 +232,17 @@ Advance invoicing does not change the subscription's billing cycle. Regular invo
 When an advance invoice is paid, the full amount enters the Deferred Revenue account (`2100`). Revenue is then recognized month by month as each period elapses, following the standard recognition schedule described in the [Revenue Recognition](/advanced/revenue-recognition) guide.
 
 ```
-Advance invoice paid (6 months × ₹4,999):
-  Debit   1000 (Cash)               ₹29,994.00
-  Credit  2100 (Deferred Revenue)   ₹29,994.00
+Advance invoice issued (6 months × ₹4,999) — code 1:
+  Debit   1100 (Accounts Receivable) ₹29,994.00
+  Credit  2100 (Deferred Revenue)    ₹29,994.00
 
-End of each month (×6):
+Advance invoice paid — code 3:
+  Debit   1000 (Cash)                ₹29,994.00
+  Credit  1100 (Accounts Receivable) ₹29,994.00
+
+End of each month (×6) — code 2:
   Debit   2100 (Deferred Revenue)    ₹4,999.00
-  Credit  4000 (Revenue)             ₹4,999.00
+  Credit  4100 (Recognized Revenue)  ₹4,999.00
 ```
 
 ## Use Cases

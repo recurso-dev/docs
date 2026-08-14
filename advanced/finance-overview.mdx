@@ -7,18 +7,18 @@ description: "The double-entry ledger, revenue recognition, multi-currency, and 
 
 Every billing event in Recurso lands in a proper set of books. A built-in **double-entry ledger** records balanced debits and credits for each invoice, payment, and refund — with PostgreSQL as the authoritative store and an optional TigerBeetle mirror for high-throughput environments. On top of the ledger, revenue recognition turns billings into deferred and recognized revenue over time, multi-currency normalizes everything to a reporting currency, and analytics surfaces MRR and other metrics.
 
-Cash collected upfront is not revenue until it is earned. Recurso holds it in
-**Deferred Revenue** and recognizes it into **Revenue** as each service period
-elapses — the core of ASC 606 reporting:
+Billed amounts are not revenue until they are earned. Recurso holds them in
+**Deferred Revenue** and moves them into **Recognized Revenue** as each service
+period elapses — the core of ASC 606 reporting:
 
 ```mermaid
 flowchart LR
-    P["Annual payment collected<br/>₹12,000"] --> D["Deferred Revenue<br/>account 2100"]
+    P["Annual invoice issued<br/>₹12,000"] --> D["Deferred Revenue<br/>account 2100"]
     D -->|Month 1| R1["Recognize ₹1,000"]
     D -->|Month 2| R2["Recognize ₹1,000"]
     D -->|...| R3["..."]
     D -->|Month 12| R12["Recognize ₹1,000<br/>Deferred → 0"]
-    R1 --> REV["Revenue<br/>account 4000"]
+    R1 --> REV["Recognized Revenue<br/>account 4100"]
     R2 --> REV
     R3 --> REV
     R12 --> REV
