@@ -584,7 +584,8 @@
               {
                 "group": "Finance",
                 "pages": [
-                  "api-reference/finance/reconciliation"
+                  "api-reference/finance/reconciliation",
+                  "api-reference/finance/reconciliation-runs"
                 ]
               },
               {
