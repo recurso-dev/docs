@@ -49,18 +49,21 @@ been created yet.
 **Cause** — The schema migrations haven't been applied to this database. This
 is the single most common first-run error.
 
-**Fix**
+**Fix** — Migrations run **automatically when the API boots** (fail-closed: if a
+migration errors, the server exits non-zero rather than serve a mis-migrated
+schema). So restart the API against the target database:
 
 ```bash
-make migrate
+make run
 ```
 
-Then restart the API. `make demo` runs migrations for you; only standalone or
-production deployments need this step explicitly.
+`make demo` also applies migrations for you as part of seeding.
 
 <Warning>
-If you later see missing columns after pulling new code, a migration was added
-upstream. Re-run `make migrate` — migrations are additive and safe to re-apply.
+If you see missing columns after pulling new code, a migration was added
+upstream. Just restart the API — migrations are additive and re-applied on the
+next boot. If boot fails on a *dirty* migration, resolve it before restarting;
+see the [Going to Production](/going-to-production) runbook.
 </Warning>
 
 </Accordion>

@@ -44,10 +44,7 @@ Choose your preferred setup method:
     # Set up environment
     cp .env.example .env
 
-    # Run migrations
-    make migrate
-
-    # Start the server
+    # Start the server — schema migrations run automatically on boot
     make run
     ```
   </Tab>
@@ -73,25 +70,35 @@ Choose your preferred setup method:
 
 Set these environment variables:
 
-```bash .env
-# Database
-DATABASE_URL=postgres://user:pass@localhost:5432/recurso
+`cp .env.example .env` gives you a working local config. The core settings:
 
-# API
+```bash .env
+# Core
+APP_ENV=development
 PORT=8080
-API_KEY_SECRET=your-secret-key
+BASE_URL=http://localhost:8080
+DATABASE_URL=postgres://user:password@localhost:5432/recurso?sslmode=disable
+API_SECRET=changeme
+REPORTING_CURRENCY=USD
 
 # Payment Gateways (optional)
 RAZORPAY_KEY_ID=rzp_test_xxx
 RAZORPAY_KEY_SECRET=xxx
 STRIPE_SECRET_KEY=sk_test_xxx
 
-# Email (optional)
+# Email (optional) — leave SMTP_HOST unset to log emails to the console
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
-SMTP_USER=noreply@example.com
+SMTP_USERNAME=noreply@example.com
 SMTP_PASSWORD=xxx
+SMTP_FROM=noreply@recurso.dev
 ```
+
+<Note>
+  `DATABASE_URL` is the only strictly required setting — the server fails to boot
+  without it. Everything else has a sensible default. See `.env.example` in the
+  repo for the full annotated list.
+</Note>
 
 ## Create an API Key
 

@@ -143,9 +143,12 @@ Review all environment variables before launch.
 
 ```bash .env
 # Core
+APP_ENV=production
 DATABASE_URL=postgres://user:pass@prod-db:5432/recurso
 PORT=8080
-API_KEY_SECRET=<strong-random-secret>
+BASE_URL=https://api.yourdomain.com
+API_SECRET=<strong-random-secret>
+REPORTING_CURRENCY=USD
 
 # Payment Gateways (LIVE keys)
 RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxx
