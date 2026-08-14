@@ -48,108 +48,95 @@ const webhook = await recurso.webhooks.create({
 }
 ```
 
-## Verify Signature
+## Verify the signature
 
-Always verify webhook signatures:
+Every delivery carries an `X-Recurso-Signature` header: the **hex-encoded
+HMAC-SHA256 of the raw request body**, keyed by your endpoint's signing secret.
+Recompute it over the exact bytes you received and compare in constant time.
+There is no SDK helper — it is a few lines of standard-library crypto.
 
 <CodeGroup>
 ```typescript TypeScript
+import crypto from 'crypto';
 import express from 'express';
 
-app.post('/webhooks/recurso', 
-  express.raw({ type: 'application/json' }),
+app.post(
+  '/webhooks/recurso',
+  express.raw({ type: 'application/json' }), // keep the RAW body for signing
   (req, res) => {
-    const signature = req.headers['recurso-signature'];
-    
-    try {
-      const event = recurso.webhooks.constructEvent(
-        req.body,
-        signature,
-        process.env.WEBHOOK_SECRET
-      );
-      
-      // Handle the event
-      switch (event.type) {
-        case 'subscription.created':
-          handleSubscriptionActivated(event.data);
-          break;
-        case 'payment.failed':
-          handlePaymentFailed(event.data);
-          break;
-      }
-      
-      res.sendStatus(200);
-    } catch (err) {
-      console.error('Webhook signature verification failed');
-      res.sendStatus(400);
+    const signature = req.headers['x-recurso-signature'] as string;
+    const expected = crypto
+      .createHmac('sha256', process.env.WEBHOOK_SECRET!)
+      .update(req.body) // Buffer of the raw bytes
+      .digest('hex');
+
+    const valid =
+      !!signature &&
+      signature.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+    if (!valid) return res.sendStatus(400);
+
+    const event = JSON.parse(req.body.toString());
+    switch (event.type) {
+      case 'invoice.paid':
+        handleInvoicePaid(event.data);
+        break;
+      case 'payment.failed':
+        handlePaymentFailed(event.data);
+        break;
     }
-  }
+    res.sendStatus(200); // ack fast, process async
+  },
 );
 ```
 
 ```python Python
+import hmac
+import hashlib
+import os
 from flask import Flask, request
 
 @app.route('/webhooks/recurso', methods=['POST'])
 def webhook():
-    signature = request.headers.get('Recurso-Signature')
-    
-    try:
-        event = recurso.webhooks.construct_event(
-            request.data,
-            signature,
-            os.environ['WEBHOOK_SECRET']
-        )
-        
-        if event['type'] == 'subscription.created':
-            handle_activation(event['data'])
-            
-        return '', 200
-    except Exception as e:
+    signature = request.headers.get('X-Recurso-Signature', '')
+    expected = hmac.new(
+        os.environ['WEBHOOK_SECRET'].encode(),
+        request.get_data(),  # the RAW body bytes
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(signature, expected):
         return 'Invalid signature', 400
+
+    event = request.get_json()
+    if event['type'] == 'invoice.paid':
+        handle_invoice_paid(event['data'])
+    return '', 200
 ```
 </CodeGroup>
 
-## Event Types
+The header name is `X-Recurso-Signature`; each delivery also carries
+`X-Recurso-Event-ID`. Non-`2xx` responses are retried with exponential backoff
+(`2^attempt × 30s`, capped at 24 hours).
 
-### Subscription Events
+## Event types
 
-| Event | Description |
-|-------|-------------|
-| `subscription.created` | New subscription |
-| `subscription.created` | First payment succeeded |
-| `subscription.updated` | Plan/quantity changed |
-| `subscription.paused` | Subscription paused |
-| `subscription.resumed` | Subscription resumed |
-| `subscription.canceled` | Subscription cancelled |
-| `subscription.past_due` | Payment failed |
+Recurso emits **ten** event types. The full list — with the event envelope and
+per-event notes — is the [Webhook Events reference](/api-reference/webhooks/events).
 
-### Payment Events
+| Event | Fires when |
+|---|---|
+| `invoice.created` · `invoice.paid` · `invoice.payment_failed` | Invoice lifecycle |
+| `subscription.created` · `subscription.canceled` · `subscription.renewed` | Subscription lifecycle |
+| `payment.succeeded` · `payment.failed` | Payment outcome |
+| `customer.created` · `customer.updated` | Customer changes |
 
-| Event | Description |
-|-------|-------------|
-| `payment.succeeded` | Payment completed |
-| `payment.failed` | Payment attempt failed |
-| `payment.refunded` | Refund issued |
-| `payment.disputed` | Chargeback opened |
-
-### Invoice Events
-
-| Event | Description |
-|-------|-------------|
-| `invoice.created` | New invoice generated |
-| `invoice.finalized` | Invoice finalized |
-| `invoice.paid` | Invoice paid |
-| `invoice.payment_failed` | Payment attempt failed |
-| `invoice.past_due` | Invoice overdue |
-
-### Customer Events
-
-| Event | Description |
-|-------|-------------|
-| `customer.created` | New customer |
-| `customer.updated` | Customer updated |
-| `customer.deleted` | Customer deleted |
+<Warning>
+  There are no `subscription.updated` / `.paused` / `.resumed` / `.past_due` /
+  `.activated`, `payment.refunded` / `.disputed`, `invoice.finalized` /
+  `.past_due`, or `customer.deleted` events. Don't subscribe handlers to events
+  that never fire.
+</Warning>
 
 ## Retry Policy
 

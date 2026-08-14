@@ -1,64 +1,20 @@
 ---
 title: "List Ledger Entries"
 openapi: "GET /v1/ledger/entries"
-description: "Retrieve ledger entries with optional filters for account, date range, and pagination."
+description: "List a ledger account's raw transactions — each one balanced transfer: a single debit account, a single credit account, and a positive amount."
 ---
 
-## Query Parameters
+Recurso's ledger is **transfer-based**: every row is exactly one debit account,
+one credit account, and a positive `amount` in minor units — never a multi-leg
+compound entry. A posting's `code` names its kind (`1` = invoice issuance,
+`3` = payment, `6` = tax reclass, …) and its `reference_id` points at the source
+object (an invoice or payment id).
 
-| Parameter    | Type   | Required | Description                                                         |
-|--------------|--------|----------|---------------------------------------------------------------------|
-| `account_id` | string | No       | Filter entries to a specific ledger account (e.g., `acct_1aB2CdEfGh`). |
-| `start_date` | string | No       | ISO 8601 date for the beginning of the range (inclusive).           |
-| `end_date`   | string | No       | ISO 8601 date for the end of the range (inclusive).                 |
-| `limit`      | int    | No       | Maximum number of entries to return. Defaults to `50`, max `200`.   |
-| `offset`     | int    | No       | Number of entries to skip for pagination. Defaults to `0`.          |
+The ledger is queried **one account at a time**, so `account_id` is required.
+Narrow to a single posting kind with `code`, and page with `limit` / `offset`.
 
-Each ledger entry represents a double-entry transaction with one or more debit and credit movements. All amounts are expressed in the smallest currency unit.
-
-## Example Request
-
-```bash
-curl -X GET "https://api.recurso.io/v1/ledger/entries?account_id=acct_1aB2CdEfGh&start_date=2026-06-01&end_date=2026-06-30&limit=2" \
-  -H "Authorization: Bearer sk_live_26PHem9AhJZvU..." \
-  -H "Content-Type: application/json"
-```
-
-## Response
-
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "txn_4kR7LmNpXs",
-      "description": "Invoice inv_9wXpKfMnBv finalized",
-      "posted_at": "2026-06-15T08:00:00Z",
-      "entries": [
-        {
-          "debit_account_id": "acct_1aB2CdEfGh",
-          "credit_account_id": "acct_3iJ4KlMnOp",
-          "amount": 26705,
-          "currency": "usd"
-        }
-      ]
-    },
-    {
-      "id": "txn_8mT2QvWrYu",
-      "description": "Payment pmt_5nU3RwXsZv applied",
-      "posted_at": "2026-06-16T14:30:00Z",
-      "entries": [
-        {
-          "debit_account_id": "acct_3iJ4KlMnOp",
-          "credit_account_id": "acct_5qR6StUvWx",
-          "amount": 26705,
-          "currency": "usd"
-        }
-      ]
-    }
-  ],
-  "total_count": 47,
-  "limit": 2,
-  "offset": 0
-}
-```
+<Note>
+  There are no `start_date` / `end_date` filters on this endpoint. To read every
+  posting behind a single invoice, use that invoice's journal entries; to pull a
+  full period across all accounts, use the [General Ledger export](/api-reference/ledger/export).
+</Note>
