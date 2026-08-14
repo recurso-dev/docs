@@ -5,7 +5,7 @@ description: "Bill customers in their local currency and settle in yours"
 
 ## Overview
 
-Recurso supports billing in multiple currencies, allowing you to charge customers in their local currency while tracking revenue and settling funds in your base currency. Currency is specified at the plan, invoice, and ledger level, giving you full control over international billing.
+Recurso supports billing in multiple currencies, allowing you to charge customers in their local currency while tracking revenue and settling funds in your base currency. Currency is specified at the plan, subscription, and invoice level; the ledger itself is kept in a single reporting currency and foreign amounts are normalized at read time.
 
 ```mermaid
 flowchart LR
@@ -171,8 +171,6 @@ Recurso supports multiple approaches for exchange rates:
 
 ### Configuring FX Rate Source
 
-<CodeGroup>
-
 The FX rate source (live provider vs. fixed rates) is a **deployment
 setting**, not a runtime API — configure it via environment / dashboard,
 not a `/v1` call. FX affects reporting only: invoices always bill in the
@@ -181,24 +179,26 @@ currency at read time.
 
 ## Currency Conversion in the Ledger
 
-Ledger accounts track balances in the currency of their transactions. When a payment in a foreign currency is received, Recurso creates entries in both the presentment currency and the base currency.
+The ledger is kept in a **single reporting currency**. A posting stores no
+per-transaction currency of its own — a foreign-currency invoice or payment is
+converted at the applicable FX rate and booked once, in your reporting currency.
+There are no parallel "presentment-currency" ledger entries.
 
-### Example: EUR Payment with INR Base Currency
+### Example: EUR Payment with INR Reporting Currency
 
-A customer pays €49.99 for a subscription. The FX rate is 1 EUR = 90.75 INR.
+A customer pays €49.99 for a subscription. The FX rate is 1 EUR = 90.75 INR, so
+the payment is booked as ₹4,536.59 — a single transfer (posting `code` `3`):
 
 ```
-Presentment currency entries (EUR):
-  Debit   1000 (Cash)                 €49.99
-  Credit  1100 (Accounts Receivable)  €49.99
-
-Base currency entries (INR):
+Payment received (€49.99 → ₹4,536.59):
   Debit   1000 (Cash)                 ₹4,536.59
   Credit  1100 (Accounts Receivable)  ₹4,536.59
 ```
 
 <Info>
-Each ledger account maintains its balance per currency. When querying account balances, you can filter by currency to see positions in each denomination.
+The presentment amount (€49.99) lives on the **invoice and payment** records, not
+in the ledger. Query those objects when you need the original billed currency; the
+ledger always answers in your reporting currency.
 </Info>
 
 ## Reporting in Base Currency
@@ -228,26 +228,33 @@ curl https://api.recurso.dev/v1/ledger/accounts \
 
 ### Breakdown by Presentment Currency
 
-To see revenue broken down by the currencies your customers paid in, query ledger entries and group by currency:
+The ledger cannot answer this — it holds only reporting-currency amounts with no
+per-transaction currency. To see revenue by the currency your customers actually
+paid in, group the **invoices** (each carries its own `currency`), not ledger
+entries:
 
 ```typescript
-const entries = await recurso.ledger.entries.list({
-  account_id: "lacc_rev4000",
-  start_date: "2025-06-01",
-  end_date: "2025-06-30"
-});
+// List invoices and group paid ones by their presentment currency.
+// (The list endpoint filters by customer_id / subscription_id only, so
+//  filter on status client-side.)
+const invoices = await recurso.invoices.list();
 
 const byCurrency: Record<string, number> = {};
-entries.data.forEach(txn => {
-  txn.entries.forEach(entry => {
-    const currency = entry.currency;
-    byCurrency[currency] = (byCurrency[currency] || 0) + entry.amount;
+invoices.data
+  .filter(inv => inv.status === "paid")
+  .forEach(inv => {
+    byCurrency[inv.currency] = (byCurrency[inv.currency] || 0) + inv.total;
   });
-});
 
 console.log(byCurrency);
-// { INR: 15000000, USD: 119980, EUR: 49990 }
+// { INR: 15000000, USD: 119980, EUR: 49990 }  // each in that currency's minor units
 ```
+
+<Note>
+  Because each figure is in its own currency's minor units, don't sum across
+  currencies — convert to your reporting currency first (or read the already-
+  normalized total from the ledger / analytics).
+</Note>
 
 ## Supported Currencies
 
@@ -269,17 +276,16 @@ Zero-decimal currencies like `JPY` have no minor unit. An amount of `5999` in JP
 
 ## Handling FX Gains and Losses
 
-When exchange rates fluctuate between the time an invoice is created and the time payment is received, an FX gain or loss may occur. Recurso records these as separate ledger entries to keep your books accurate.
+Exchange rates can move between the time an invoice is issued and the time it is
+paid. Recurso does **not** post a realized FX gain/loss to a dedicated ledger
+account — there is no `4500 FX Gain` account, and the transfer-based ledger never
+records a multi-leg compound entry. FX is a **read-time reporting** concern:
+foreign amounts are normalized to your reporting currency when MRR, revenue, and
+receivables are computed, using the applicable rate.
 
-```
-Invoice created at 1 EUR = 90.75 INR:
-  Debit   1100 (Accounts Receivable)  ₹4,536.59
-
-Payment received at 1 EUR = 91.00 INR:
-  Debit   1000 (Cash)                 ₹4,549.09
-  Credit  1100 (Accounts Receivable)  ₹4,536.59
-  Credit  4500 (FX Gain)              ₹12.50
-```
+If you need formal FX gain/loss accounting for statutory books, export the ledger
+and the underlying invoice/payment currencies (each object carries its own
+`currency`) and recognize the difference in your general ledger of record.
 
 ## Best Practices
 
