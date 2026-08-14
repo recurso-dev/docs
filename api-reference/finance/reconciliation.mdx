@@ -95,8 +95,10 @@ The TigerBeetle pass never fails the report — when it cannot run,
   summaries errored (the message includes the underlying error)
 
 <Info>
-The report is computed on demand and never persisted. It only reads —
-correcting drift (e.g. with a reversing entry) is a deliberate human
-action. See the [ledger guide](/advanced/ledger#reconciliation) and the
-incident runbook's SEV1 procedure for how to act on a non-zero report.
+This `GET` is computed on demand and never persisted — it only reads.
+Correcting drift (e.g. with a reversing entry) is a deliberate human action.
+If you want an audit trail of *when* reconciliation ran and what it found, use
+[Reconciliation Run History](/api-reference/finance/reconciliation-runs) to run
+and record a summary. See the [ledger guide](/advanced/ledger#reconciliation)
+and the incident runbook's SEV1 procedure for how to act on a non-zero report.
 </Info>
