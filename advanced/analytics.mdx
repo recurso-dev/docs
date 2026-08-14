@@ -168,7 +168,7 @@ const result = await recurso.analytics.ask({
     { customer_id: 'cust_beta', name: 'BetaWorks', churned_mrr: 1000000, churned_at: '2026-05-18' },
     { customer_id: 'cust_nova', name: 'Nova Labs', churned_mrr: 700000, churned_at: '2026-05-25' }
   ],
-  query: "SELECT c.id, c.name, s.mrr, s.cancelled_at FROM subscriptions s JOIN customers c ON s.customer_id = c.id WHERE s.status = 'canceled' AND s.cancelled_at BETWEEN '2026-05-01' AND '2026-05-31'"
+  query: "SELECT c.id, c.name, s.mrr, s.canceled_at FROM subscriptions s JOIN customers c ON s.customer_id = c.id WHERE s.status = 'canceled' AND s.canceled_at BETWEEN '2026-05-01' AND '2026-05-31'"
 }
 ```
 
