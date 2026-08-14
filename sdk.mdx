@@ -317,7 +317,7 @@ Every endpoint module exposes four functions: `sync` and `sync_detailed`
 support idempotency via a per-call header:
 
 ```python
-client = client.with_headers({"X-Idempotency-Key": "order-1234"})
+client = client.with_headers({"Idempotency-Key": "order-1234"})
 ```
 
 ## Go

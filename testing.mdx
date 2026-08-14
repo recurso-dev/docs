@@ -162,14 +162,14 @@ due, and observe the retry schedule and
 
 ## Idempotency in tests
 
-Every mutating request accepts an `X-Idempotency-Key` header. Reusing the same key
+Every mutating request accepts an `Idempotency-Key` header. Reusing the same key
 returns the original result instead of creating a duplicate — so a test that
 retries a flaky network call won't double-charge or double-create:
 
 ```bash
 curl -X POST https://api.recurso.dev/v1/subscriptions \
   -H "Authorization: Bearer <your_api_key>" \
-  -H "X-Idempotency-Key: test-sub-0001" \
+  -H "Idempotency-Key: test-sub-0001" \
   -d '{ "customer_id": "cust_123", "plan_id": "plan_pro" }'
 ```
 

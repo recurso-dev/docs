@@ -306,13 +306,16 @@ For high-throughput environments, Recurso supports an optional [TigerBeetle](htt
 TigerBeetle is optional. The default PostgreSQL-backed ledger handles most workloads. Consider TigerBeetle if you process more than 10,000 transactions per minute or need sub-millisecond ledger writes.
 </Tip>
 
-To enable TigerBeetle, set the following environment variables:
+To enable TigerBeetle, point Recurso at a reachable cluster address:
 
 ```bash .env
-LEDGER_BACKEND=tigerbeetle
-TIGERBEETLE_ADDRESSES=127.0.0.1:3001
-TIGERBEETLE_CLUSTER_ID=0
+TIGERBEETLE_ADDRESS=127.0.0.1:3001
 ```
+
+`TIGERBEETLE_ADDRESS` is the only setting — the cluster ID is `0`. On boot,
+Recurso connects if the address is reachable and mirrors postings to it; if the
+connection fails it logs `TigerBeetle not connected — ledger PG-only mode` and
+runs on Postgres alone. There is no separate backend toggle.
 
 Every posting is **dual-written**: PostgreSQL is written first and is always
 authoritative; when TigerBeetle is connected, the same transfer is mirrored to it

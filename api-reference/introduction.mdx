@@ -76,33 +76,38 @@ curl -X POST https://api.recurso.dev/v1/customers \
 
 ## Response Format
 
-Responses are JSON with consistent structure:
+Every success response wraps the result in a top-level `data` field. Object ids
+are **UUIDs** — there is no `object` type field or resource-prefixed id.
 
 ```json
 {
-  "id": "cust_abc123",
-  "object": "customer",
-  "name": "Acme Corp",
-  "email": "billing@acme.com",
-  "created_at": "2024-01-15T10:30:00Z"
+  "data": {
+    "id": "b9071c55-0e14-4720-80f3-665613ceb7de",
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
 }
 ```
 
 ### List Responses
 
-Collections include pagination:
+Collections return an array under the same `data` field:
 
 ```json
 {
-  "object": "list",
   "data": [
-    { "id": "cust_abc", ... },
-    { "id": "cust_def", ... }
-  ],
-  "has_more": true,
-  "total_count": 150
+    { "id": "b9071c55-0e14-4720-80f3-665613ceb7de", "name": "Acme Corp" },
+    { "id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12", "name": "Globex" }
+  ]
 }
 ```
+
+<Note>
+  A few endpoints deviate from the `{data}` wrapper (auth and import handlers
+  return bare objects; action endpoints return `{status}` / `{message}`). Each
+  endpoint's reference page shows its exact shape.
+</Note>
 
 ## Pagination
 
@@ -114,8 +119,14 @@ GET /v1/customers?limit=20&offset=40
 
 | Parameter | Default | Max |
 |-----------|---------|-----|
-| `limit` | 10 | 100 |
-| `offset` | 0 | - |
+| `limit` | 50 | Varies by endpoint (up to 1000) |
+| `offset` | 0 | — |
+
+<Note>
+  List endpoints don't return a total count or `has_more` flag — page until you
+  receive fewer rows than your `limit`. Always pass an explicit `limit` when you
+  need a full set, since defaults differ across endpoints.
+</Note>
 
 ## Errors
 
@@ -171,7 +182,9 @@ X-RateLimit-Reset: 1705312800
 
 ## Idempotency
 
-For POST requests, use idempotency keys to prevent duplicate operations:
+On any mutating request (POST, PUT, PATCH, DELETE), send an `Idempotency-Key`
+header to prevent duplicate operations — a replayed key returns the original
+stored response (marked with `X-Idempotency-Hit: true`):
 
 ```bash
 curl -X POST https://api.recurso.dev/v1/subscriptions \

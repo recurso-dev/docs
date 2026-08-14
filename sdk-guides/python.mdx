@@ -257,11 +257,11 @@ while True:
 
 ## Idempotency
 
-Mutating calls honor the `X-Idempotency-Key` header so a retry settles at most
+Mutating calls honor the `Idempotency-Key` header so a retry settles at most
 once. Attach it with `with_headers`, which returns a new client:
 
 ```python
-idem_client = client.with_headers({"X-Idempotency-Key": "order-1234"})
+idem_client = client.with_headers({"Idempotency-Key": "order-1234"})
 create_subscription.sync(client=idem_client, body=body)
 ```
 
