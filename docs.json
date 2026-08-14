@@ -425,6 +425,7 @@
                   "api-reference/subscriptions/cancel",
                   "api-reference/subscriptions/pause",
                   "api-reference/subscriptions/resume",
+                  "api-reference/subscriptions/history",
                   "api-reference/subscriptions/usage"
                 ]
               },
@@ -448,6 +449,7 @@
                 "pages": [
                   "api-reference/invoices/list",
                   "api-reference/invoices/get",
+                  "api-reference/invoices/status-history",
                   "api-reference/invoices/pdf",
                   "api-reference/invoices/send",
                   "api-reference/invoices/preview",
