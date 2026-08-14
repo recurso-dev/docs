@@ -245,6 +245,19 @@ otherwise 327/328 present.
 
 ## 18. TRUTH DEFECTS (fix before anything else — this is financial documentation)
 
+> **STATUS — CLOSED (PR #80, truth passes 1–8, 2026-08-14).** All nine defect
+> classes below were fixed against verified recur-so code: ledger-entries +
+> webhook API surface (#1/#2), accounting postings + chart of accounts (#3/#4),
+> multi-currency ledger & FX + QuickBooks push-only (#5), getting-started
+> env/migrations (#6), idempotency header (#7), response envelope + pagination
+> (#8), and the stale set — revrec `month`/`year` contract, full reconciliation
+> discrepancy-type list, `cancelled`→`canceled` per-object spelling (#9;
+> evidence.mdx's v0.9.0 pin was verified correct as a historical receipt and
+> left). **Remaining systemic item for a later sweep:** example ID prefixes
+> (`cust_`/`inv_`/`wh_`) vs real UUIDs and stray `"object"`/`"total"` envelope
+> fields across many api-reference example pages — same class as #8, replicated.
+> With §18 closed, proceed to Wave 3 (IA restructure).
+
 Verified against recur-so code, in reader-damage order:
 
 1. **Fabricated ledger API surface** — `advanced/ledger.mdx:140-260` +
