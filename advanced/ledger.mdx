@@ -366,9 +366,11 @@ flowchart TD
 Two passes run:
 
 1. **Billing records vs. PostgreSQL ledger** — every non-draft invoice must
-   have invoice postings summing to its total, every paid invoice must have
-   payment postings summing to its amount paid, and every such posting must
-   reference an existing invoice.
+   have invoice postings summing to its total, every paid invoice payment
+   postings summing to its amount paid, and likewise for credit notes, applied
+   credits, write-offs, and tax reclass; every posting must reference an
+   existing invoice; and the ledger as a whole must stay balanced (debits =
+   credits, no account on its wrong side).
 2. **PostgreSQL ledger vs. TigerBeetle** (when connected) — the tenant's
    Postgres ledger transactions (authoritative) are diffed against the
    enumerated TigerBeetle transfers by transaction ID.
@@ -381,7 +383,17 @@ Two passes run:
 | `invoice_amount_mismatch` | Billing ↔ Postgres | Invoice postings do not sum to the invoice total |
 | `missing_payment_transaction` | Billing ↔ Postgres | A paid invoice has no payment posting |
 | `payment_amount_mismatch` | Billing ↔ Postgres | Payment postings do not sum to the amount paid |
+| `missing_credit_note_transaction` | Billing ↔ Postgres | A credit note has no ledger posting |
+| `missing_credit_application_transaction` | Billing ↔ Postgres | An applied credit has no ledger posting |
+| `credit_application_amount_mismatch` | Billing ↔ Postgres | Credit-application postings do not sum to the applied amount |
+| `missing_write_off_transaction` | Billing ↔ Postgres | A written-off invoice has no write-off posting |
+| `write_off_amount_mismatch` | Billing ↔ Postgres | Write-off postings do not sum to the written-off amount |
+| `missing_tax_transaction` | Billing ↔ Postgres | A taxed invoice has no tax-reclass posting |
+| `tax_amount_mismatch` | Billing ↔ Postgres | Tax postings do not sum to the invoice tax |
+| `customer_credit_liability_mismatch` | Billing ↔ Postgres | The Customer Credit balance disagrees with outstanding credit |
 | `orphaned_transaction` | Billing ↔ Postgres | A ledger posting references an invoice that does not exist |
+| `ledger_unbalanced` | Postgres | Total debits ≠ total credits (trial balance off) |
+| `abnormal_account_balance` | Postgres | An account holds a balance on its wrong side |
 | `missing_in_tigerbeetle` | Postgres ↔ TigerBeetle | A Postgres ledger transaction has no TigerBeetle transfer |
 | `missing_in_postgres` | Postgres ↔ TigerBeetle | A TigerBeetle transfer has no Postgres ledger transaction |
 | `tb_amount_mismatch` | Postgres ↔ TigerBeetle | Same transaction ID, different amounts |
