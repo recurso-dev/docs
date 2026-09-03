@@ -1,0 +1,68 @@
+---
+title: "Get Journal Entry"
+openapi: "GET /v1/ledger/transactions/{id}"
+description: "One posted transaction — a single balanced double-entry journal entry — flattened with both account ids, codes and names so each leg deep-links to its account."
+keywords: ["ledger transaction", "journal entry", "posted transaction", "reconciliation discrepancy"]
+---
+
+Fetches one posted transaction (a single balanced double-entry journal entry)
+by its `ledger_transactions` id, flattened with both account ids, codes and
+names so each leg deep-links to its account page. This is the addressable
+journal-entry object that a [reconciliation discrepancy's](/api-reference/finance/reconciliation-run)
+`transaction_id` points to, and that every row of an
+[invoice's](/api-reference/invoices/journal-entries) or
+[credit note's](/api-reference/credit-notes/journal-entries) journal entries
+links back to.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/ledger/transactions/4c7e1a93-5b2d-4f6e-8a0c-9d3f5b7e1a24" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "transaction_id": "4c7e1a93-5b2d-4f6e-8a0c-9d3f5b7e1a24",
+    "timestamp": "2026-07-01T00:05:00Z",
+    "code": 1,
+    "debit_account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+    "debit_account_code": 1100,
+    "debit_account_name": "Accounts Receivable",
+    "credit_account_id": "c4d2e8f1-6a3b-4c9d-8e7f-2a5b9c3d1e46",
+    "credit_account_code": 2100,
+    "credit_account_name": "Deferred Revenue",
+    "amount": 118000,
+    "reference_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+    "description": "Invoice issued",
+    "accounting_version": 1,
+    "entity_id": null,
+    "entity_name": ""
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `transaction_id` | string (uuid) | The transaction's id |
+| `timestamp` | string (date-time) | When it was posted |
+| `code` | integer | Posting code — see [posting codes](/advanced/ledger#how-transactions-are-created) |
+| `debit_account_id` / `debit_account_code` / `debit_account_name` | uuid / integer / string | The debit side; the id deep-links to the account |
+| `credit_account_id` / `credit_account_code` / `credit_account_name` | uuid / integer / string | The credit side |
+| `amount` | integer (int64) | Minor units |
+| `reference_id` | string (uuid) | The business object that caused the posting (invoice, credit note, wallet transaction, …) |
+| `description` | string | Human-readable posting description |
+| `accounting_version` | integer | Posting-semantics version the leg was written under |
+| `entity_id` | string (uuid), nullable | The legal entity whose ledger holds the entry; `null` for the primary ledger |
+| `entity_name` | string | The entity's name (empty for the primary ledger) |
+
+<Note>
+  Read-only. A missing or cross-tenant `id` returns `404`. To list postings by
+  account rather than fetch one by id, use
+  [List Ledger Entries](/api-reference/ledger/entries).
+</Note>

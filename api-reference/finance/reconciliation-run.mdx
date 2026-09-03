@@ -1,0 +1,97 @@
+---
+title: "Get Reconciliation Run"
+openapi: "GET /v1/finance/reconciliation/runs/{id}"
+description: "One recorded reconciliation run — its summary plus the discrepancy rows persisted at record time: what disagreed, by how much, and why."
+keywords: ["reconciliation run", "discrepancies", "audit trail", "ledger drift"]
+---
+
+Returns one recorded run made addressable: the run summary (who, when, scope,
+verdict) plus the per-run discrepancy rows persisted at record time — what
+disagreed, by how much, and why. Each discrepancy carries the identifier
+needed to drill in: an `invoice_id` you can open with
+[Invoice Journal Entries](/api-reference/invoices/journal-entries), or a
+`transaction_id` you can open with [Get Journal Entry](/api-reference/ledger/transaction).
+See [Explain any number](/advanced/explain-any-number).
+
+`discrepancies_truncated` is `true` when fewer rows were stored than were
+counted — either the live-run listing cap was hit, or the run was recorded
+before per-run persistence existed.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/finance/reconciliation/runs/3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+    "run_by": "b9071c55-0e14-4720-80f3-665613ceb7de",
+    "run_at": "2026-08-14T09:15:02Z",
+    "invoices_checked": 58231,
+    "paid_invoices_checked": 41207,
+    "total_discrepancies": 2,
+    "tb_compared": true,
+    "tb_accounts_checked": 214,
+    "tb_transfers_checked": 17352,
+    "created_at": "2026-08-14T09:15:02Z",
+    "discrepancies_truncated": false,
+    "discrepancies": [
+      {
+        "type": "missing_payment_transaction",
+        "invoice_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "transaction_id": null,
+        "reference_id": null,
+        "account_code": 0,
+        "expected_amount": 499900,
+        "found_amount": 0
+      },
+      {
+        "type": "tb_amount_mismatch",
+        "invoice_id": null,
+        "transaction_id": "9b2f1c4d-3e5a-4b6c-8d7e-0f1a2b3c4d5e",
+        "reference_id": null,
+        "account_code": 0,
+        "expected_amount": 129900,
+        "found_amount": 128900
+      }
+    ]
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The recorded run's id |
+| `run_by` | string (uuid), nullable | The user who ran it; `null` for a scheduled/system run |
+| `run_at` | string (date-time) | When the reconciliation ran |
+| `invoices_checked` / `paid_invoices_checked` | integer | Scope of the billing ↔ ledger pass |
+| `total_discrepancies` | integer | Full count — `0` means the books tied out |
+| `tb_compared` | boolean | Whether the TigerBeetle comparison pass ran |
+| `tb_accounts_checked` / `tb_transfers_checked` | integer | Scope of the TigerBeetle pass |
+| `created_at` | string (date-time) | When the summary row was recorded |
+| `discrepancies_truncated` | boolean | `true` when fewer rows were stored than `total_discrepancies` |
+| `discrepancies[]` | array | Persisted discrepancy rows (see below) |
+
+### Discrepancy Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | One of the [discrepancy types](/api-reference/finance/reconciliation#discrepancy-types) |
+| `invoice_id` | string (uuid), nullable | The invoice involved, for billing ↔ ledger types |
+| `transaction_id` | string (uuid), nullable | The ledger transaction involved, for ledger ↔ TigerBeetle types |
+| `reference_id` | string (uuid), nullable | The referenced business object, for orphan postings |
+| `account_code` | integer | The ledger account involved, for trial-balance types; `0` when not applicable |
+| `expected_amount` / `found_amount` | integer (int64) | What the check expected vs found, minor units |
+
+<Note>
+  Read-only. A missing or cross-tenant `id` returns `404`. Correcting drift
+  stays a deliberate human action; see the
+  [ledger guide](/advanced/ledger#reconciliation).
+</Note>

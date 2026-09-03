@@ -1,0 +1,85 @@
+---
+title: "List Payment Attempts"
+openapi: "GET /v1/payment-attempts"
+description: "The tenant-wide payments log — every gateway payment attempt, newest first, paginated, with an optional status filter and search."
+keywords: ["payment attempts", "payments log", "failed payments", "settlement"]
+---
+
+Returns every gateway payment attempt for the tenant, newest first, paginated,
+with an optional status filter. Each row carries its invoice number, so the
+response reads as the operator's failed-payments log without a second lookup.
+
+A payment *attempt* is one try at settling an invoice through a gateway — a
+card charge, an ACH debit, a UPI mandate collection. An invoice can have several
+(a card's `failed` → `succeeded`, or an ACH debit's `initiated` → `processing`
+→ `succeeded` → `returned`); the invoice's own `amount_paid` reflects only the
+ones that settled. See [Explain any number](/advanced/explain-any-number) for
+how attempts relate to invoices and the ledger.
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | string | No | Filter to one status: `initiated`, `processing`, `succeeded`, `failed`, or `returned`. |
+| `q` | string | No | Case-insensitive substring search on the attempt's `invoice_number` or gateway payment reference (tenant-scoped), newest first. Backs the command-palette payment lookup; the `status` filter is ignored on the search path. |
+| `page` | integer | No | Page number. |
+| `per_page` | integer | No | Rows per page. |
+
+## Example Request
+
+```bash
+curl -G https://api.recurso.dev/v1/payment-attempts \
+  -H "Authorization: Bearer $API_KEY" \
+  -d status=failed \
+  -d per_page=25
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "id": "c2d4e6f8-1a3b-4c5d-9e7f-8a9b0c1d2e3f",
+      "invoice_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+      "invoice_number": "REC/2026/0042",
+      "currency": "USD",
+      "gateway": "stripe",
+      "method": "card",
+      "gateway_payment_intent_id": "pi_3PqR7sK2eZvKYlo2C0Xy1AbC",
+      "status": "failed",
+      "failure_code": "insufficient_funds",
+      "amount": 118000,
+      "created_at": "2026-07-02T09:00:00Z",
+      "settled_at": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 25,
+    "total": 1,
+    "total_pages": 1
+  }
+}
+```
+
+## Attempt Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The attempt's id — fetch it with [Get Payment Attempt](/api-reference/payment-attempts/get) |
+| `invoice_id` / `invoice_number` | uuid / string | The invoice the attempt tried to settle |
+| `currency` | string | The invoice's currency |
+| `gateway` | string | The gateway that processed the attempt (e.g. `stripe`, `razorpay`) |
+| `method` | string | The payment method used |
+| `gateway_payment_intent_id` | string | The gateway's reference for the attempt |
+| `status` | string | `initiated`, `processing`, `succeeded`, `failed`, or `returned` |
+| `failure_code` | string | Gateway failure or return code; empty when the attempt succeeded |
+| `amount` | integer (int64) | Minor units |
+| `created_at` | string (date-time) | When the attempt was made |
+| `settled_at` | string (date-time), nullable | When funds settled; `null` until then |
+
+<Note>
+  Read-only. Offline payments recorded by hand live under
+  [List Offline Payments](/api-reference/payments/list-offline), not here.
+</Note>

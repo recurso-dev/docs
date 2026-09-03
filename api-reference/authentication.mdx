@@ -77,9 +77,14 @@ curl https://api.recurso.dev/v1/customers \
 Mutating requests also accept an `Idempotency-Key` header so retries never
 duplicate work — see [Idempotency](/advanced/idempotency).
 
-## Scoped Keys (Coming Soon)
+## Key Scope
 
-Create keys with limited permissions via the dashboard or API.
+<Note>
+  API keys are tenant-wide: every key grants the same access to everything in
+  its tenant and mode (`rsk_live_` / `rsk_test_`). There are no per-resource
+  or read-only scopes, so contain blast radius by issuing one key per
+  integration and revoking it on its own.
+</Note>
 
 ## Security Best Practices
 
@@ -93,8 +98,8 @@ Create keys with limited permissions via the dashboard or API.
   <Card title="Use Test Keys in Dev" icon="flask">
     Develop with an `rsk_test_` key against a `none`/`test` [server](/testing)
   </Card>
-  <Card title="Restrict Permissions" icon="lock">
-    Use scoped keys with minimal permissions (coming soon)
+  <Card title="One Key per Integration" icon="lock">
+    Keys are tenant-wide, so give each service its own key and revoke individually
   </Card>
 </CardGroup>
 

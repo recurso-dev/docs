@@ -1,0 +1,103 @@
+---
+title: "Invoice Journal Entries"
+openapi: "GET /v1/invoices/{id}/journal-entries"
+description: "Every ledger posting that references an invoice — issuance, tax reclass, payment, and any credit, refund or write-off legs — each with its debit and credit account."
+keywords: ["invoice journal entries", "ledger drill", "invoice postings", "explain any number"]
+---
+
+Returns every ledger posting that references this invoice: its Code-1
+issuance, Code-6 tax reclass, Code-3 payment, and any credit, refund, or
+write-off legs. Each entry is one balanced transfer — a debit account and a
+credit account (id, code, and name), an amount in minor units, its posting
+code, and a timestamp. This is the finance-accounting side of the invoice
+page: the answer to "which postings produced this invoice's numbers?"
+
+Account ids deep-link each leg to its ledger account; `transaction_id` links
+to the [journal entry](/api-reference/ledger/transaction) itself. See
+[Explain any number](/advanced/explain-any-number) for how this fits with the
+other drill-down endpoints, and the [ledger guide](/advanced/ledger) for what
+each posting code means.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/invoices/06c151de-8d3a-4b21-9c77-2f0e5a9b4d12/journal-entries" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "invoice_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+    "entries": [
+      {
+        "transaction_id": "4c7e1a93-5b2d-4f6e-8a0c-9d3f5b7e1a24",
+        "timestamp": "2026-07-01T00:05:00Z",
+        "code": 1,
+        "debit_account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+        "debit_account_code": 1100,
+        "debit_account_name": "Accounts Receivable",
+        "credit_account_id": "c4d2e8f1-6a3b-4c9d-8e7f-2a5b9c3d1e46",
+        "credit_account_code": 2100,
+        "credit_account_name": "Deferred Revenue",
+        "amount": 118000,
+        "reference_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+        "description": "Invoice issued",
+        "accounting_version": 1
+      },
+      {
+        "transaction_id": "9a2d5e71-3c8b-4f0e-a6d4-2b7f9c1e5a38",
+        "timestamp": "2026-07-01T00:05:00Z",
+        "code": 6,
+        "debit_account_id": "c4d2e8f1-6a3b-4c9d-8e7f-2a5b9c3d1e46",
+        "debit_account_code": 2100,
+        "debit_account_name": "Deferred Revenue",
+        "credit_account_id": "d5e3f9a2-7b4c-4dae-9f80-3b6c0d4e2f57",
+        "credit_account_code": 2200,
+        "credit_account_name": "Tax Payable",
+        "amount": 18000,
+        "reference_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+        "description": "Output tax",
+        "accounting_version": 1
+      },
+      {
+        "transaction_id": "2b3c4d5e-6f70-4a81-9b2c-3d4e5f6a7b8c",
+        "timestamp": "2026-07-03T14:22:10Z",
+        "code": 3,
+        "debit_account_id": "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+        "debit_account_code": 1000,
+        "debit_account_name": "Cash",
+        "credit_account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+        "credit_account_code": 1100,
+        "credit_account_name": "Accounts Receivable",
+        "amount": 118000,
+        "reference_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+        "description": "Payment received",
+        "accounting_version": 1
+      }
+    ]
+  }
+}
+```
+
+## Entry Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `transaction_id` | string (uuid) | The posted transaction — fetch it with [Get Journal Entry](/api-reference/ledger/transaction) |
+| `timestamp` | string (date-time) | When the leg was posted |
+| `code` | integer | Posting code (`1` issuance, `6` tax reclass, `3` payment, …) — see [posting codes](/advanced/ledger#how-transactions-are-created) |
+| `debit_account_id` / `debit_account_code` / `debit_account_name` | uuid / integer / string | The debit side of the transfer; the id deep-links to the ledger account |
+| `credit_account_id` / `credit_account_code` / `credit_account_name` | uuid / integer / string | The credit side of the transfer |
+| `amount` | integer (int64) | Minor units |
+| `reference_id` | string (uuid) | The business object that caused the posting |
+| `description` | string | Human-readable posting description |
+| `accounting_version` | integer | Posting-semantics version the leg was written under |
+
+<Note>
+  Read-only. An existing invoice with no postings yet returns an empty
+  `entries` list — a draft, or an invoice whose best-effort posting is still
+  pending reconciliation. A missing or cross-tenant `id` returns `404`.
+</Note>

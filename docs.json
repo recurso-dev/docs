@@ -69,6 +69,7 @@
               "advanced/double-entry",
               "advanced/finance-overview",
               "advanced/ledger",
+              "advanced/explain-any-number",
               "advanced/revenue-recognition",
               "advanced/multi-currency",
               "advanced/accounting",
@@ -412,6 +413,7 @@
                   "api-reference/customers/get",
                   "api-reference/customers/update",
                   "api-reference/customers/credit-statement",
+                  "api-reference/customers/financial-summary",
                   "api-reference/customers/update-payment-method"
                 ]
               },
@@ -423,9 +425,11 @@
                   "api-reference/subscriptions/get",
                   "api-reference/subscriptions/update",
                   "api-reference/subscriptions/cancel",
+                  "api-reference/subscriptions/cancel-preview",
                   "api-reference/subscriptions/pause",
                   "api-reference/subscriptions/resume",
                   "api-reference/subscriptions/history",
+                  "api-reference/subscriptions/financial-summary",
                   "api-reference/subscriptions/usage"
                 ]
               },
@@ -450,6 +454,8 @@
                   "api-reference/invoices/list",
                   "api-reference/invoices/get",
                   "api-reference/invoices/status-history",
+                  "api-reference/invoices/payment-attempts",
+                  "api-reference/invoices/journal-entries",
                   "api-reference/invoices/pdf",
                   "api-reference/invoices/send",
                   "api-reference/invoices/preview",
@@ -473,7 +479,15 @@
                 "pages": [
                   "api-reference/payments/create-order",
                   "api-reference/payments/record-offline",
-                  "api-reference/payments/list-offline"
+                  "api-reference/payments/list-offline",
+                  "api-reference/payment-attempts/list",
+                  "api-reference/payment-attempts/get"
+                ]
+              },
+              {
+                "group": "Disputes",
+                "pages": [
+                  "api-reference/disputes/get"
                 ]
               },
               {
@@ -492,6 +506,7 @@
                   "api-reference/metrics/list",
                   "api-reference/metrics/create",
                   "api-reference/metrics/get",
+                  "api-reference/metrics/charges",
                   "api-reference/metrics/update",
                   "api-reference/metrics/delete",
                   "api-reference/usage-alerts/create",
@@ -512,6 +527,7 @@
                   "api-reference/credit-notes/create",
                   "api-reference/credit-notes/list",
                   "api-reference/credit-notes/get",
+                  "api-reference/credit-notes/journal-entries",
                   "api-reference/credit-notes/approve",
                   "api-reference/credit-notes/reject",
                   "api-reference/credit-notes/void",
@@ -574,6 +590,7 @@
                 "pages": [
                   "api-reference/ledger/list-accounts",
                   "api-reference/ledger/entries",
+                  "api-reference/ledger/transaction",
                   "api-reference/ledger/export"
                 ]
               },
@@ -587,7 +604,9 @@
                 "group": "Finance",
                 "pages": [
                   "api-reference/finance/reconciliation",
-                  "api-reference/finance/reconciliation-runs"
+                  "api-reference/finance/reconciliation-runs",
+                  "api-reference/finance/reconciliation-runs-list",
+                  "api-reference/finance/reconciliation-run"
                 ]
               },
               {

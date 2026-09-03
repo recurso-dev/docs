@@ -1,0 +1,61 @@
+---
+title: "Plans Pricing on a Metric"
+openapi: "GET /v1/billable-metrics/{id}/charges"
+description: "The charges that consume a billable metric, each with its plan and charge model — the reverse lookup of a plan's charges."
+keywords: ["billable metric charges", "which plans use this meter", "reverse lookup"]
+---
+
+Returns the charges that consume this billable metric, each with its plan
+(name, code, active flag) and charge model — the meter page's "which plans
+price on this meter", the reverse of a plan's charges. Use it before
+[deleting](/api-reference/metrics/delete) or reshaping a metric to see what
+pricing depends on it.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/billable-metrics/3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f/charges" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "charge_id": "9f8e7d6c-5b4a-4938-8271-605f4e3d2c1b",
+      "plan_id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      "plan_name": "Growth",
+      "plan_code": "growth-monthly",
+      "plan_active": true,
+      "charge_model": "graduated",
+      "pay_in_advance": false
+    },
+    {
+      "charge_id": "7e9f0a1b-2c3d-4e5f-8a6b-7c8d9e0f1a2b",
+      "plan_id": "5c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f",
+      "plan_name": "Scale",
+      "plan_code": "scale-monthly",
+      "plan_active": true,
+      "charge_model": "package",
+      "pay_in_advance": true
+    }
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `charge_id` | string (uuid) | The charge on the plan |
+| `plan_id` / `plan_name` / `plan_code` | uuid / string / string | The plan the charge belongs to |
+| `plan_active` | boolean | Whether that plan is currently active |
+| `charge_model` | string | How the charge prices usage (e.g. `standard`, `graduated`, `package`) |
+| `pay_in_advance` | boolean | Whether the charge bills in advance rather than in arrears |
+
+<Note>
+  Read-only. A metric no plan prices on returns an empty list; a missing or
+  cross-tenant `id` returns `404`.
+</Note>

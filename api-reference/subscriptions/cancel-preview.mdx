@@ -1,0 +1,79 @@
+---
+title: "Cancel Preview"
+openapi: "GET /v1/subscriptions/{id}/cancel-preview"
+description: "The deterministic financial consequence of canceling a subscription — effective date, resulting status, deferred revenue forfeited, and future billing avoided — shown before the mutation."
+keywords: ["cancel preview", "cancellation forecast", "deferred revenue forfeited", "breakage"]
+---
+
+Returns the deterministic financial forecast of canceling a subscription,
+shown **before** the mutation so an operator never cancels blind. The
+[cancel](/api-reference/subscriptions/cancel) mutation itself is unchanged —
+this endpoint only reads.
+
+It exposes exactly what the engine computes deterministically:
+
+- **`effective_date`** and **`resulting_status`** — when the cancel would take
+  effect and the status it leaves the subscription in.
+- **`deferred_revenue_forfeited`** / **`recognized_as_breakage`** — the
+  still-deferred revenue an *immediate* cancel forfeits and recognizes as
+  breakage, computed read-only from the same revenue-recognition data the
+  mutation uses.
+- **`avoided_future_recurring`** — the future recurring amount that will no
+  longer bill.
+- **`flat_fee_refund`** — always `0`: the flat fee is paid in advance and is
+  not refunded.
+
+It deliberately **omits** an unused-time proration credit (the cancel mutation
+posts none) and a final metered-usage figure (only the mutating invoice path
+can produce one). See [Explain any number](/advanced/explain-any-number).
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `immediately` | boolean | No | Preview an immediate cancel (`true`) vs cancel-at-period-end (default `false`). |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/subscriptions/b9071c55-0e14-4720-80f3-665613ceb7de/cancel-preview?immediately=true" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "subscription_id": "b9071c55-0e14-4720-80f3-665613ceb7de",
+    "immediately": true,
+    "effective_date": "2026-08-18T10:30:00Z",
+    "resulting_status": "canceled",
+    "cancel_at_period_end": false,
+    "currency": "USD",
+    "deferred_revenue_forfeited": 45161,
+    "recognized_as_breakage": 45161,
+    "avoided_future_recurring": 100000,
+    "flat_fee_refund": 0
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `immediately` | boolean | The mode that was previewed |
+| `effective_date` | string (date-time) | When the cancel would take effect |
+| `resulting_status` | string | The status the subscription would end up in |
+| `cancel_at_period_end` | boolean | `true` when the preview is a period-end cancel |
+| `currency` | string | Currency of the amounts below |
+| `deferred_revenue_forfeited` | integer (int64) | Still-deferred revenue an immediate cancel forfeits, minor units |
+| `recognized_as_breakage` | integer (int64) | The portion recognized as breakage on cancel |
+| `avoided_future_recurring` | integer (int64) | Future recurring amount that will no longer bill |
+| `flat_fee_refund` | integer (int64) | Always `0` — flat fee paid in advance, not refunded |
+
+<Note>
+  Read-only and side-effect free — nothing is posted, scheduled, or changed. A
+  missing or cross-tenant `id` returns `404`.
+</Note>

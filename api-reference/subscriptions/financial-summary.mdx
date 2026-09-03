@@ -1,0 +1,87 @@
+---
+title: "Subscription Financial Summary"
+openapi: "GET /v1/subscriptions/{id}/financial-summary"
+description: "One subscription's financial position: MRR, recurring list price and interval, next-invoice date and base amount, and its invoice-derived outstanding position per currency."
+keywords: ["subscription financial summary", "subscription MRR", "next invoice", "outstanding"]
+---
+
+## What it returns
+
+One subscription's financial position:
+
+- **`mrr`** — the monthly-normalized list price, counted only when the
+  subscription is `active` (`0` otherwise). This matches the tenant-wide
+  [MRR](/api-reference/analytics/mrr) definition, so summing it across
+  subscriptions agrees with the dashboard.
+- **`recurring_amount`**, **`interval_unit`**, **`interval_count`** — the
+  recurring list price and its interval.
+- **`next_invoice_date`** and **`next_invoice_base_amount`** — when it will
+  renew and the base amount. Base is the plan list price only; it excludes tax,
+  coupon, add-ons, and usage, so it is never the total that will be due.
+- **`outstanding`** — the subscription's invoice-derived position per currency,
+  in the same shape as the
+  [customer financial summary](/api-reference/customers/financial-summary).
+
+See [Explain any number](/advanced/explain-any-number) for how this fits with
+the other drill-down endpoints.
+
+## Example request
+
+```bash
+curl https://api.recurso.dev/v1/subscriptions/b9071c55-0e14-4720-80f3-665613ceb7de/financial-summary \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example response
+
+```json
+{
+  "data": {
+    "subscription_id": "b9071c55-0e14-4720-80f3-665613ceb7de",
+    "status": "active",
+    "currency": "USD",
+    "mrr": 100000,
+    "recurring_amount": 100000,
+    "interval_unit": "month",
+    "interval_count": 1,
+    "current_period_start": "2026-08-01T00:00:00Z",
+    "current_period_end": "2026-09-01T00:00:00Z",
+    "next_invoice_date": "2026-09-01T00:00:00Z",
+    "next_invoice_base_amount": 100000,
+    "coupon_id": null,
+    "discount_active": false,
+    "outstanding": [
+      {
+        "currency": "USD",
+        "outstanding": 118000,
+        "past_due": 0,
+        "past_due_count": 0,
+        "billed": 354000,
+        "paid": 236000
+      }
+    ]
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | The subscription's current status |
+| `currency` | string | The subscription's billing currency |
+| `mrr` | integer (int64) | Monthly-normalized recurring value; `0` unless `active` |
+| `recurring_amount` | integer (int64) | Recurring list price per interval, minor units |
+| `interval_unit` / `interval_count` | string / integer | Billing interval (e.g. `month` × `1`) |
+| `current_period_start` / `current_period_end` | string (date-time) | The current billing period |
+| `next_invoice_date` | string (date-time), nullable | When the next invoice will be generated; `null` when it will not renew |
+| `next_invoice_base_amount` | integer (int64) | Plan list price only — excludes tax, coupon, add-ons, and usage |
+| `coupon_id` | string (uuid), nullable | Attached coupon, if any |
+| `discount_active` | boolean | Whether that coupon currently applies |
+| `outstanding[]` | array | Per-currency `outstanding`, `past_due`, `past_due_count`, `billed`, `paid` |
+
+<Note>
+  Read-only. A missing or cross-tenant `id` returns `404`. For what canceling
+  this subscription would do to these numbers, see
+  [Cancel Preview](/api-reference/subscriptions/cancel-preview).
+</Note>

@@ -1,0 +1,88 @@
+---
+title: "Explain Any Number"
+description: "The drill-down endpoints that tie every invoice, credit note, payment, and summary figure back to the ledger postings behind it."
+keywords: ["explain any number", "journal entries", "payment attempts", "financial summary", "cancel preview", "reconciliation"]
+---
+
+Recurso's rule is that debits equal credits, always, and every customer-visible
+figure ties to the postings behind it. The endpoints on this page are the
+read-only surfaces that let you follow that tie-out yourself — from a number on
+an invoice or a dashboard card down to the balanced journal entry that produced
+it. None of them mutate anything.
+
+## Journal entries on an invoice or credit note
+
+Every money event posts one or more balanced transfers to the
+[double-entry ledger](/advanced/ledger): a single debit account, a single credit
+account, one amount in minor units, and a posting code that says *why*. An
+invoice's postings are its Code-1 issuance (AR → Deferred Revenue for
+subscriptions, AR → Revenue for one-offs), a Code-6 tax reclass when tax
+applies, a Code-3 payment when cash arrives, and any later credit, refund, or
+write-off legs. A credit note's are its Customer-Credit liability leg, any tax
+reversal, and refund or write-off legs.
+
+- [Invoice Journal Entries](/api-reference/invoices/journal-entries) and
+  [Credit Note Journal Entries](/api-reference/credit-notes/journal-entries)
+  return those legs, each with both accounts named and a `transaction_id`.
+- [Get Journal Entry](/api-reference/ledger/transaction) fetches one posted
+  transaction by that id — the addressable object a reconciliation discrepancy
+  points to.
+
+Posting is best-effort after the business write commits (ADR-002): a leg that
+failed to post is logged for reconciliation rather than failing the customer
+operation, so an invoice can briefly have an empty `entries` list. The
+[reconciliation report](/api-reference/finance/reconciliation) is what catches
+that, and [Get Reconciliation Run](/api-reference/finance/reconciliation-run)
+keeps each recorded run's discrepancies so you can drill from a finding to the
+invoice or transaction it names.
+
+## Payment attempts versus payments
+
+A **payment attempt** is one try at settling an invoice through a gateway. It
+has a status (`initiated`, `processing`, `succeeded`, `failed`, `returned`),
+a failure code, the gateway's payment-intent reference, and a `settled_at`.
+An invoice may accumulate several — a card's `failed` then `succeeded`, or an
+ACH debit's `initiated` → `processing` → `succeeded` → `returned`. Only a
+succeeded attempt becomes a payment on the invoice and a Code-3 posting in the
+ledger; a `returned` attempt is what drives a Code-19 payment reversal.
+
+- [Invoice Payment Attempts](/api-reference/invoices/payment-attempts) — one
+  invoice's retry and settlement history, oldest first.
+- [List Payment Attempts](/api-reference/payment-attempts/list) — the
+  tenant-wide payments log, newest first, filterable by status.
+- [Get Payment Attempt](/api-reference/payment-attempts/get) — one attempt with
+  its invoice, customer, and subscription resolved.
+
+## Financial summaries
+
+Two endpoints roll invoices up into a position without ever summing across
+currencies:
+
+- [Customer Financial Summary](/api-reference/customers/financial-summary) —
+  per currency: `outstanding` (open + past-due remaining), the `past_due` slice
+  and its invoice count, lifetime `billed`, and `paid`. Written-off invoices are
+  excluded from outstanding; drafts and voids from billed and paid.
+- [Subscription Financial Summary](/api-reference/subscriptions/financial-summary)
+  — `mrr` (monthly-normalized list price, `0` unless active, matching the
+  tenant-wide MRR definition), the recurring price and interval, the next
+  invoice date and base amount (list price only — never the total due), and
+  the same per-currency outstanding block.
+
+Because every figure is derived from invoices, each one can be re-derived from
+[List Invoices](/api-reference/invoices/list) and, from there, from the
+invoice's journal entries.
+
+## Cancel preview
+
+[Cancel Preview](/api-reference/subscriptions/cancel-preview) shows the
+financial consequence of a cancellation *before* you run it: the effective
+date and resulting status, the still-deferred revenue an immediate cancel
+forfeits and recognizes as breakage, the future recurring amount that will no
+longer bill, and a `flat_fee_refund` that is always `0` because the flat fee is
+paid in advance. It deliberately omits an unused-time proration credit (the
+cancel mutation posts none) and a final metered-usage figure (only the
+mutating invoice path can produce one).
+
+See the [double-entry ledger](/advanced/ledger) for accounts and posting codes
+in depth, and [revenue recognition](/advanced/revenue-recognition) for where
+deferred revenue and breakage come from.
