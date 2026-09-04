@@ -21,7 +21,8 @@
               "quickstart",
               "concepts",
               "end-to-end",
-              "testing"
+              "testing",
+              "changelog"
             ]
           },
           {
@@ -878,6 +879,7 @@
                 "pages": [
                   "api-reference/portal/auth-request",
                   "api-reference/portal/auth-verify",
+                  "api-reference/portal/auth-verify-post",
                   "api-reference/portal/profile",
                   "api-reference/portal/payment-method-setup-intent",
                   "api-reference/portal/payment-method-confirm",
