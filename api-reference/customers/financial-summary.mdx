@@ -1,0 +1,68 @@
+---
+title: "Customer Financial Summary"
+openapi: "GET /v1/customers/{id}/financial-summary"
+description: "A customer's invoice-derived financial position, one block per currency: outstanding, past due, lifetime billed, and paid."
+keywords: ["customer financial summary", "outstanding balance", "past due", "lifetime billed"]
+---
+
+## What it returns
+
+A customer's invoice-derived financial position, one block per currency:
+
+- **`outstanding`** — the amount remaining on `open` + `past_due` invoices.
+- **`past_due`** / **`past_due_count`** — the past-due slice of that, and how
+  many invoices it spans.
+- **`billed`** — lifetime issued total.
+- **`paid`** — lifetime paid.
+
+Written-off invoices are excluded from `outstanding`; `draft` and `void`
+invoices are excluded from `billed` and `paid`. Money is never summed across
+currencies — a customer billed in both USD and INR gets two blocks, not one
+converted figure. Every number here is derived from invoices you can list with
+[List Invoices](/api-reference/invoices/list) filtered by `customer_id`, so it
+can always be explained; see [Explain any number](/advanced/explain-any-number).
+
+## Example request
+
+```bash
+curl https://api.recurso.dev/v1/customers/0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f/financial-summary \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example response
+
+```json
+{
+  "data": {
+    "customer_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+    "currencies": [
+      {
+        "currency": "USD",
+        "outstanding": 236000,
+        "past_due": 118000,
+        "past_due_count": 1,
+        "billed": 944000,
+        "paid": 708000
+      }
+    ]
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `currency` | string | ISO currency code for this block |
+| `outstanding` | integer (int64) | Amount remaining on `open` + `past_due` invoices, minor units |
+| `past_due` | integer (int64) | The past-due portion of `outstanding` |
+| `past_due_count` | integer | Number of past-due invoices |
+| `billed` | integer (int64) | Lifetime issued total (excludes `draft`/`void`) |
+| `paid` | integer (int64) | Lifetime paid (excludes `draft`/`void`) |
+
+<Note>
+  Read-only. A customer with no non-draft invoices returns an empty
+  `currencies` list; a missing or cross-tenant `id` returns `404`. For the
+  customer's account-credit position, use the
+  [credit statement](/api-reference/customers/credit-statement).
+</Note>

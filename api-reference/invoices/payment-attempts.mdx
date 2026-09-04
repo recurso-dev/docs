@@ -1,0 +1,79 @@
+---
+title: "Invoice Payment Attempts"
+openapi: "GET /v1/invoices/{id}/payment-attempts"
+description: "An invoice's payment attempts, oldest first — the retry and settlement history, each with status, failure code, gateway reference, amount, and settled-at."
+keywords: ["invoice payment attempts", "settlement history", "retry history", "failed payment"]
+---
+
+Returns the invoice's payment attempts, oldest first — its retry/settlement
+history: a card's `failed` → `succeeded`, or an ACH debit's `initiated` →
+`processing` → `succeeded` → `returned`. Each attempt carries its status,
+failure code, gateway and payment-intent reference, amount, and settled-at.
+
+Read this alongside the [status timeline](/api-reference/invoices/status-history)
+(what the invoice's status did) and the
+[journal entries](/api-reference/invoices/journal-entries) (what the ledger
+recorded): a succeeded attempt is what produces the invoice's Code-3 payment
+posting. See [Explain any number](/advanced/explain-any-number).
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/invoices/06c151de-8d3a-4b21-9c77-2f0e5a9b4d12/payment-attempts" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "invoice_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+    "attempts": [
+      {
+        "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+        "invoice_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+        "gateway": "stripe",
+        "method": "card",
+        "gateway_payment_intent_id": "pi_3PqR7sK2eZvKYlo2C0Xy1AbC",
+        "status": "failed",
+        "failure_code": "insufficient_funds",
+        "amount": 118000,
+        "created_at": "2026-07-02T09:00:00Z",
+        "settled_at": null
+      },
+      {
+        "id": "c2d4e6f8-1a3b-4c5d-9e7f-8a9b0c1d2e3f",
+        "invoice_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+        "gateway": "stripe",
+        "method": "card",
+        "gateway_payment_intent_id": "pi_3PqR7sK2eZvKYlo2C0Xy1DeF",
+        "status": "succeeded",
+        "failure_code": "",
+        "amount": 118000,
+        "created_at": "2026-07-03T14:22:00Z",
+        "settled_at": "2026-07-03T14:22:10Z"
+      }
+    ]
+  }
+}
+```
+
+## Attempt Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The attempt's id — fetch it with [Get Payment Attempt](/api-reference/payment-attempts/get) |
+| `gateway` | string | The gateway that processed the attempt |
+| `method` | string | The payment method used |
+| `gateway_payment_intent_id` | string | The gateway's reference for the attempt |
+| `status` | string | `initiated`, `processing`, `succeeded`, `failed`, or `returned` |
+| `failure_code` | string | Gateway failure or return code; empty when the attempt succeeded |
+| `amount` | integer (int64) | Minor units |
+| `created_at` | string (date-time) | When the attempt was made |
+| `settled_at` | string (date-time), nullable | When funds settled; `null` until then |
+
+<Note>
+  Read-only. An existing invoice with no attempts returns an empty `attempts`
+  list; a missing or cross-tenant `id` returns `404`.
+</Note>

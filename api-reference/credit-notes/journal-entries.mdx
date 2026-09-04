@@ -1,0 +1,85 @@
+---
+title: "Credit Note Journal Entries"
+openapi: "GET /v1/credit-notes/{id}/journal-entries"
+description: "Every ledger posting that references a credit note — its Customer-Credit liability leg, any tax reversal, and refund or write-off legs — each with its debit and credit account."
+keywords: ["credit note journal entries", "ledger drill", "credit note postings", "customer credit"]
+---
+
+Returns every ledger posting that references this credit note: its
+Customer-Credit liability leg, any tax reversal, and refund or write-off legs.
+Each entry is one balanced transfer — a debit account and a credit account
+(id, code, and name), an amount in minor units, its posting code, and a
+timestamp. This is the finance-accounting side of the credit-note page, and the
+same shape as [Invoice Journal Entries](/api-reference/invoices/journal-entries).
+
+Account ids deep-link each leg to its ledger account; `transaction_id` links
+to the [journal entry](/api-reference/ledger/transaction) itself. See
+[Explain any number](/advanced/explain-any-number) for the wider picture.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/credit-notes/8d1f3a6b-2c4e-4f70-9a1b-5c6d7e8f9a0b/journal-entries" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "credit_note_id": "8d1f3a6b-2c4e-4f70-9a1b-5c6d7e8f9a0b",
+    "entries": [
+      {
+        "transaction_id": "5f8c2b96-1d4e-4a7c-9b3f-6e0a8d2c4f17",
+        "timestamp": "2026-08-01T09:00:00Z",
+        "code": 8,
+        "debit_account_id": "f6a4b0c3-8d5e-4ebf-a091-4c7d1e5f3a68",
+        "debit_account_code": 5100,
+        "debit_account_name": "Credits & Adjustments",
+        "credit_account_id": "a7b5c1d4-9e6f-4fc0-b1a2-5d8e2f6a4b79",
+        "credit_account_code": 2300,
+        "credit_account_name": "Customer Credit",
+        "amount": 5000,
+        "reference_id": "8d1f3a6b-2c4e-4f70-9a1b-5c6d7e8f9a0b",
+        "description": "Adjustment credit issued",
+        "accounting_version": 1
+      },
+      {
+        "transaction_id": "7d2b9f41-8c3e-4a5d-b6f0-1e4a7c9d2b58",
+        "timestamp": "2026-08-15T00:10:00Z",
+        "code": 7,
+        "debit_account_id": "a7b5c1d4-9e6f-4fc0-b1a2-5d8e2f6a4b79",
+        "debit_account_code": 2300,
+        "debit_account_name": "Customer Credit",
+        "credit_account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+        "credit_account_code": 1100,
+        "credit_account_name": "Accounts Receivable",
+        "amount": 500,
+        "reference_id": "8d1f3a6b-2c4e-4f70-9a1b-5c6d7e8f9a0b",
+        "description": "Credit applied to invoice",
+        "accounting_version": 1
+      }
+    ]
+  }
+}
+```
+
+## Entry Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `transaction_id` | string (uuid) | The posted transaction — fetch it with [Get Journal Entry](/api-reference/ledger/transaction) |
+| `timestamp` | string (date-time) | When the leg was posted |
+| `code` | integer | Posting code — see [posting codes](/advanced/ledger#how-transactions-are-created) |
+| `debit_account_id` / `debit_account_code` / `debit_account_name` | uuid / integer / string | The debit side of the transfer; the id deep-links to the ledger account |
+| `credit_account_id` / `credit_account_code` / `credit_account_name` | uuid / integer / string | The credit side of the transfer |
+| `amount` | integer (int64) | Minor units |
+| `reference_id` | string (uuid) | The business object that caused the posting |
+| `description` | string | Human-readable posting description |
+| `accounting_version` | integer | Posting-semantics version the leg was written under |
+
+<Note>
+  Read-only. An existing credit note with no postings yet returns an empty
+  `entries` list. A missing or cross-tenant `id` returns `404`.
+</Note>

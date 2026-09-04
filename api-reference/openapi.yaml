@@ -758,6 +758,44 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/customers/{id}/financial-summary:
+    get:
+      operationId: getCustomerFinancialSummary
+      tags: [Customers]
+      summary: Customer financial summary
+      description: >
+        A customer's invoice-derived financial position, one block per currency:
+        outstanding (open + past_due amount remaining), the past-due slice with
+        its invoice count, lifetime billed (issued total), and paid. Written-off
+        invoices are excluded from outstanding; draft/void from billed/paid.
+        Money is never summed across currencies.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The financial summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      customer_id: { type: string, format: uuid }
+                      currencies:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            currency: { type: string }
+                            outstanding: { type: integer, format: int64 }
+                            past_due: { type: integer, format: int64 }
+                            past_due_count: { type: integer }
+                            billed: { type: integer, format: int64 }
+                            paid: { type: integer, format: int64 }
+        '404':
+          description: Customer not found.
   /v1/customers/{id}/credit-statement:
     get:
       operationId: getCreditStatement
@@ -1498,6 +1536,100 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/subscriptions/{id}/financial-summary:
+    get:
+      operationId: getSubscriptionFinancialSummary
+      tags: [Subscriptions]
+      summary: Subscription financial summary
+      description: >
+        One subscription's financial position: MRR (monthly-normalized list
+        price, counted only when active — 0 otherwise, matching the tenant-wide
+        MRR definition), the recurring list price + interval, the next-invoice
+        date and base amount when it will renew (base = list price only; it
+        excludes tax/coupon/add-ons/usage), and its invoice-derived outstanding
+        position per currency. Read-only; cross-tenant ids return 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The subscription's financial summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      subscription_id: { type: string, format: uuid }
+                      status: { type: string }
+                      currency: { type: string }
+                      mrr: { type: integer, format: int64, description: Monthly-normalized recurring value; 0 unless active. }
+                      recurring_amount: { type: integer, format: int64 }
+                      interval_unit: { type: string }
+                      interval_count: { type: integer }
+                      current_period_start: { type: string, format: date-time }
+                      current_period_end: { type: string, format: date-time }
+                      next_invoice_date: { type: string, format: date-time, nullable: true }
+                      next_invoice_base_amount: { type: integer, format: int64, description: Plan list price only; excludes tax/coupon/add-ons/usage. Never the total due. }
+                      coupon_id: { type: string, format: uuid, nullable: true }
+                      discount_active: { type: boolean }
+                      outstanding:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            currency: { type: string }
+                            outstanding: { type: integer, format: int64 }
+                            past_due: { type: integer, format: int64 }
+                            past_due_count: { type: integer }
+                            billed: { type: integer, format: int64 }
+                            paid: { type: integer, format: int64 }
+        '404':
+          description: Subscription not found.
+  /v1/subscriptions/{id}/cancel-preview:
+    get:
+      operationId: getSubscriptionCancelPreview
+      tags: [Subscriptions]
+      summary: Preview the financial consequence of a cancellation
+      description: >
+        The deterministic financial forecast of canceling a subscription, shown
+        BEFORE the mutation so an operator never cancels blind. Exposes only what
+        the engine computes deterministically: effective time + resulting status,
+        the still-deferred revenue an immediate cancel forfeits and recognizes as
+        breakage (computed read-only from the same rev-rec data the mutation
+        uses), the future recurring amount that will no longer bill, and
+        flat_fee_refund (constant 0 — the flat fee is paid in advance, not
+        refunded). It deliberately omits an unused-time proration credit (the
+        cancel mutation posts none) and a final metered-usage figure (only the
+        mutating invoice path can produce it). The cancel mutation is unchanged.
+        Read-only; cross-tenant ids return 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: immediately, in: query, required: false, schema: { type: boolean, default: false }, description: Preview an immediate cancel (true) vs cancel-at-period-end (default). }
+      responses:
+        '200':
+          description: The cancel preview.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      subscription_id: { type: string, format: uuid }
+                      immediately: { type: boolean }
+                      effective_date: { type: string, format: date-time }
+                      resulting_status: { type: string }
+                      cancel_at_period_end: { type: boolean }
+                      currency: { type: string }
+                      deferred_revenue_forfeited: { type: integer, format: int64 }
+                      recognized_as_breakage: { type: integer, format: int64 }
+                      avoided_future_recurring: { type: integer, format: int64 }
+                      flat_fee_refund: { type: integer, format: int64, description: Always 0 — flat fee paid in advance, not refunded. }
+        '404':
+          description: Subscription not found.
   /v1/subscriptions/{id}:
     get:
       operationId: getSubscription
@@ -1561,10 +1693,7 @@ paths:
         status row is the creation state (null from_value). Read-only; a
         missing or cross-tenant id returns 404.
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '200':
           description: The subscription's lifecycle timeline.
@@ -1589,7 +1718,7 @@ paths:
                             to_value: { type: string, nullable: true }
                             changed_at: { type: string, format: date-time }
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: Subscription not found.
 
   /v1/subscriptions/{id}/preview-change:
     get:
@@ -1967,6 +2096,14 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: q
+          in: query
+          description: >-
+            Case-insensitive substring search on invoice_number (tenant-scoped),
+            newest first. Backs the command-palette invoice lookup. Ignored when
+            customer_id or subscription_id is provided.
+          schema:
+            type: string
       responses:
         '200':
           description: Invoices for the tenant.
@@ -2007,6 +2144,227 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/invoices/{id}/journal-entries:
+    get:
+      operationId: getInvoiceJournalEntries
+      tags: [Invoices]
+      summary: Invoice journal entries (ledger drill)
+      description: >
+        Every ledger posting that references this invoice — its Code-1 issuance,
+        Code-6 tax reclass, Code-3 payment, and any credit/refund/write-off legs —
+        each as a transfer with its debit and credit account (code + name), amount,
+        posting code, and timestamp. The finance-accounting side of the invoice
+        page. Read-only; an existing invoice with no postings yet returns an empty list.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The invoice's journal entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      invoice_id: { type: string, format: uuid }
+                      entries:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            transaction_id: { type: string, format: uuid }
+                            timestamp: { type: string, format: date-time }
+                            code: { type: integer }
+                            debit_account_id: { type: string, format: uuid, description: Debit account id — deep-links the leg to its ledger account. }
+                            debit_account_code: { type: integer }
+                            debit_account_name: { type: string }
+                            credit_account_id: { type: string, format: uuid, description: Credit account id — deep-links the leg to its ledger account. }
+                            credit_account_code: { type: integer }
+                            credit_account_name: { type: string }
+                            amount: { type: integer, format: int64 }
+                            reference_id: { type: string, format: uuid }
+                            description: { type: string }
+                            accounting_version: { type: integer }
+        '404':
+          description: Invoice not found.
+  /v1/credit-notes/{id}/journal-entries:
+    get:
+      operationId: getCreditNoteJournalEntries
+      tags: [CreditNotes]
+      summary: Credit note journal entries (ledger drill)
+      description: >
+        Every ledger posting that references this credit note — its
+        Customer-Credit liability leg, any tax reversal, and refund/write-off
+        legs — each as a transfer with its debit and credit account (code +
+        name), amount, posting code, and timestamp. The finance-accounting side
+        of the credit-note page. Read-only; an existing note with no postings
+        yet returns an empty list.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The credit note's journal entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      credit_note_id: { type: string, format: uuid }
+                      entries:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            transaction_id: { type: string, format: uuid }
+                            timestamp: { type: string, format: date-time }
+                            code: { type: integer }
+                            debit_account_id: { type: string, format: uuid, description: Debit account id — deep-links the leg to its ledger account. }
+                            debit_account_code: { type: integer }
+                            debit_account_name: { type: string }
+                            credit_account_id: { type: string, format: uuid, description: Credit account id — deep-links the leg to its ledger account. }
+                            credit_account_code: { type: integer }
+                            credit_account_name: { type: string }
+                            amount: { type: integer, format: int64 }
+                            reference_id: { type: string, format: uuid }
+                            description: { type: string }
+                            accounting_version: { type: integer }
+        '404':
+          description: Credit note not found.
+  /v1/payment-attempts/{id}:
+    get:
+      operationId: getPaymentAttempt
+      tags: [Payments]
+      summary: Get a payment attempt by id
+      description: >
+        One payment attempt as an addressable object, resolved with the
+        invoice-level context it belongs to (invoice number, currency, customer,
+        and subscription for recurring invoices). customer_id/subscription_id are
+        read-time joins off the attempt's invoice. Read-only; cross-tenant ids
+        return 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The payment attempt.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      invoice_id: { type: string, format: uuid }
+                      invoice_number: { type: string }
+                      currency: { type: string }
+                      customer_id: { type: string, format: uuid }
+                      subscription_id: { type: string, format: uuid, nullable: true }
+                      gateway: { type: string }
+                      method: { type: string }
+                      gateway_payment_intent_id: { type: string }
+                      status: { type: string, enum: [initiated, processing, succeeded, failed, returned] }
+                      failure_code: { type: string }
+                      amount: { type: integer, format: int64 }
+                      created_at: { type: string, format: date-time }
+                      updated_at: { type: string, format: date-time }
+                      settled_at: { type: string, format: date-time, nullable: true }
+        '404':
+          description: Payment not found.
+  /v1/payment-attempts:
+    get:
+      operationId: listPaymentAttempts
+      tags: [Payments]
+      summary: Payments log (tenant-wide payment attempts)
+      description: >
+        Every gateway payment attempt for the tenant, newest first, paginated,
+        with an optional status filter (initiated/processing/succeeded/failed/
+        returned). Each row carries its invoice number. The operator's failed-
+        payments log. Read-only.
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string, enum: [initiated, processing, succeeded, failed, returned] } }
+        - { name: q, in: query, required: false, description: "Case-insensitive substring search on the attempt's invoice_number or gateway payment reference (tenant-scoped), newest first. Backs the command-palette payment lookup; the status filter is ignored on the search path.", schema: { type: string } }
+        - { name: page, in: query, required: false, schema: { type: integer } }
+        - { name: per_page, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200':
+          description: The payments log page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        invoice_id: { type: string, format: uuid }
+                        invoice_number: { type: string }
+                        currency: { type: string }
+                        gateway: { type: string }
+                        method: { type: string }
+                        gateway_payment_intent_id: { type: string }
+                        status: { type: string, enum: [initiated, processing, succeeded, failed, returned] }
+                        failure_code: { type: string }
+                        amount: { type: integer, format: int64 }
+                        created_at: { type: string, format: date-time }
+                        settled_at: { type: string, format: date-time, nullable: true }
+                  pagination:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
+                      total_pages: { type: integer }
+  /v1/invoices/{id}/payment-attempts:
+    get:
+      operationId: getInvoicePaymentAttempts
+      tags: [Invoices]
+      summary: Invoice payment attempts (settlement history)
+      description: >
+        An invoice's payment attempts, oldest first — the retry/settlement
+        history: a card's failed → succeeded, or an ACH debit's initiated →
+        processing → succeeded → returned. Each attempt carries its status,
+        failure code, gateway + payment-intent reference, amount, and settled-at.
+        Read-only; an existing invoice with no attempts returns an empty list.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The invoice's payment attempts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      invoice_id: { type: string, format: uuid }
+                      attempts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            invoice_id: { type: string, format: uuid }
+                            gateway: { type: string }
+                            method: { type: string }
+                            gateway_payment_intent_id: { type: string }
+                            status: { type: string, enum: [initiated, processing, succeeded, failed, returned] }
+                            failure_code: { type: string }
+                            amount: { type: integer, format: int64 }
+                            created_at: { type: string, format: date-time }
+                            settled_at: { type: string, format: date-time, nullable: true }
+        '404':
+          description: Invoice not found.
   /v1/invoices/{id}/status-history:
     get:
       operationId: getInvoiceStatusHistory
@@ -2019,10 +2377,7 @@ paths:
         (null from_status). Read-only; an existing invoice with no recorded
         transitions returns an empty list.
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '200':
           description: The invoice's status timeline.
@@ -2046,8 +2401,7 @@ paths:
                             to_status: { type: string }
                             changed_at: { type: string, format: date-time }
         '404':
-          $ref: '#/components/responses/NotFound'
-
+          description: Invoice not found.
   /v1/invoices/{id}/pdf:
     get:
       operationId: downloadInvoicePDF
@@ -2241,6 +2595,27 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /v1/coupons/{id}:
+    get:
+      operationId: getCoupon
+      tags: [Coupons]
+      summary: Get one coupon (tenant-scoped)
+      description: >
+        Fetches a single coupon by id — the addressable object behind the
+        dashboard's coupon page. A missing or cross-tenant id returns 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The coupon.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Coupon'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       operationId: updateCoupon
       tags: [Coupons]
@@ -4558,6 +4933,29 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/disputes/{id}:
+    get:
+      operationId: getDispute
+      tags: [Disputes]
+      summary: Get one invoice dispute (tenant-scoped)
+      description: >
+        Fetches a single dispute by id — the addressable object behind the
+        dashboard's dispute page. A missing or cross-tenant id returns 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The dispute.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvoiceDispute'
+        '404':
+          description: Dispute not found.
+
   /v1/disputes/{id}/resolve:
     post:
       operationId: resolveDispute
@@ -5044,6 +5442,47 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/ledger/transactions/{id}:
+    get:
+      operationId: getLedgerTransaction
+      tags: [Finance]
+      summary: Get a single journal entry (posted transaction) by id
+      description: >
+        One posted transaction (a single balanced double-entry journal entry) by
+        its ledger_transactions id, flattened with both account ids, codes and
+        names so each leg deep-links to its account page. The addressable
+        journal-entry object a reconciliation discrepancy's transaction points to.
+        Read-only; cross-tenant ids return 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The journal entry.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      transaction_id: { type: string, format: uuid }
+                      timestamp: { type: string, format: date-time }
+                      code: { type: integer }
+                      debit_account_id: { type: string, format: uuid }
+                      debit_account_code: { type: integer }
+                      debit_account_name: { type: string }
+                      credit_account_id: { type: string, format: uuid }
+                      credit_account_code: { type: integer }
+                      credit_account_name: { type: string }
+                      amount: { type: integer, format: int64 }
+                      reference_id: { type: string, format: uuid }
+                      description: { type: string }
+                      accounting_version: { type: integer }
+                      entity_id: { type: string, format: uuid, nullable: true }
+                      entity_name: { type: string }
+        '404':
+          description: Transaction not found.
   /v1/ledger/entries:
     get:
       operationId: listLedgerEntries
@@ -5220,6 +5659,56 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /v1/finance/reconciliation/runs/{id}:
+    get:
+      operationId: getReconciliationRun
+      tags: [Finance]
+      summary: Get a recorded reconciliation run with its discrepancies
+      description: >
+        One recorded run made addressable: the run summary (who/when/scope/verdict)
+        plus the per-run discrepancy rows persisted at record time — what
+        disagreed, by how much, and why. discrepancies_truncated is true when
+        fewer rows were stored than counted (the live-run listing cap, or a run
+        recorded before per-run persistence existed). Read-only; cross-tenant ids
+        return 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The recorded run with its discrepancies.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      run_by: { type: string, format: uuid, nullable: true }
+                      run_at: { type: string, format: date-time }
+                      invoices_checked: { type: integer }
+                      paid_invoices_checked: { type: integer }
+                      total_discrepancies: { type: integer }
+                      tb_compared: { type: boolean }
+                      tb_accounts_checked: { type: integer }
+                      tb_transfers_checked: { type: integer }
+                      created_at: { type: string, format: date-time }
+                      discrepancies_truncated: { type: boolean }
+                      discrepancies:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            type: { type: string }
+                            invoice_id: { type: string, format: uuid, nullable: true }
+                            transaction_id: { type: string, format: uuid, nullable: true }
+                            reference_id: { type: string, format: uuid, nullable: true }
+                            account_code: { type: integer }
+                            expected_amount: { type: integer, format: int64 }
+                            found_amount: { type: integer, format: int64 }
+        '404':
+          description: Reconciliation run not found.
   /v1/finance/reconciliation/runs:
     post:
       operationId: recordReconciliation
@@ -5250,13 +5739,7 @@ paths:
         The tenant's recorded reconciliation runs, newest first — when it was
         checked, by whom, and whether it tied out (total_discrepancies == 0).
       parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 50
-            maximum: 200
+        - { name: limit, in: query, required: false, schema: { type: integer, default: 50, maximum: 200 } }
       responses:
         '200':
           description: The recorded runs.
@@ -8198,6 +8681,39 @@ paths:
                     items: { $ref: "#/components/schemas/BillableMetric" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /v1/billable-metrics/{id}/charges:
+    get:
+      operationId: getMetricCharges
+      tags: [Metering]
+      summary: Plans pricing on this meter (reverse lookup)
+      description: >
+        The charges that consume this billable metric, each with its plan (name,
+        code, active) and charge model — the meter page's "which plans price on
+        this meter", the reverse of a plan's charges. Read-only.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The charges consuming this metric.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        charge_id: { type: string, format: uuid }
+                        plan_id: { type: string, format: uuid }
+                        plan_name: { type: string }
+                        plan_code: { type: string }
+                        plan_active: { type: boolean }
+                        charge_model: { type: string }
+                        pay_in_advance: { type: boolean }
+        '404':
+          description: Metric not found.
   /v1/billable-metrics/{id}:
     get:
       tags: [Metering]
@@ -11493,6 +12009,11 @@ components:
           description: Whether TigerBeetle was included in the comparison.
         tb_skip_reason:
           type: string
+        reporting_currency:
+          type: string
+          description: >-
+            The tenant's reporting currency; discrepancy amounts are minor units
+            of this currency so clients can format them as money.
 
     TaxNexus:
       type: object

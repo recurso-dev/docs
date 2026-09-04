@@ -28,6 +28,10 @@ history as a side effect.
 
 Retrieve the recorded runs, newest first — a ledger-close audit trail showing
 who ran each check, when, and whether it tied out (`total_discrepancies == 0`).
+The list operation has its own reference page,
+[List Reconciliation Runs](/api-reference/finance/reconciliation-runs-list);
+each run is addressable via
+[Get Reconciliation Run](/api-reference/finance/reconciliation-run).
 
 ```bash
 curl "https://api.recurso.dev/v1/finance/reconciliation/runs?limit=50" \
@@ -74,8 +78,10 @@ curl "https://api.recurso.dev/v1/finance/reconciliation/runs?limit=50" \
 | `created_at` | string (date-time) | When the summary row was recorded |
 
 <Info>
-  Only the **summary** is stored, not the individual discrepancies — the row
-  records that a check happened and its headline result. To see the current
-  drift in detail, run the report again. Correcting drift stays a deliberate
+  The list carries **summaries** — that a check happened and its headline
+  result. The discrepancy rows found by a recorded run are persisted with it
+  and returned by [Get Reconciliation Run](/api-reference/finance/reconciliation-run)
+  (`discrepancies_truncated` flags runs recorded before per-run persistence
+  existed, or that hit the listing cap). Correcting drift stays a deliberate
   human action; see the [ledger guide](/advanced/ledger#reconciliation).
 </Info>

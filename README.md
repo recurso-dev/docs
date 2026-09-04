@@ -17,11 +17,13 @@ Published at **[docs.recurso.dev](https://docs.recurso.dev)** (Mintlify).
 - `api-reference/` — endpoint reference generated from `openapi.yaml`
 - `docs.json` — navigation and site config
 
-The `openapi.yaml` here is a copy of the spec served by the API
-(`cmd/api/openapi.yaml` in the main repo); re-copy it when the API surface
-changes. A CI test in the main repo (`TestOpenAPISpecCoversRegisteredRoutes`)
-fails if a served route is missing from the spec, so the documented surface
-can't silently drift.
+The `api-reference/openapi.yaml` here is a byte-for-byte copy of the spec
+served by the API (`cmd/api/openapi.yaml` in the main repo); re-copy it when
+the API surface changes. Two checks in the main repo keep it honest:
+`TestOpenAPISpecCoversRegisteredRoutes` fails if a served route is missing
+from the spec, and `scripts/sdk_drift.py` fails when this copy differs from
+the source spec (run it from the `recurso` checkout with this repo cloned
+alongside as `../docs`; it prints `docs: in sync` when the copy matches).
 
 ## Local preview
 
