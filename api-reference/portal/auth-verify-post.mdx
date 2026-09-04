@@ -1,0 +1,43 @@
+---
+title: "Verify Magic Link (POST)"
+openapi: "POST /portal/auth/verify"
+description: "Exchange a magic link token sent in the request body for a portal session"
+---
+
+<Note>
+This is the preferred form of magic-link verification. The token travels in the
+JSON body rather than the query string, so it is not written to Referer headers,
+browser history, or access logs. The GET form is kept for links opened directly
+from email clients.
+</Note>
+
+## Request Body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | string | The magic link token from the email (required) |
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/portal/auth/verify" \
+  -H "Content-Type: application/json" \
+  -d '{ "token": "mlk_a1b2c3d4e5f6g7h8i9j0" }'
+```
+
+## Response
+
+```json
+{
+  "message": "Logged in successfully"
+}
+```
+
+The 7-day session is delivered only as the httpOnly `portal_session` cookie
+(plus a readable `portal_csrf` double-submit cookie) — it is never in the JSON
+body. Send subsequent portal requests with `credentials: "include"`.
+
+<Warning>
+Magic link tokens are single-use and expire after 15 minutes. An invalid or
+expired token returns `401` with the canonical error envelope.
+</Warning>

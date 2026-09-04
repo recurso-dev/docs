@@ -178,11 +178,12 @@ settings, auto-login, and an hourly reset.
     client := recurso.NewClient("your-api-key")
 
     plan, _ := client.Plans.Create(ctx, &recurso.PlanCreateParams{
-      Name:         "Pro Plan",
-      Code:         "PRO-INR",
-      IntervalUnit: "month",
-      Amount:       4999, // minor units
-      Currency:     "INR",
+      Name:          "Pro Plan",
+      Code:          "PRO-INR",
+      IntervalUnit:  "month",
+      IntervalCount: 1,
+      Amount:        4999, // minor units
+      Currency:      "INR",
     })
     ```
     </CodeGroup>

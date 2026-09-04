@@ -1,0 +1,22 @@
+---
+title: "Changelog"
+description: "Where Recurso changes are recorded, and how this site tracks the API"
+---
+
+This documentation site does not keep its own release notes.
+
+- **Product and API releases** are published on
+  [GitHub Releases](https://github.com/recurso-dev/recurso/releases) for the
+  `recurso-dev/recurso` repository, with the full commit history alongside.
+- **The API reference** on this site is generated from the OpenAPI
+  specification (`cmd/api/openapi.yaml`) that ships with the API. The copy
+  served here (`api-reference/openapi.yaml`) is kept byte-identical to the
+  API's copy by a CI check, so an endpoint's documented request and response
+  shapes are exactly what the current API declares. The same spec is served
+  live at `GET /openapi.yaml` and `GET /openapi.json` on every API deployment.
+- **SDKs** (`recurso-go`, `recurso-node`, `recurso-python`) each carry their
+  own `CHANGELOG.md` in their repository.
+
+If a page on this site disagrees with the specification, the specification
+is the source of truth — please
+[open an issue](https://github.com/recurso-dev/docs/issues).

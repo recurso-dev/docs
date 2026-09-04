@@ -24,11 +24,19 @@ curl "https://api.recurso.dev/portal/auth/verify?token=mlk_a1b2c3d4e5f6g7h8i9j0"
 
 ```json
 {
-  "session_token": "sess_x9y8z7w6v5u4t3s2",
-  "customer_id": "cust_abc123",
-  "expires_at": "2024-01-22T10:30:00Z"
+  "message": "Logged in successfully"
 }
 ```
+
+The 7-day session is delivered only as the httpOnly `portal_session` cookie
+(plus a readable `portal_csrf` double-submit cookie) — it is never in the JSON
+body. Send subsequent portal requests with `credentials: "include"`.
+
+<Tip>
+Prefer [`POST /portal/auth/verify`](/api-reference/portal/auth-verify-post): the
+token travels in the request body instead of the URL, so it does not end up in
+Referer headers, browser history, or access logs.
+</Tip>
 
 <Warning>
 Magic link tokens are single-use and expire after 15 minutes. If the token is invalid or expired, a `401` error is returned.
