@@ -163,4 +163,11 @@ the cache expires.
 | `401`  | `invalid_api_key`   | A bearer token was sent but is not a valid key | Check the key in [Developer keys](/api-reference/developer/list-keys) |
 | `401`  | `key_mode_mismatch` | The key's live/test mode does not match this API host | Use a key for the right mode — see [Authentication](/api-reference/authentication) |
 
+<Note>
+The spec entry for this operation declares only `200` and `401`, so the
+playground on this page does not list the `400`. The handler does return
+`400 validation_failed` for a malformed `entity_id`; the row above documents
+runtime behaviour.
+</Note>
+
 Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -67,9 +67,10 @@ curl "https://api.recurso.dev/v1/finance/revrec/waterfall" \
 | `recognized` | integer | Sum of recognition events with status `recognized` whose recognition date falls in that month, minor units |
 | `scheduled`  | integer | Sum of recognition events with status `pending` whose recognition date falls in that month, minor units |
 
-The statuses above are recognition-event statuses (`pending`, `recognized`,
-`failed`, …), not schedule statuses (`active`, `canceled`). Failed, canceled
-and reversed events are excluded from every bucket.
+The statuses above are recognition-event statuses, not schedule statuses
+(`active`, `canceled`). Only `recognized` and `pending` events are summed;
+events in any other status (`processing`, `failed`, `reversed`, `canceled`)
+are excluded from every bucket.
 
 Amounts are a raw sum of each event's `amount` across whatever currencies the
 underlying schedules carry — no FX conversion is applied, so on a

@@ -29,9 +29,11 @@ curl https://api.recurso.dev/openapi.json -o recurso-openapi.json
 `Content-Type: application/json`. The body is the specification document
 itself — a bare OpenAPI object, not a `data` envelope. The excerpt below is
 pretty-printed and abridged (`info.description`, `info.license`, `tags`,
-every path but `/health`, the `/health` response `content` and `503`, and
-all `components.schemas` are omitted); the key order matches the real
-body, and every value shown is verbatim.
+every path but `/health`, the `/health` response `content` and `503`, the
+`portalSession` and `sessionCookie` security schemes, and all of
+`components.parameters`, `components.responses` and `components.schemas`
+are omitted); the key order matches the real body, and every value shown
+is verbatim.
 
 ```json
 {

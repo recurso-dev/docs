@@ -9,8 +9,10 @@ Deletes a single session belonging to the logged-in user, signing that device
 out immediately. Find session IDs with
 [List Sessions](/api-reference/auth/list-sessions). A session that does not
 exist (already revoked or purged), or belongs to another user, returns `404` —
-ownership is never disclosed. To sign out everywhere except the current
-device, use [Revoke Other Sessions](/api-reference/auth/revoke-other-sessions).
+ownership is never disclosed. Expiry is not checked here: a session that has
+expired but not yet been purged is deleted and returns `200` like any other. To
+sign out everywhere except the current device, use
+[Revoke Other Sessions](/api-reference/auth/revoke-other-sessions).
 
 Requires a logged-in user session; API-key callers receive `401`.
 

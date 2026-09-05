@@ -56,14 +56,14 @@ paths:
           # … content, and the '503' response
   # … every other path
 components:
-  # … schemas
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: API key
       description: Tenant API key obtained from `POST /auth/register` or `POST /v1/developer/keys`.
-    # … portalSession
+    # … portalSession and sessionCookie
+  # … parameters, responses and schemas
 ```
 
 ## Errors

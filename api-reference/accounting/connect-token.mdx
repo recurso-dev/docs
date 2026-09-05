@@ -10,13 +10,15 @@ browser OAuth flow of [Initiate Accounting OAuth](/api-reference/accounting/conn
 `netsuite` takes a NetSuite account id and a SuiteTalk OAuth 2.0 access token
 minted in NetSuite's own UI (experimental). `tally` takes no credentials at
 all — connecting simply enables the local JSONL export sync that Tally's import
-tooling reads. If a connection for the provider already exists — active,
-soft-disconnected by
-[Disconnect Accounting Integration](/api-reference/accounting/disconnect), or
-deactivated after a token-refresh failure — it is updated in place and
-reactivated with `sync_status` reset to `idle` and `last_error` cleared;
-otherwise a new one is created. Trigger a push afterwards with
-[Trigger Accounting Sync](/api-reference/accounting/sync).
+tooling reads. If a row for the provider already exists — active, or
+inactive because
+[Disconnect Accounting Integration](/api-reference/accounting/disconnect)
+cleared `is_active` (the row is kept) or a sync deactivated it after the
+provider rejected its token — it is updated in place and reactivated with
+`sync_status` reset to `idle` and `last_error` cleared; otherwise a new one
+is created. The lookup does not filter on `is_active`, so any earlier
+connection for the provider is refreshed rather than duplicated. Trigger a
+push afterwards with [Trigger Accounting Sync](/api-reference/accounting/sync).
 
 ## Path Parameters
 
