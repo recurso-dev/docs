@@ -1,0 +1,72 @@
+---
+title: "Get SSO Connection"
+openapi: "GET /v1/sso/connection"
+description: "Return the caller tenant's SAML SSO connection, including the public SP URLs to hand to the identity provider."
+keywords: ["saml", "sso", "connection", "idp", "single sign-on"]
+---
+
+Returns the tenant's SAML SSO connection: the identity provider (IdP) details
+an admin submitted with
+[`PUT /v1/sso/connection`](/api-reference/sso/update), whether the connection
+is enabled, and the two public Service Provider (SP) URLs the IdP needs — the
+[SP metadata](/api-reference/auth/saml-metadata) URL and the
+[Assertion Consumer Service](/api-reference/auth/saml-acs) URL. Each tenant
+has at most one connection, so there is no ID to pass.
+
+Any authenticated member of the tenant can read the connection; only owners
+and admins can change it. The IdP certificate and metadata XML are echoed back
+exactly as submitted — nothing beyond what the admin entered is exposed.
+Remove the connection with
+[`DELETE /v1/sso/connection`](/api-reference/sso/delete).
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/sso/connection \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Dashboard sessions authenticate with the `recurso_session` cookie instead of
+a bearer token.
+
+## Response
+
+```json
+{
+  "data": {
+    "tenant_id": "d4c3b2a1-0f9e-4765-8321-abcdef012345",
+    "idp_entity_id": "http://www.okta.com/exk1a2b3c4d5e6f7g8h9",
+    "idp_sso_url": "https://acme.okta.com/app/acme_recurso_1/exk1a2b3c4d5e6f7g8h9/sso/saml",
+    "idp_certificate": "-----BEGIN CERTIFICATE-----\nMIIDpDCCAoygAwIBAgIGAYt...\n-----END CERTIFICATE-----",
+    "idp_metadata_xml": "",
+    "enabled": true,
+    "configured": true,
+    "sp_metadata_url": "https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/metadata",
+    "sp_acs_url": "https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/acs"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenant_id` | string (uuid) | The tenant that owns the connection. Also the `{tenantID}` segment of the public SP endpoints. |
+| `idp_entity_id` | string | The IdP's SAML entity id (issuer). Empty when only `idp_metadata_xml` was submitted; every submitted field is stored as sent (trimmed), so a connection given both keeps both. |
+| `idp_sso_url` | string | The IdP's HTTP-Redirect SingleSignOnService location that logins redirect to. |
+| `idp_certificate` | string | The IdP's base64/PEM X.509 signing certificate used to validate assertions. |
+| `idp_metadata_xml` | string | The IdP's full metadata document, or empty when only the discrete fields were submitted. When both are present, the metadata XML takes precedence. |
+| `enabled` | boolean | Whether the public SP login and ACS endpoints answer for this tenant. |
+| `configured` | boolean | Whether the connection holds enough IdP detail to attempt a login: either `idp_metadata_xml`, or all of `idp_entity_id`, `idp_sso_url` and `idp_certificate`. |
+| `sp_metadata_url` | string | Public URL of the tenant's SP metadata document. Give this to the IdP. |
+| `sp_acs_url` | string | Public URL the IdP posts the `SAMLResponse` to. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | No API key or session cookie was sent, or the credential is invalid. | Send `Authorization: Bearer <api_key>` or sign in to the dashboard. |
+| `404` | `not_found` | The tenant has no SSO connection configured yet. | Create one with [`PUT /v1/sso/connection`](/api-reference/sso/update). |
+| `500` | `internal_error` | The connection could not be read. | Retry; if it persists, contact support. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

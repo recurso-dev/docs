@@ -1,0 +1,93 @@
+---
+title: "Get Revenue Recognition Waterfall"
+openapi: "GET /v1/finance/revrec/waterfall"
+description: "The recognition curve — revenue already recognized and revenue still scheduled — bucketed by calendar month, with totals. Read-only."
+keywords: ["revenue waterfall", "revenue recognition", "deferred revenue", "recognition schedule"]
+---
+
+Returns the tenant's full recognized-plus-scheduled revenue curve, one bucket
+per calendar month that has at least one recognition event: how much revenue
+each month has already recognized and how much is still scheduled (pending)
+to recognize in it. Buckets are grouped from the events themselves, so a
+month with no `recognized` or `pending` event is simply absent — the series is
+ordered but not gap-filled. Past months carry `recognized`; future months
+carry `scheduled`; the current month can carry both. This is the classic
+rev-rec waterfall an auditor plots to see how deferred revenue releases over
+time. Read-only.
+
+For a single month's figures plus the still-deferred balance broken down by
+currency, use the [revenue recognition report](/api-reference/revrec/report).
+For the ledger's own view of the deferred balance, use the
+[Deferred Revenue rollforward](/api-reference/ledger/deferred-rollforward).
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/finance/revrec/waterfall" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "tenant_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+    "buckets": [
+      { "year": 2026, "month": 6, "recognized": 700000, "scheduled": 0 },
+      { "year": 2026, "month": 7, "recognized": 750000, "scheduled": 0 },
+      { "year": 2026, "month": 8, "recognized": 800000, "scheduled": 0 },
+      { "year": 2026, "month": 9, "recognized": 0, "scheduled": 750000 },
+      { "year": 2026, "month": 10, "recognized": 0, "scheduled": 500000 },
+      { "year": 2026, "month": 11, "recognized": 0, "scheduled": 250000 }
+    ],
+    "total_recognized": 2250000,
+    "total_scheduled": 1500000,
+    "reporting_currency": "INR"
+  }
+}
+```
+
+## Fields
+
+| Field                | Type          | Description                                                                                  |
+|----------------------|---------------|----------------------------------------------------------------------------------------------|
+| `tenant_id`          | string (uuid) | The tenant the waterfall belongs to                                                          |
+| `buckets`            | array         | One entry per calendar month that has at least one `recognized` or `pending` recognition event, oldest first; months without events are omitted — see below |
+| `total_recognized`   | integer       | Sum of every bucket's `recognized`, minor units                                              |
+| `total_scheduled`    | integer       | Sum of every bucket's `scheduled`, minor units — the still-deferred balance across all schedules |
+| `reporting_currency` | string        | The tenant's base currency, resolved from the ledger after the sums are taken. A label only — amounts are not converted into it (see below) |
+
+### Bucket Fields
+
+| Field        | Type    | Description                                                              |
+|--------------|---------|--------------------------------------------------------------------------|
+| `year`       | integer | Calendar year of the bucket                                              |
+| `month`      | integer | Calendar month, `1`–`12`                                                 |
+| `recognized` | integer | Sum of recognition events with status `recognized` whose recognition date falls in that month, minor units |
+| `scheduled`  | integer | Sum of recognition events with status `pending` whose recognition date falls in that month, minor units |
+
+The statuses above are recognition-event statuses (`pending`, `recognized`,
+`failed`, …), not schedule statuses (`active`, `canceled`). Failed, canceled
+and reversed events are excluded from every bucket.
+
+Amounts are a raw sum of each event's `amount` across whatever currencies the
+underlying schedules carry — no FX conversion is applied, so on a
+multi-currency tenant the figures are not denominated in `reporting_currency`.
+Read `by_currency` on the [monthly report](/api-reference/revrec/report) for
+the native split.
+
+<Info>
+Responses are cached per tenant and URL for five minutes; the `X-Cache`
+header reports `HIT` or `MISS`.
+</Info>
+
+## Errors
+
+| Status | Code           | When                       | Fix                                   |
+|--------|----------------|----------------------------|---------------------------------------|
+| `401`  | `unauthorized`      | No `Authorization` bearer token (and no session cookie) was sent | Send `Authorization: Bearer $API_KEY`   |
+| `401`  | `invalid_api_key`   | A bearer token was sent but is not a valid key | Check the key in [Developer keys](/api-reference/developer/list-keys) |
+| `401`  | `key_mode_mismatch` | The key's live/test mode does not match this API host | Use a key for the right mode — see [Authentication](/api-reference/authentication) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

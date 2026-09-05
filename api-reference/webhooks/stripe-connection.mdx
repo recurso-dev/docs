@@ -1,0 +1,117 @@
+---
+title: "Stripe Connection Webhook"
+openapi: "POST /webhooks/stripe/{connID}"
+description: "Receive Stripe webhook events for a workspace's own connected Stripe account."
+keywords: ["stripe", "webhook", "bring your own", "gateway connection", "inbound"]
+---
+
+Per-connection variant of the [Stripe webhook receiver](/api-reference/webhooks/stripe)
+for workspaces that connected their own Stripe account with
+[Connect a Gateway](/api-reference/gateways/connect). The event is verified
+with that connection's own signing secret (resolved from `connID`) before the
+payload is trusted. Invoice-bearing events are bound to the connection's
+workspace; subscription and payment-attempt events are not (see below). Event
+handling is otherwise identical to the platform receiver.
+
+<Note>
+Each connection has its own URL. Read `webhook_path` from
+[List Gateway Connections](/api-reference/gateways/list) (for example
+`/webhooks/stripe/{connID}`), append it to `https://api.recurso.dev`, and
+register that URL in the Stripe Dashboard under **Developers > Webhooks** using
+the `webhook_secret` (`whsec_...`) you supplied when connecting. A connection
+without a webhook secret cannot verify deliveries and rejects them.
+</Note>
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connID` | string (UUID, path) | Yes | The workspace's Stripe gateway-connection id. |
+| `Stripe-Signature` | string (header) | Yes | Stripe webhook signature header (`t=...,v1=...`), verified with the connection's signing secret. Events stamped with a different Stripe API version than the one Recurso pins are still accepted. |
+
+## Request Body
+
+The raw Stripe event payload. The `type` field selects the handler:
+
+| Event | Effect |
+|-------|--------|
+| `payment_intent.succeeded` | Settles the invoice named in `metadata.invoice_id` (`open` → `paid`), stores the `pi_*` id for later refunds, records the dunning success, and marks any tracked ACH [payment attempt](/api-reference/payment-attempts/get) `succeeded`. |
+| `payment_intent.processing` | Records an ACH debit entering its multi-day processing window as a `processing` payment attempt; the invoice stays `open`. |
+| `payment_intent.payment_failed` | Marks the tracked ACH payment attempt `failed` with the return code; the invoice stays `open` for dunning. |
+| `invoice.payment_failed` | Marks the invoice in `metadata.invoice_id` `past_due`, records the failure reason, records the dunning failure, triggers the dunning campaign, and emails the customer. |
+| `customer.subscription.deleted` | Cancels the matching Recurso subscription immediately (status `canceled`, reason `stripe_webhook`). |
+| `charge.refunded`, `charge.refund.updated`, `refund.updated`, `refund.failed` | Advances the [credit note](/api-reference/credit-notes/get) that owns each refund (`pending` → `processed` or `refund_failed`). A succeeded full refund on a bank-debit attempt with no credit note is treated as an ACH return: the attempt is marked `returned`, the invoice reopens (`paid` → `past_due`), and the settlement cash leg is reversed in the ledger. |
+
+Any other event type is acknowledged without side effects. An invoice that
+belongs to a different workspace than the connection is ignored, never
+applied. `customer.subscription.deleted` resolves the subscription by its
+Stripe subscription id and `payment_intent.payment_failed` resolves the
+payment attempt by its PaymentIntent id; neither is checked against the
+connection's workspace.
+
+## Example Request
+
+Stripe sends a POST request with event data:
+
+```bash
+curl -X POST https://api.recurso.dev/webhooks/stripe/7c9e6679-7425-40de-944b-e07fc1f90ae7 \
+  -H "Content-Type: application/json" \
+  -H "Stripe-Signature: t=1756944000,v1=3f1a9c0e7b2d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b" \
+  -d '{
+    "id": "evt_StripeABC123",
+    "object": "event",
+    "type": "payment_intent.succeeded",
+    "data": {
+      "object": {
+        "id": "pi_StripeDEF456",
+        "object": "payment_intent",
+        "amount": 5899,
+        "currency": "usd",
+        "status": "succeeded",
+        "metadata": {
+          "invoice_id": "1c1b3a5e-4d7f-4c1a-9f2e-6b8d0a3c5e71"
+        }
+      }
+    }
+  }'
+```
+
+## Response
+
+Returns `200 OK` on successful processing. Unhandled event types, and events
+whose `metadata.invoice_id` is missing or malformed, are also acknowledged
+with `ok` so Stripe stops redelivering them. A `payment_intent.succeeded`
+whose `invoice_id` matches no invoice is acknowledged the same way; an
+`invoice.payment_failed` whose `invoice_id` matches no invoice is treated as
+an error and returns `500`, so Stripe keeps redelivering it.
+
+```json
+{
+  "status": "ok"
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `ok` when the event was processed or deliberately ignored. A redelivery of an event that was already applied returns `duplicate ignored`. |
+
+<Warning>
+Deduplication keys on the Stripe event `id`. An event is only recorded as
+processed after a successful response; a delivery that fails with 5xx is
+retried by Stripe and reprocessed.
+</Warning>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `connID` in the path is not a UUID | Use the connection's `webhook_path` from [List Gateway Connections](/api-reference/gateways/list) |
+| `400` | `validation_failed` | Request body could not be read | Check the delivery in the Stripe Dashboard |
+| `401` | `unauthorized` | `Stripe-Signature` is missing, expired, or does not verify against this connection's signing secret (an unparseable body also fails verification) | Make sure the signing secret registered in Stripe matches the connection's `webhook_secret` |
+| `404` | `not_found` | No active Stripe connection has this id (a missing, disconnected, or non-Stripe connection all return 404) | Reconnect the gateway and register the new `webhook_path` |
+| `500` | `internal_error` | The event payload could not be decoded; loading, settling, reopening, or canceling the affected record failed; or an `invoice.payment_failed` names an `invoice_id` that matches no invoice | Stripe retries the delivery; the event is not recorded as processed until it succeeds |
+| `503` | `internal_error` | The connection has no webhook secret (the receiver fails closed), per-connection webhooks are not configured on the API, or the inbound-webhook dedup store is unavailable | Reconnect the gateway with a `webhook_secret`; otherwise let Stripe retry |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

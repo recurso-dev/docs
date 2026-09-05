@@ -1,0 +1,77 @@
+---
+title: "List Integration Connections"
+openapi: "GET /v1/integration-connections"
+description: "List the workspace's own tax, CRM, and storage integration connections, secret-free, plus whether the credential vault is ready."
+keywords: ["integration connections", "taxjar", "avalara", "hubspot", "s3", "bring your own credentials"]
+---
+
+Returns the workspace's active bring-your-own integration connections: tax
+(`taxjar`, `avalara`, `ziptax`), CRM (`hubspot`), and storage (`s3`). Secrets
+are write-only — each connection carries only its non-secret config (region,
+bucket, endpoints) and a `has_secrets` flag saying whether a secret is stored.
+`vault_ready` tells you whether [Connect an Integration](/api-reference/integration-connections/create)
+can succeed at all. Payment gateways are a separate resource — see
+[List Gateway Connections](/api-reference/gateways/list).
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/integration-connections" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "connections": [
+      {
+        "id": "9b1c2d3e-4f5a-4b6c-8d7e-0f1a2b3c4d5e",
+        "category": "tax",
+        "provider": "taxjar",
+        "config": {},
+        "has_secrets": true,
+        "created_at": "2026-08-12T09:30:00Z",
+        "updated_at": "2026-08-12T09:30:00Z"
+      },
+      {
+        "id": "c7d8e9f0-1a2b-4c3d-9e4f-5a6b7c8d9e0f",
+        "category": "storage",
+        "provider": "s3",
+        "config": {
+          "bucket": "acme-invoices",
+          "region": "ap-south-1"
+        },
+        "has_secrets": true,
+        "created_at": "2026-07-01T14:05:12Z",
+        "updated_at": "2026-08-30T08:11:44Z"
+      }
+    ],
+    "vault_ready": true
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `connections` | array | Active connections, one per `(category, provider)` |
+| `connections[].id` | string (uuid) | The connection's id |
+| `connections[].category` | string | `tax`, `crm`, or `storage` |
+| `connections[].provider` | string | `taxjar`, `avalara`, `ziptax`, `hubspot`, or `s3` |
+| `connections[].config` | object | Non-secret config only (`api_url`, `base_url`, `endpoint`, `region`, `bucket`, `prefix`, `company_code`); every other key is treated as a secret and never returned |
+| `connections[].has_secrets` | boolean | `true` when at least one secret value is stored for the connection |
+| `connections[].created_at` | string (date-time) | When the connection was first created |
+| `connections[].updated_at` | string (date-time) | When its config was last replaced |
+| `vault_ready` | boolean | `false` when `GATEWAY_ENCRYPTION_KEY` is unset on the API — connecting will fail with `503` |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Unexpected server failure | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

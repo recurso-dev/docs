@@ -1,0 +1,51 @@
+---
+title: "Start an OAuth Login"
+openapi: "GET /auth/oauth/{provider}/start"
+description: "Begin a Google or GitHub social login by redirecting the browser to the provider's authorize URL."
+keywords: ["oauth", "social login", "google", "github", "pkce"]
+---
+
+Begins a social login. The server generates a CSRF `state` and a PKCE code
+verifier, binds them into a short-lived signed httpOnly cookie
+(`recurso_oauth_state`, scoped to `/auth/oauth`, valid for 10 minutes), and
+`302`-redirects to the provider's authorize URL. The provider later sends the
+browser back to
+[`GET /auth/oauth/{provider}/callback`](/api-reference/auth/oauth-callback),
+which finishes the login.
+
+Navigate a browser to this URL — do not call it from a server, since the state
+cookie must land in the same browser that completes the callback. Check which
+providers are available first with
+[`GET /auth/oauth/providers`](/api-reference/auth/oauth-providers).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | string | Yes | The provider to log in with: `google` or `github`. |
+
+## Example Request
+
+```bash
+curl -i https://api.recurso.dev/auth/oauth/google/start
+```
+
+## Example Response
+
+There is no response body. A successful call answers `302 Found` with the
+provider's authorize URL in `Location` and the state cookie in `Set-Cookie`:
+
+```http
+HTTP/1.1 302 Found
+Location: https://accounts.google.com/o/oauth2/v2/auth?client_id=...&code_challenge=...&code_challenge_method=S256&redirect_uri=https%3A%2F%2Fapi.recurso.dev%2Fauth%2Foauth%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+profile&state=...
+Set-Cookie: recurso_oauth_state=...; Path=/auth/oauth; Max-Age=600; HttpOnly; Secure; SameSite=Lax
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `404` | `not_found` | `provider` is not `google`/`github`, or the provider's client id and secret are not configured. | Check [`GET /auth/oauth/providers`](/api-reference/auth/oauth-providers) and only offer providers with `enabled: true`. |
+| `500` | `internal_error` | The server could not generate the CSRF state. | Retry; if it persists, contact support. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

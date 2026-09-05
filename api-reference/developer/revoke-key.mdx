@@ -1,0 +1,51 @@
+---
+title: "Revoke API Key"
+openapi: "DELETE /v1/developer/keys/{id}"
+description: "Deactivate an API key so it stops authenticating immediately. Revocation cannot be undone."
+keywords: ["api key", "revoke", "developer", "credentials"]
+---
+
+Revokes an API key. The key is soft-deactivated rather than deleted:
+authentication filters on the active flag, so the key stops working on the
+next request and stays in your records with its history. A revoked key cannot
+be restored — [create a new key](/api-reference/developer/create-key) and
+rotate your integration to it instead. Find key IDs with
+[`GET /v1/developer/keys`](/api-reference/developer/list-keys).
+
+A key may revoke itself. Make sure the caller is not the last active key
+for an environment you still depend on. Only owners and admins can call this
+endpoint from a dashboard session; members receive `403`. API-key callers act
+with full tenant access.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The API key's ID, as returned by list or create. Not the key value itself. |
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/developer/keys/7f2c1a9e-4b3d-4e6f-9a8b-0c1d2e3f4a5b \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "status": "revoked"
+}
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a valid UUID. | Pass the key's `id` from the list response, not its `key_prefix` or raw value. |
+| `401` | `unauthorized` | No API key or session cookie was sent, or the credential is invalid. | Send `Authorization: Bearer <api_key>` or sign in to the dashboard. |
+| `403` | `forbidden` | The dashboard session belongs to a member, not an owner or admin. | Ask an owner or admin to revoke the key, or use an API key. |
+| `404` | `not_found` | No active key with that ID exists in your tenant, or it was already revoked. | Check the ID against the list endpoint; a key that is already revoked needs no further action. |
+| `500` | `internal_error` | The revocation could not be persisted. | Retry; if it persists, contact support. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

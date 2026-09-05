@@ -1,0 +1,82 @@
+---
+title: "Preview Plan Change"
+openapi: "GET /v1/subscriptions/{id}/preview-change"
+description: "The proration a plan change would produce — credit for unused time, prorated charge, tax, and the next invoice amount — computed with the same math as the update, without applying it."
+keywords: ["plan change preview", "proration", "upgrade", "downgrade", "prorated charge"]
+---
+
+Returns the proration breakdown for switching a subscription to another plan
+**before** anything is charged or persisted. It runs the exact function
+[`PUT /v1/subscriptions/{id}`](/api-reference/subscriptions/update) uses, so
+the preview matches the invoice or credit note the real change would post.
+The plan must exist in your tenant — see
+[Get Plan](/api-reference/plans/get).
+
+All amounts are minor units in the subscription's currency.
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `plan_id` | string (uuid) | Yes | The plan to preview switching to. |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/subscriptions/b9071c55-0e14-4720-80f3-665613ceb7de/preview-change?plan_id=2f4d1a6e-8c3b-4e77-9a10-5d6b7c8e9f01" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "subscription_id": "b9071c55-0e14-4720-80f3-665613ceb7de",
+    "current_plan_id": "7c0e2b91-3f5a-4d8c-a2b4-1e9f0d6c5a83",
+    "new_plan_id": "2f4d1a6e-8c3b-4e77-9a10-5d6b7c8e9f01",
+    "currency": "INR",
+    "credit_amount": 45161,
+    "charge_amount": 96774,
+    "net_amount": 51613,
+    "tax_amount": 9290,
+    "total_amount": 60903,
+    "effective_date": "2026-09-04T10:30:00Z",
+    "next_invoice_amount": 236000,
+    "is_upgrade": true
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `subscription_id` | string (uuid) | The subscription previewed |
+| `current_plan_id` | string (uuid) | The plan the subscription is on today |
+| `new_plan_id` | string (uuid) | The plan passed as `plan_id` |
+| `currency` | string | Currency of every amount below |
+| `credit_amount` | integer (int64) | Credit for unused time on the current plan, minor units |
+| `charge_amount` | integer (int64) | Prorated charge for the remaining period on the new plan, minor units |
+| `net_amount` | integer (int64) | `charge_amount - credit_amount`, before tax |
+| `tax_amount` | integer (int64) | Tax netted across both sides: GST collected on the new-plan charge (at the new plan's rate/HSN) minus GST reversed on the old-plan credit (at the old plan's rate/HSN). Positive on an upgrade, negative on a downgrade credit; equals tax on `net_amount` only when both plans share a rate |
+| `total_amount` | integer (int64) | `net_amount + tax_amount` — the immediate proration invoice total (positive) or credit (negative) |
+| `effective_date` | string (date-time) | When the change would take effect (now) |
+| `next_invoice_amount` | integer (int64) | Full new-plan charge including tax at the next renewal |
+| `is_upgrade` | boolean | `true` when the new plan costs more than the current one |
+
+<Note>
+  Read-only and side-effect free — no invoice, credit note, or ledger entry is
+  created. Apply the change with
+  [Update Subscription](/api-reference/subscriptions/update).
+</Note>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID, `plan_id` is missing, or `plan_id` is not a valid UUID. | Pass the subscription's UUID in the path and the target plan's UUID as `plan_id`. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 404 | `not_found` | The subscription or the target plan does not exist in your tenant (cross-tenant IDs also return 404). | Verify both IDs with `GET /v1/subscriptions/{id}` and `GET /v1/plans/{id}`. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

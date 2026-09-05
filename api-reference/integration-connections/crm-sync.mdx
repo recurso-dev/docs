@@ -1,0 +1,55 @@
+---
+title: "Sync CRM Now"
+openapi: "POST /v1/crm/sync"
+description: "Run the workspace's CRM contact sweep synchronously to verify a freshly connected HubSpot token instead of waiting for the daily sweep."
+keywords: ["crm sync", "hubspot", "sync now", "contacts"]
+---
+
+Runs the CRM sweep for the calling workspace synchronously and reports how many
+customers were upserted as CRM contacts. It exists to verify a connection just
+stored with [Connect an Integration](/api-reference/integration-connections/create)
+(`category: crm`, `provider: hubspot`) without waiting for the daily sweep — so
+one call is capped at 25 contacts. Anything left over is reported in
+`contacts_remaining` and finished by the daily sweep. When the provider
+rejects every contact (bad token, missing scopes) — or rejects the custom
+property bootstrap that runs first — the call fails with a `424` carrying the
+provider's own error. When at least one contact was upserted, the call
+returns `200` and any individual contacts the provider rejected are logged
+server-side only; they are counted in neither `contacts_synced` nor
+`contacts_remaining`, and the daily sweep retries them.
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/v1/crm/sync" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "contacts_synced": 25,
+    "contacts_remaining": 112
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `contacts_synced` | integer | Contacts upserted in the CRM by this call (at most 25) |
+| `contacts_remaining` | integer | Eligible contacts left unattempted once the 25-contact cap was reached; the daily sweep finishes them. Contacts the provider rejected are not included |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | No CRM is connected for this workspace | Connect HubSpot with [Connect an Integration](/api-reference/integration-connections/create) first |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `424` | `internal_error` | No contact could be upserted and the provider returned an error, or the property bootstrap failed; the message carries the provider's error (`CRM sync failed: ...`) | Fix the token or scopes in HubSpot and reconnect |
+| `503` | `internal_error` | CRM sync is not enabled on this server (the CRM worker is not running) | Self-hosted: enable the CRM sync worker |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

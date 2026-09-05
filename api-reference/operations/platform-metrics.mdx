@@ -1,0 +1,157 @@
+---
+title: "Get Platform Metrics"
+openapi: "GET /platform/metrics"
+description: "Operator-only snapshot across all tenants: signups, activation, expiring trials, plan and billing breakdowns, recent signups and the Recurso Cloud charge dry-run."
+keywords: ["platform metrics", "founder", "cross-tenant", "funnel", "signups", "activation", "FOUNDER_TOKEN", "cloud charges"]
+---
+
+A cross-tenant funnel snapshot for whoever operates the Recurso instance:
+how many workspaces exist, how many signed up in the last 7 and 30 days, how
+many have activated (created at least one customer), how many trials expire
+in the next 7 days, tenant counts by `billing_status` and `plan_tier`, the
+15 most recent signups, and a money-free dry-run of what each tenant would be
+charged for Recurso Cloud this month.
+
+This is the only cross-tenant surface in the API and it sits deliberately
+outside tenant authentication. It is gated by the `FOUNDER_TOKEN` environment
+variable: the request must carry that value as a bearer token, and when the
+variable is unset the route answers `404` as if it did not exist, so no
+tenant login or API key can ever reach it. For per-tenant reporting use
+[Analytics](/api-reference/analytics/mrr); for process-level telemetry
+use [Get Prometheus Metrics](/api-reference/operations/metrics).
+
+<Note>
+The spec entry for this operation does not declare `security: []`, so the
+playground on this page inherits the document-level `bearerAuth` scheme and
+shows a tenant-API-key box. Ignore it: the handler compares the header
+against `FOUNDER_TOKEN` only, and a tenant API key is rejected with `401`.
+</Note>
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/platform/metrics \
+  -H "Authorization: Bearer $FOUNDER_TOKEN"
+```
+
+## Response
+
+Returned bare — no `data` envelope. Money fields are minor units in
+`cloud_charge_currency`. Array fields are Go nil slices when there is
+nothing to list, so they serialise as `null`, not `[]` — see the Fields
+table and the note below.
+
+```json
+{
+  "total_tenants": 148,
+  "signups_last_7d": 9,
+  "signups_last_30d": 41,
+  "activated_tenants": 87,
+  "trials_expiring_7d": 6,
+  "by_billing_status": {
+    "active": 112,
+    "trialing": 31,
+    "past_due": 5
+  },
+  "by_plan_tier": {
+    "free": 117,
+    "trial": 31
+  },
+  "recent_signups": [
+    {
+      "name": "Acme Robotics",
+      "email": "billing@acme-robotics.example",
+      "plan_tier": "trial",
+      "billing_status": "trialing",
+      "trial_ends_at": "2026-09-18T00:00:00Z",
+      "created_at": "2026-09-04T08:12:41Z",
+      "activated": true
+    },
+    {
+      "name": "Northwind Labs",
+      "email": "ops@northwind.example",
+      "plan_tier": "free",
+      "billing_status": "active",
+      "created_at": "2026-09-03T17:40:05Z",
+      "activated": false
+    }
+  ],
+  "generated_at": "2026-09-04T09:30:00Z",
+  "cloud_charges": [
+    {
+      "tenant_id": "1f3a9c2e-6b4d-4e8a-9c21-7d5e0b3f8a14",
+      "name": "Acme Robotics",
+      "email": "billing@acme-robotics.example",
+      "tracked_revenue_minor": 4820000,
+      "collected_volume_minor": 3610000,
+      "would_charge_minor": 9900,
+      "reason": "$99 monthly cap"
+    },
+    {
+      "tenant_id": "8c0d7e5b-2a1f-4c93-b6e4-0f9a3d2c1b77",
+      "name": "Northwind Labs",
+      "email": "ops@northwind.example",
+      "tracked_revenue_minor": 420000,
+      "collected_volume_minor": 390000,
+      "would_charge_minor": 0,
+      "reason": "under $10,000 free tier"
+    }
+  ],
+  "cloud_charge_total_minor": 9900,
+  "cloud_charge_currency": "USD"
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_tenants` | integer | All workspaces on the instance. |
+| `signups_last_7d` | integer | Tenants created in the last 7 days. |
+| `signups_last_30d` | integer | Tenants created in the last 30 days. |
+| `activated_tenants` | integer | Tenants that have created at least one customer. |
+| `trials_expiring_7d` | integer | Tenants in `trialing` whose `trial_ends_at` falls within the next 7 days. |
+| `by_billing_status` | object | Tenant count keyed by `billing_status` (for example `active`, `trialing`). |
+| `by_plan_tier` | object | Tenant count keyed by `plan_tier` (`free` or `trial` — the only tiers the platform defines). |
+| `recent_signups` | array or null | The 15 most recently created tenants, newest first. `null` on an instance with no tenants. |
+| `recent_signups[].name` | string | Workspace name; empty string when unset. |
+| `recent_signups[].email` | string | Workspace contact email; empty string when unset. |
+| `recent_signups[].plan_tier` | string | The tenant's plan tier. |
+| `recent_signups[].billing_status` | string | The tenant's billing status. |
+| `recent_signups[].trial_ends_at` | string (ISO 8601) | When the trial ends. Omitted when the tenant has no trial. |
+| `recent_signups[].created_at` | string (ISO 8601) | When the tenant signed up. |
+| `recent_signups[].activated` | boolean | `true` once the tenant has created a customer. |
+| `generated_at` | string (ISO 8601) | When the snapshot was computed. |
+| `cloud_charges` | array or null | Per-tenant Recurso Cloud charge preview for the current calendar month. A dry-run only — no invoice is created and no money moves. `null` until the usage meter and preview run have produced readings for the month, and `null` when the preview query fails (see the note below). |
+| `cloud_charges[].tenant_id` | string (UUID) | The tenant the preview belongs to. |
+| `cloud_charges[].name` | string | Tenant workspace name. |
+| `cloud_charges[].email` | string | Tenant contact email. |
+| `cloud_charges[].tracked_revenue_minor` | integer | Revenue the tenant tracked this month, minor units in the reporting currency. |
+| `cloud_charges[].collected_volume_minor` | integer | Volume the tenant collected this month, minor units in the reporting currency. |
+| `cloud_charges[].would_charge_minor` | integer | What Recurso Cloud would charge the tenant, minor units. |
+| `cloud_charges[].reason` | string | Why that amount: `under $10,000 free tier`, `0.4% of collected volume`, or `$99 monthly cap`. |
+| `cloud_charge_total_minor` | integer | Sum of `would_charge_minor` across `cloud_charges`, minor units. `0` when there are no previews. |
+| `cloud_charge_currency` | string | Reporting currency for every `*_minor` field — `REPORTING_CURRENCY`, defaulting to `USD`. Set only when the preview query succeeded; on a preview failure it is the empty string `""`. |
+
+<Note>
+The cloud-charge section is best-effort. If the preview query fails the
+funnel metrics are still returned with `200`, and the charge fields are
+left at their zero values — `"cloud_charges": null`,
+`"cloud_charge_total_minor": 0`, `"cloud_charge_currency": ""` — rather
+than the whole response failing. A successful query with no readings for
+the month also yields `"cloud_charges": null` (the repository returns no
+rows), but with `cloud_charge_currency` populated. Treat `null` and `[]`
+the same when consuming this field.
+</Note>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | — | `FOUNDER_TOKEN` is set and the `Authorization` header does not equal `Bearer <token>`. Empty body — no error envelope. | Send `Authorization: Bearer $FOUNDER_TOKEN`; a tenant API key or dashboard session never authorises this route. |
+| `404` | — | `FOUNDER_TOKEN` is unset — the endpoint is disabled. Empty body. | Set `FOUNDER_TOKEN` on the API deployment to enable the endpoint. |
+| `500` | `internal_error` | The cross-tenant funnel query failed. | Retry; check the API logs for `platform metrics query failed`. |
+
+Only the `500` carries the standard envelope — see [Errors](/api-reference/errors).
+The `401` and `404` are intentionally bodiless so the route's existence is
+not confirmed to unauthenticated callers.

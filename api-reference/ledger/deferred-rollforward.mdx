@@ -1,0 +1,84 @@
+---
+title: "Get Deferred Revenue Rollforward"
+openapi: "GET /v1/ledger/deferred-rollforward"
+description: "The Deferred Revenue account's movement for one calendar month — opening balance, deferrals added, amounts released, and the derived closing balance. Read-only."
+keywords: ["deferred revenue", "rollforward", "unearned revenue", "month-end close", "revenue recognition"]
+---
+
+Returns the movement of the Deferred Revenue account (code `2100`) over a
+calendar month, sourced straight from the ledger: the balance carried in at
+the start of the month, new deferrals booked during it (credits), amounts
+recognized or reversed out of it (debits), and the closing balance. The
+identity is always `opening + added - released == closing`. This is the
+rollforward an auditor ties to the Deferred Revenue line of the
+[trial balance](/api-reference/ledger/trial-balance).
+
+For the schedule-sourced view of the same balance — what the recognition
+schedules say is still deferred — use the
+[revenue recognition report](/api-reference/revrec/report). The
+[month-end close pack](/api-reference/finance/close-pack) returns both and
+reports whether they tie.
+
+## Query Parameters
+
+| Parameter | Type    | Required | Description                                  |
+|-----------|---------|----------|----------------------------------------------|
+| `month`   | integer | **Yes**  | Calendar month, `1`–`12`.                    |
+| `year`    | integer | **Yes**  | Calendar year, `2000` or later.              |
+
+The period runs from `00:00:00 UTC` on the first of the month up to, but not
+including, the first of the next month.
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/ledger/deferred-rollforward?month=8&year=2026" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "tenant_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+    "period_start": "2026-08-01T00:00:00Z",
+    "period_end": "2026-09-01T00:00:00Z",
+    "opening": 2900000,
+    "added": 1400000,
+    "released": 800000,
+    "closing": 3500000,
+    "reporting_currency": "INR"
+  }
+}
+```
+
+## Fields
+
+| Field                | Type               | Description                                                                              |
+|----------------------|--------------------|------------------------------------------------------------------------------------------|
+| `tenant_id`          | string (uuid)      | The tenant the rollforward belongs to                                                    |
+| `period_start`       | string (date-time) | First instant of the month (inclusive)                                                   |
+| `period_end`         | string (date-time) | First instant of the following month (exclusive)                                         |
+| `opening`            | integer            | Deferred Revenue balance at `period_start`, minor units                                  |
+| `added`              | integer            | New deferrals booked in the period — credits to Deferred Revenue, minor units            |
+| `released`           | integer            | Amounts recognized or reversed out in the period — debits to Deferred Revenue, minor units |
+| `closing`            | integer            | `opening + added - released`, minor units                                                |
+| `reporting_currency` | string             | The tenant's base currency; use its exponent to format the minor-unit amounts            |
+
+<Info>
+Responses are cached per tenant and URL for five minutes; the `X-Cache`
+header reports `HIT` or `MISS`.
+</Info>
+
+## Errors
+
+| Status | Code                | When                                            | Fix                                   |
+|--------|---------------------|-------------------------------------------------|---------------------------------------|
+| `400`  | `validation_failed` | `month` missing or outside `1`–`12`             | Pass `month=1`…`12`                   |
+| `400`  | `validation_failed` | `year` missing, not an integer, or before 2000  | Pass a four-digit year, `2000` or later |
+| `401`  | `unauthorized`      | No `Authorization` bearer token (and no session cookie) was sent | Send `Authorization: Bearer $API_KEY`   |
+| `401`  | `invalid_api_key`   | A bearer token was sent but is not a valid key | Check the key in [Developer keys](/api-reference/developer/list-keys) |
+| `401`  | `key_mode_mismatch` | The key's live/test mode does not match this API host | Use a key for the right mode — see [Authentication](/api-reference/authentication) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

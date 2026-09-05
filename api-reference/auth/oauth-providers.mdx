@@ -1,0 +1,45 @@
+---
+title: "List OAuth Providers"
+openapi: "GET /auth/oauth/providers"
+description: "Return every social-login provider this build knows about and whether each is enabled."
+keywords: ["oauth", "social login", "google", "github", "sso"]
+---
+
+Returns every social-login provider the API understands with an `enabled`
+flag. A provider is enabled only when both its client id and client secret are
+configured on the server (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`,
+`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`). The dashboard calls this on the
+login page to decide which social buttons to show; to begin a login, send the
+browser to [`GET /auth/oauth/{provider}/start`](/api-reference/auth/oauth-start).
+
+This endpoint is public and takes no authentication.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/auth/oauth/providers
+```
+
+## Example Response
+
+```json
+{
+  "providers": [
+    { "name": "google", "enabled": true },
+    { "name": "github", "enabled": false }
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `providers` | array | One entry per known provider, in a stable order (`google`, then `github`). |
+| `providers[].name` | string | Provider identifier — `google` or `github`. Use it as the `{provider}` path segment on the start endpoint. |
+| `providers[].enabled` | boolean | `true` when the provider's client id and secret are both configured. Disabled providers return `404` from the start and callback endpoints. |
+
+<Note>
+The response is not wrapped in a `data` envelope — `providers` is the top-level
+key.
+</Note>

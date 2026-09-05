@@ -1,0 +1,125 @@
+---
+title: "Razorpay Connection Webhook"
+openapi: "POST /webhooks/razorpay/{connID}"
+description: "Receive Razorpay webhook events for a workspace's own connected Razorpay account."
+keywords: ["razorpay", "webhook", "bring your own", "gateway connection", "inbound"]
+---
+
+Per-connection variant of the [Razorpay webhook receiver](/api-reference/webhooks/razorpay)
+for workspaces that connected their own Razorpay account with
+[Connect a Gateway](/api-reference/gateways/connect). The event is verified
+with that connection's own webhook secret (resolved from `connID`) before the
+payload is trusted. Invoice, refund and virtual-account events are bound to
+the connection's workspace; `token.confirmed` is not (see below). Event
+handling is otherwise identical to the platform receiver.
+
+<Note>
+Each connection has its own URL. Read `webhook_path` from
+[List Gateway Connections](/api-reference/gateways/list) (for example
+`/webhooks/razorpay/{connID}`), append it to `https://api.recurso.dev`, and
+register that URL in the Razorpay Dashboard under **Settings > Webhooks**
+using the `webhook_secret` you supplied when connecting. A connection without
+a webhook secret cannot verify deliveries and rejects them.
+</Note>
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connID` | string (UUID, path) | Yes | The workspace's Razorpay gateway-connection id. |
+| `X-Razorpay-Signature` | string (header) | Yes | HMAC-SHA256 hex signature of the raw request body, computed with the connection's webhook secret. |
+
+## Request Body
+
+The raw Razorpay event payload. The `event` field selects the handler:
+
+| Event | Effect |
+|-------|--------|
+| `payment.captured`, `order.paid` | Settles the invoice named in `notes.invoice_id` (`open` → `paid`), stores the `pay_*` id for later refunds, and records the dunning success. |
+| `payment.failed` | Marks the invoice in `notes.invoice_id` `past_due`, records the dunning failure, and triggers the dunning campaign. |
+| `refund.processed`, `refund.failed` | Advances the [credit note](/api-reference/credit-notes/get) that owns the refund (`pending` → `processed` or `refund_failed`). |
+| `token.confirmed` | Activates the [UPI mandate](/api-reference/mandates/create) authorized by the customer. |
+| `virtual_account.credited` | Reconciles an offline payment against the [virtual account](/api-reference/virtual-accounts/list) it landed in. |
+
+Any other event is acknowledged with `status: "ignored"`. An invoice,
+refund or virtual account that belongs to a different workspace than the
+connection is ignored, never applied. `token.confirmed` resolves the mandate
+by its Razorpay token id alone and is not checked against the connection's
+workspace.
+
+## Example Request
+
+Razorpay sends a POST request with event data:
+
+```bash
+curl -X POST https://api.recurso.dev/webhooks/razorpay/7c9e6679-7425-40de-944b-e07fc1f90ae7 \
+  -H "Content-Type: application/json" \
+  -H "X-Razorpay-Signature: 3f1a9c0e7b2d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b" \
+  -H "X-Razorpay-Event-Id: Rzp9ABCDEF123456" \
+  -d '{
+    "entity": "event",
+    "event": "payment.captured",
+    "payload": {
+      "payment": {
+        "entity": {
+          "id": "pay_RzpABC123",
+          "amount": 249900,
+          "currency": "INR",
+          "status": "captured",
+          "order_id": "order_RzpDEF456",
+          "notes": {
+            "invoice_id": "1c1b3a5e-4d7f-4c1a-9f2e-6b8d0a3c5e71"
+          }
+        }
+      }
+    }
+  }'
+```
+
+## Response
+
+Returns `200 OK` on successful processing.
+
+```json
+{
+  "status": "ok"
+}
+```
+
+When the event is acknowledged but deliberately not applied, `reason` says
+why:
+
+```json
+{
+  "status": "ignored",
+  "reason": "unknown invoice_id"
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `ok` when the event was applied, `ignored` when it was acknowledged without side effects. A redelivery of an event that was already applied returns `duplicate ignored`. |
+| `reason` | string | Present on some ignored events: `no invoice_id`, `invalid invoice_id`, `unknown invoice_id`, `no refund_id`, `unknown refund_id`, `no token_id`, or `no va_id`. Absent for unhandled event types. |
+
+<Warning>
+Deduplication keys on `X-Razorpay-Event-Id`. When the header is missing, the
+delivery is deduplicated on a hash of the signed body instead, so a
+byte-identical replay is still ignored. An event is only recorded as processed
+after a 2xx response; a delivery that fails with 5xx is retried by Razorpay and
+reprocessed.
+</Warning>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `connID` in the path is not a UUID | Use the connection's `webhook_path` from [List Gateway Connections](/api-reference/gateways/list) |
+| `400` | `validation_failed` | Request body could not be read, is not valid JSON, or the event-specific payload (token, refund, virtual account) cannot be parsed | Check the delivery in the Razorpay Dashboard; Recurso expects the raw event payload |
+| `401` | `unauthorized` | `X-Razorpay-Signature` is missing or does not match the HMAC-SHA256 of the raw body under this connection's secret | Make sure the secret registered in Razorpay matches the connection's `webhook_secret` |
+| `404` | `not_found` | No active Razorpay connection has this id (a missing, disconnected, or non-Razorpay connection all return 404) | Reconnect the gateway and register the new `webhook_path` |
+| `500` | `internal_error` | The invoice could not be loaded, or settling, reconciling, or advancing the refund failed | Razorpay retries the delivery; the event is not recorded as processed until it succeeds |
+| `503` | `internal_error` | The connection has no webhook secret (the receiver fails closed), per-connection webhooks are not configured on the API, or the inbound-webhook dedup store is unavailable | Reconnect the gateway with a `webhook_secret`; otherwise let Razorpay retry |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

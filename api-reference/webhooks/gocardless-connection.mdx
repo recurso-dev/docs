@@ -1,0 +1,126 @@
+---
+title: "GoCardless Connection Webhook"
+openapi: "POST /webhooks/gocardless/{connID}"
+description: "Receive batched GoCardless webhook events for a workspace's own connected GoCardless account."
+keywords: ["gocardless", "webhook", "bring your own", "gateway connection", "inbound"]
+---
+
+Per-connection variant of the [GoCardless webhook receiver](/api-reference/webhooks/gocardless)
+for workspaces that connected their own GoCardless account with
+[Connect a Gateway](/api-reference/gateways/connect). The batch is verified
+with that connection's own webhook secret (resolved from `connID`) before any
+event is trusted. Payment events are bound to the connection's workspace;
+mandate events are not (see below). Event handling is otherwise identical to
+the platform receiver.
+
+<Note>
+Each connection has its own URL. Read `webhook_path` from
+[List Gateway Connections](/api-reference/gateways/list) (for example
+`/webhooks/gocardless/{connID}`), append it to `https://api.recurso.dev`, and
+register that URL in the GoCardless Dashboard under
+**Developers > Webhook endpoints** using the `webhook_secret` you supplied when
+connecting. A connection without a webhook secret cannot verify deliveries and
+rejects them.
+</Note>
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connID` | string (UUID, path) | Yes | The workspace's GoCardless gateway-connection id. |
+| `Webhook-Signature` | string (header) | Yes | HMAC-SHA256 hex signature of the raw request body, computed with the connection's webhook secret. |
+
+## Request Body
+
+The raw GoCardless events payload: an object with an `events` array. Each event
+is handled by its `resource_type` and `action`:
+
+| Event | Effect |
+|-------|--------|
+| `billing_requests` / `fulfilled` | Activates the local mandate and stores the real `MD...` mandate id that future debits reference. |
+| `mandates` / any action | Keeps the local mandate status in sync with GoCardless. |
+| `payments` / `confirmed`, `paid_out` | Settles the invoice that references this payment (`open` → `paid`) and records the dunning success. |
+| `payments` / `failed`, `cancelled` | No state change; the invoice stays `open` and dunning picks it up. |
+| `payments` / `charged_back`, `late_failure` | Reverses a settled payment: the invoice reopens (`paid` → `past_due`) and the settlement cash leg is reversed in the ledger. |
+
+Any other event is acknowledged and ignored. A payment event whose invoice
+belongs to a different workspace than the connection is ignored, never
+applied. `billing_requests` and `mandates` events are resolved by their
+GoCardless id alone and are not checked against the connection's workspace.
+
+## Example Request
+
+GoCardless sends a POST request with a batch of events:
+
+```bash
+curl -X POST https://api.recurso.dev/webhooks/gocardless/7c9e6679-7425-40de-944b-e07fc1f90ae7 \
+  -H "Content-Type: application/json" \
+  -H "Webhook-Signature: 3f1a9c0e7b2d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b" \
+  -d '{
+    "events": [
+      {
+        "id": "EV0123456789ABCD",
+        "resource_type": "payments",
+        "action": "confirmed",
+        "links": {
+          "payment": "PM0123456789ABCD"
+        }
+      }
+    ]
+  }'
+```
+
+## Response
+
+Returns `200 OK` once the batch has been processed. `processed` counts every
+event that was accepted on this delivery, including the ones acknowledged and
+ignored (an unknown `resource_type`, a `billing_requests` action other than
+`fulfilled`, a payment id that no invoice references, a payment for another
+workspace's invoice). It is not a count of side effects. Events already
+recorded by an earlier delivery are skipped silently and not counted, and an
+event whose handler returned an error is not counted either.
+
+```json
+{
+  "status": "ok",
+  "processed": 1
+}
+```
+
+When mandate handling is not configured on the API, the batch is acknowledged
+without processing:
+
+```json
+{
+  "status": "ignored"
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `ok` when the batch was processed, `ignored` when mandate handling is not configured. |
+| `processed` | integer | Number of events accepted on this delivery: the events in the batch minus duplicates minus events whose handler returned an error. Ignored events count. Present only when `status` is `ok`. |
+
+<Warning>
+An event whose handler returns an error (for example, a transient database
+error while looking up the invoice for a payment id) is logged and left
+unrecorded rather than failing the batch, so the next redelivery retries it.
+A payment id that simply matches no invoice is not an error: it is
+acknowledged, counted in `processed`, and recorded, so it is never retried.
+Per-event deduplication skips the events that already completed, so nothing
+is processed twice.
+</Warning>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `connID` in the path is not a UUID | Use the connection's `webhook_path` from [List Gateway Connections](/api-reference/gateways/list) |
+| `400` | `validation_failed` | Request body could not be read, or is not valid JSON | Check the delivery in the GoCardless Dashboard; Recurso expects the raw events payload |
+| `401` | `unauthorized` | `Webhook-Signature` does not match the HMAC-SHA256 of the raw body under this connection's secret | Make sure the secret registered in GoCardless matches the connection's `webhook_secret` |
+| `404` | `not_found` | No active GoCardless connection has this id (a missing, disconnected, or non-GoCardless connection all return 404) | Reconnect the gateway and register the new `webhook_path` |
+| `503` | `internal_error` | The connection has no webhook secret (the receiver fails closed), per-connection webhooks are not configured on the API, or the inbound-webhook dedup store is unavailable | Reconnect the gateway with a `webhook_secret`; otherwise let GoCardless retry |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

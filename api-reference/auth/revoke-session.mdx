@@ -1,0 +1,47 @@
+---
+title: "Revoke Session"
+openapi: "DELETE /v1/auth/sessions/{id}"
+description: "Revoke one of the logged-in user's own dashboard sessions."
+keywords: ["sessions", "security", "sign out device"]
+---
+
+Deletes a single session belonging to the logged-in user, signing that device
+out immediately. Find session IDs with
+[List Sessions](/api-reference/auth/list-sessions). A session that does not
+exist (already revoked or purged), or belongs to another user, returns `404` —
+ownership is never disclosed. To sign out everywhere except the current
+device, use [Revoke Other Sessions](/api-reference/auth/revoke-other-sessions).
+
+Requires a logged-in user session; API-key callers receive `401`.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The session to revoke (path parameter). |
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/auth/sessions/5c0e2b17-93da-4f61-b8a4-7e1f6d3c9b20 \
+  -b cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "message": "session revoked"
+}
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID. | Pass a session `id` from [List Sessions](/api-reference/auth/list-sessions). |
+| 401 | `unauthorized` | No live session cookie, or the caller authenticated with an API key rather than a user session. | Sign in via [`/auth/login`](/api-reference/auth/login) and send the `recurso_session` cookie. |
+| 404 | `not_found` | The session does not exist (including one already revoked or purged), or belongs to a different user. | Refresh the list; the session may already be gone. |
+| 500 | `internal_error` | The session could not be deleted. | Retry; contact support if it persists. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).
