@@ -1,0 +1,93 @@
+---
+title: "Connect an Integration"
+openapi: "POST /v1/integration-connections"
+description: "Store the workspace's own credentials for a tax, CRM, or storage provider, sealed at rest; replaces any existing connection for that provider."
+keywords: ["connect integration", "taxjar", "avalara", "ziptax", "hubspot", "s3", "minio", "credential vault"]
+---
+
+Stores the workspace's own credentials for one tax, CRM, or storage provider.
+The config is sealed as a single encrypted blob; secrets are write-only and
+never returned. Connecting a `(category, provider)` that already has an active
+connection replaces it in place. Owner/admin only — API-key callers are not
+role-gated. Check `vault_ready` on
+[List Integration Connections](/api-reference/integration-connections/list)
+first; once a HubSpot connection exists, verify it with
+[Sync CRM Now](/api-reference/integration-connections/crm-sync).
+
+## Request Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `category` | string | Yes | `tax`, `crm`, or `storage` |
+| `provider` | string | Yes | Must match the category: `tax` → `taxjar`, `avalara`, `ziptax`; `crm` → `hubspot`; `storage` → `s3` |
+| `config` | object (string → string) | Yes | Provider config. Values are trimmed. Required keys per provider: `taxjar` and `ziptax` need `api_key`; `avalara` needs `account_id`, `license_key`, `company_code`; `hubspot` needs `access_token`; `s3` needs `bucket`, `region`, `access_key_id`, `secret_access_key`, plus an optional `endpoint` for S3-compatible stores such as MinIO |
+
+Any `endpoint`, `api_url`, or `base_url` value is validated before storage. It
+must always parse as an `http` or `https` URL. On the hosted (multi-tenant)
+deployment it must additionally use `https` and its host must resolve to a
+public address — loopback, link-local, private, and other reserved ranges are
+rejected. Self-hosted deployments skip the `https` and address checks.
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/v1/integration-connections" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "storage",
+    "provider": "s3",
+    "config": {
+      "bucket": "acme-invoices",
+      "region": "ap-south-1",
+      "access_key_id": "AKIAIOSFODNN7EXAMPLE",
+      "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    }
+  }'
+```
+
+## Response
+
+Returns `201 Created` with the secret-free projection of the new connection.
+
+```json
+{
+  "data": {
+    "id": "c7d8e9f0-1a2b-4c3d-9e4f-5a6b7c8d9e0f",
+    "category": "storage",
+    "provider": "s3",
+    "config": {
+      "bucket": "acme-invoices",
+      "region": "ap-south-1"
+    },
+    "has_secrets": true,
+    "created_at": "2026-08-30T08:11:44Z",
+    "updated_at": "2026-08-30T08:11:44Z"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The connection's id |
+| `category` | string | `tax`, `crm`, or `storage` |
+| `provider` | string | The provider that was connected |
+| `config` | object | Non-secret config only (`api_url`, `base_url`, `endpoint`, `region`, `bucket`, `prefix`, `company_code`) |
+| `has_secrets` | boolean | `true` when at least one secret value was stored |
+| `created_at` | string (date-time) | When the connection was created |
+| `updated_at` | string (date-time) | When its config was last replaced |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `category`, `provider`, or `config` missing from the body, or the body is not valid JSON | Send all three fields |
+| `400` | `validation_failed` | `(category, provider)` is not a supported pair | Use one of the pairs listed under Request Body |
+| `400` | `validation_failed` | A required config key for the provider is empty (message names it, e.g. `hubspot: access_token is required`) | Add the missing key |
+| `400` | `validation_failed` | An `endpoint`/`api_url`/`base_url` is not an `http(s)` URL; on the hosted deployment also when it is not `https`, does not resolve, or resolves to a private or reserved address | Use the provider's public HTTPS endpoint |
+| `403` | `forbidden` | The session user is not an owner or admin | Integration credentials are workspace config — ask an owner/admin |
+| `503` | `internal_error` | Credential vault unavailable (`GATEWAY_ENCRYPTION_KEY` not configured on the API) | Self-hosted: set `GATEWAY_ENCRYPTION_KEY` and restart |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

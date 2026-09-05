@@ -378,7 +378,20 @@
                   "api-reference/auth/forgot-password",
                   "api-reference/auth/reset-password",
                   "api-reference/auth/verify-email",
-                  "api-reference/auth/resend-verification"
+                  "api-reference/auth/resend-verification",
+                  "api-reference/auth/list-sessions",
+                  "api-reference/auth/demo",
+                  "api-reference/auth/mfa-disable",
+                  "api-reference/auth/mfa-setup",
+                  "api-reference/auth/mfa-verify",
+                  "api-reference/auth/oauth-callback",
+                  "api-reference/auth/oauth-providers",
+                  "api-reference/auth/oauth-start",
+                  "api-reference/auth/revoke-other-sessions",
+                  "api-reference/auth/revoke-session",
+                  "api-reference/auth/saml-acs",
+                  "api-reference/auth/saml-login",
+                  "api-reference/auth/saml-metadata"
                 ]
               },
               {
@@ -403,7 +416,8 @@
                   "api-reference/plans/create",
                   "api-reference/plans/list",
                   "api-reference/plans/get",
-                  "api-reference/plans/update"
+                  "api-reference/plans/update",
+                  "api-reference/plans/charges"
                 ]
               },
               {
@@ -431,7 +445,12 @@
                   "api-reference/subscriptions/resume",
                   "api-reference/subscriptions/history",
                   "api-reference/subscriptions/financial-summary",
-                  "api-reference/subscriptions/usage"
+                  "api-reference/subscriptions/usage",
+                  "api-reference/subscriptions/addons-list",
+                  "api-reference/subscriptions/addons-add",
+                  "api-reference/subscriptions/addons-remove",
+                  "api-reference/subscriptions/preview-change",
+                  "api-reference/subscriptions/set-commitment"
                 ]
               },
               {
@@ -488,7 +507,9 @@
               {
                 "group": "Disputes",
                 "pages": [
-                  "api-reference/disputes/get"
+                  "api-reference/disputes/list",
+                  "api-reference/disputes/get",
+                  "api-reference/disputes/resolve"
                 ]
               },
               {
@@ -498,7 +519,8 @@
                   "api-reference/usage/batch",
                   "api-reference/usage/query",
                   "api-reference/usage/dimensions",
-                  "api-reference/subscriptions/usage-amount"
+                  "api-reference/subscriptions/usage-amount",
+                  "api-reference/usage/list-events"
                 ]
               },
               {
@@ -512,14 +534,17 @@
                   "api-reference/metrics/delete",
                   "api-reference/usage-alerts/create",
                   "api-reference/usage-alerts/list",
-                  "api-reference/usage-alerts/delete"
+                  "api-reference/usage-alerts/delete",
+                  "api-reference/usage-alerts/update"
                 ]
               },
               {
                 "group": "Coupons",
                 "pages": [
                   "api-reference/coupons/create",
-                  "api-reference/coupons/list"
+                  "api-reference/coupons/list",
+                  "api-reference/coupons/get",
+                  "api-reference/coupons/update"
                 ]
               },
               {
@@ -577,7 +602,9 @@
                   "api-reference/billing/advance-invoice",
                   "api-reference/billing/set-charges",
                   "api-reference/billing/simulate-charges",
-                  "api-reference/subscriptions/bill-usage"
+                  "api-reference/subscriptions/bill-usage",
+                  "api-reference/billing/get-status",
+                  "api-reference/billing/list-plans"
                 ]
               }
             ],
@@ -592,13 +619,16 @@
                   "api-reference/ledger/list-accounts",
                   "api-reference/ledger/entries",
                   "api-reference/ledger/transaction",
-                  "api-reference/ledger/export"
+                  "api-reference/ledger/export",
+                  "api-reference/ledger/deferred-rollforward",
+                  "api-reference/ledger/trial-balance"
                 ]
               },
               {
                 "group": "Revenue Recognition",
                 "pages": [
-                  "api-reference/revrec/report"
+                  "api-reference/revrec/report",
+                  "api-reference/revrec/waterfall"
                 ]
               },
               {
@@ -607,7 +637,8 @@
                   "api-reference/finance/reconciliation",
                   "api-reference/finance/reconciliation-runs",
                   "api-reference/finance/reconciliation-runs-list",
-                  "api-reference/finance/reconciliation-run"
+                  "api-reference/finance/reconciliation-run",
+                  "api-reference/finance/close-pack"
                 ]
               },
               {
@@ -676,6 +707,15 @@
                 ]
               },
               {
+                "group": "Collections",
+                "pages": [
+                  "api-reference/collections/queue",
+                  "api-reference/collections/retry-now",
+                  "api-reference/collections/pause",
+                  "api-reference/collections/mark-uncollectible"
+                ]
+              },
+              {
                 "group": "Referrals",
                 "pages": [
                   "api-reference/referrals/create",
@@ -689,7 +729,8 @@
                 "pages": [
                   "api-reference/gifts/purchase",
                   "api-reference/gifts/redeem",
-                  "api-reference/gifts/list"
+                  "api-reference/gifts/list",
+                  "api-reference/gifts/cancel"
                 ]
               }
             ],
@@ -712,7 +753,9 @@
                 "pages": [
                   "api-reference/gst/get-config",
                   "api-reference/gst/update-config",
-                  "api-reference/gst/validate"
+                  "api-reference/gst/validate",
+                  "api-reference/gst/gstr1",
+                  "api-reference/gst/gstr3b"
                 ]
               },
               {
@@ -779,7 +822,8 @@
                   "api-reference/accounting/callback",
                   "api-reference/accounting/disconnect",
                   "api-reference/accounting/sync",
-                  "api-reference/accounting/sync-status"
+                  "api-reference/accounting/sync-status",
+                  "api-reference/accounting/connect-token"
                 ]
               },
               {
@@ -803,7 +847,9 @@
                 "group": "Developer",
                 "pages": [
                   "api-reference/developer/list-keys",
-                  "api-reference/developer/create-key"
+                  "api-reference/developer/create-key",
+                  "api-reference/audit-logs/list",
+                  "api-reference/developer/revoke-key"
                 ]
               },
               {
@@ -823,7 +869,11 @@
                   "api-reference/webhooks/deliveries",
                   "api-reference/webhooks/events",
                   "api-reference/webhooks/razorpay",
-                  "api-reference/webhooks/stripe"
+                  "api-reference/webhooks/stripe",
+                  "api-reference/webhooks/gocardless-connection",
+                  "api-reference/webhooks/gocardless",
+                  "api-reference/webhooks/razorpay-connection",
+                  "api-reference/webhooks/stripe-connection"
                 ]
               },
               {
@@ -865,7 +915,36 @@
                 "pages": [
                   "api-reference/gateways/list",
                   "api-reference/gateways/connect",
-                  "api-reference/gateways/disconnect"
+                  "api-reference/gateways/disconnect",
+                  "api-reference/gateways/webhook-secret"
+                ]
+              },
+              {
+                "group": "Integration Connections",
+                "pages": [
+                  "api-reference/integration-connections/create",
+                  "api-reference/integration-connections/delete",
+                  "api-reference/integration-connections/crm-sync",
+                  "api-reference/integration-connections/list"
+                ]
+              },
+              {
+                "group": "Operations",
+                "pages": [
+                  "api-reference/operations/health",
+                  "api-reference/operations/metrics",
+                  "api-reference/operations/openapi-json",
+                  "api-reference/operations/openapi-yaml",
+                  "api-reference/operations/platform-metrics",
+                  "api-reference/operations/version"
+                ]
+              },
+              {
+                "group": "SSO",
+                "pages": [
+                  "api-reference/sso/get",
+                  "api-reference/sso/update",
+                  "api-reference/sso/delete"
                 ]
               }
             ],

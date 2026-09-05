@@ -1,0 +1,98 @@
+---
+title: "Set Subscription Commitment"
+openapi: "PUT /v1/subscriptions/{id}/commitment"
+description: "Set or clear the per-period minimum commitment on a subscription, in minor units; shortfalls are trued up on the renewal invoice."
+keywords: ["minimum commitment", "true-up", "commitment amount", "revenue floor"]
+---
+
+Sets the subscription's per-period minimum commitment. When a period's
+subtotal (flat fee + add-ons + metered usage) falls short of the commitment, a
+**Minimum commitment true-up** line fills exactly the difference on the renewal
+invoice, taxed at the plan's HSN. Usage beyond the floor bills naturally. An
+`amount` of `0` clears the commitment.
+
+The commitment is stored on the subscription as `commitment_amount` and
+returned by [Get Subscription](/api-reference/subscriptions/get). For the
+concept and setup walkthrough see
+[Set Up Minimum Commitments](/setup/commitments).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The subscription ID. |
+
+## Request Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | integer (int64) | Yes | Per-period minimum in minor units of the subscription's currency. Minimum `0`; `0` clears the commitment. |
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/subscriptions/b9071c55-0e14-4720-80f3-665613ceb7de/commitment \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500000
+  }'
+```
+
+## Response
+
+Returns the updated subscription.
+
+```json
+{
+  "data": {
+    "id": "b9071c55-0e14-4720-80f3-665613ceb7de",
+    "tenant_id": "0f9e8d7c-6b5a-4f3e-9d2c-1b0a9f8e7d6c",
+    "customer_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "plan_id": "7c0e2b91-3f5a-4d8c-a2b4-1e9f0d6c5a83",
+    "status": "active",
+    "current_period_start": "2026-09-01T00:00:00Z",
+    "current_period_end": "2026-10-01T00:00:00Z",
+    "cancel_at_period_end": false,
+    "billing_anchor": "2026-09-01T00:00:00Z",
+    "billing_anchor_type": "acquisition",
+    "billing_anchor_day": 1,
+    "payment_terms": "net0",
+    "commitment_amount": 500000,
+    "razorpay_subscription_id": "",
+    "stripe_subscription_id": "",
+    "created_at": "2026-03-01T10:30:00Z",
+    "updated_at": "2026-09-04T10:30:00Z"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The subscription ID |
+| `customer_id` | string (uuid) | The billed customer |
+| `plan_id` | string (uuid) | The base plan |
+| `status` | string | Subscription status (`trialing`, `active`, `paused`, `canceled`, …) |
+| `current_period_start` / `current_period_end` | string (date-time) | The current billing period |
+| `commitment_amount` | integer (int64) | The per-period minimum just set, minor units; `0` means no commitment |
+| `updated_at` | string (date-time) | Bumped by this call |
+
+Other fields are the standard subscription object — see
+[Get Subscription](/api-reference/subscriptions/get).
+
+<Note>
+  Nothing is invoiced when the commitment is set. The true-up line, if any, is
+  computed at renewal against that period's actual subtotal, so the invoice
+  always shows both the usage billed and the exact shortfall filled.
+</Note>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID, `amount` is missing or negative, the body is malformed JSON, or the subscription does not exist in your tenant (this endpoint reports a missing subscription as `400`, not `404`). | Pass the subscription's UUID and an integer `amount` of `0` or more; verify the ID with `GET /v1/subscriptions/{id}`. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

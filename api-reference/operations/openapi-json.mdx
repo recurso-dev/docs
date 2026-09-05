@@ -1,0 +1,83 @@
+---
+title: "Get OpenAPI JSON"
+openapi: "GET /openapi.json"
+description: "Download the OpenAPI 3.1 specification for this API converted to JSON."
+keywords: ["openapi", "specification", "swagger", "json", "codegen", "sdk"]
+---
+
+Serves the same OpenAPI 3.1 document as
+[Get OpenAPI YAML](/api-reference/operations/openapi-yaml), converted from
+the embedded YAML to JSON once at process start. Use it with tooling that
+expects JSON — code generators, request validators, API gateways. The
+content is identical to the YAML form; only the encoding differs. No
+authentication is required.
+
+The conversion decodes the YAML into a generic map and re-encodes it with
+Go's `json.Marshal`, so the body is a single compact line with object keys
+in alphabetical order (`components`, `info`, `openapi`, `paths`,
+`security`, `servers`, `tags`) rather than the authored order. Pipe it
+through `jq .` if you want to read it.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/openapi.json -o recurso-openapi.json
+```
+
+## Response
+
+`Content-Type: application/json`. The body is the specification document
+itself — a bare OpenAPI object, not a `data` envelope. The excerpt below is
+pretty-printed and abridged (`info.description`, `info.license`, `tags`,
+every path but `/health`, the `/health` response `content` and `503`, the
+`portalSession` and `sessionCookie` security schemes, and all of
+`components.parameters`, `components.responses` and `components.schemas`
+are omitted); the key order matches the real body, and every value shown
+is verbatim.
+
+```json
+{
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "bearerFormat": "API key",
+        "description": "Tenant API key obtained from `POST /auth/register` or `POST /v1/developer/keys`.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "Recurso API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Reports overall service health plus per-component status (Postgres, Redis, TigerBeetle).",
+        "operationId": "getHealth",
+        "responses": {
+          "200": { "description": "Service is healthy (or degraded but serving)." }
+        },
+        "security": [],
+        "summary": "Health check",
+        "tags": ["System"]
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "servers": [
+    {
+      "description": "Example deployment — substitute the base URL of your own Recurso deployment.",
+      "url": "https://billing.example.com"
+    }
+  ]
+}
+```
+
+## Errors
+
+This endpoint has no failure modes of its own and always returns `200`. The
+YAML-to-JSON conversion happens at boot and a conversion failure aborts
+startup, so a running instance never serves a malformed document.

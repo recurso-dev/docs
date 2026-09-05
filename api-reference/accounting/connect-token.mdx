@@ -1,0 +1,94 @@
+---
+title: "Connect Token-Based Accounting Provider"
+openapi: "POST /v1/accounting/connect-token/{provider}"
+description: "Create or refresh an accounting connection for providers outside the browser OAuth flow — NetSuite (SuiteTalk token) and Tally (local export)."
+keywords: ["netsuite", "tally", "accounting connection", "suitetalk", "token-based connect"]
+---
+
+Creates or refreshes an accounting connection for providers that do not use the
+browser OAuth flow of [Initiate Accounting OAuth](/api-reference/accounting/connect).
+`netsuite` takes a NetSuite account id and a SuiteTalk OAuth 2.0 access token
+minted in NetSuite's own UI (experimental). `tally` takes no credentials at
+all — connecting simply enables the local JSONL export sync that Tally's import
+tooling reads. If a row for the provider already exists — active, or
+inactive because
+[Disconnect Accounting Integration](/api-reference/accounting/disconnect)
+cleared `is_active` (the row is kept) or a sync deactivated it after the
+provider rejected its token — it is updated in place and reactivated with
+`sync_status` reset to `idle` and `last_error` cleared; otherwise a new one
+is created. The lookup does not filter on `is_active`, so any earlier
+connection for the provider is refreshed rather than duplicated. Trigger a
+push afterwards with [Trigger Accounting Sync](/api-reference/accounting/sync).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | string (path) | Yes | `netsuite` or `tally` |
+
+## Body Parameters
+
+Optional for `tally`; required for `netsuite`.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `account_id` | string | For `netsuite` | NetSuite account id; stored as the connection's `realm_id` |
+| `access_token` | string | For `netsuite` | SuiteTalk OAuth 2.0 access token; stored server-side and never returned |
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/v1/accounting/connect-token/netsuite" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "1234567_SB1",
+    "access_token": "eyJraWQiOiJjLjEyMzQ1NjciLCJhbGciOiJQUzI1NiJ9.example"
+  }'
+```
+
+## Response
+
+Returns `201 Created` for a new connection, or `200 OK` when an existing
+connection for the provider was refreshed. Tokens are never serialized;
+`token_expires_at`, `last_sync_at`, and `last_error` are omitted while unset.
+
+```json
+{
+  "data": {
+    "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
+    "tenant_id": "1f2e3d4c-5b6a-4798-8a9b-0c1d2e3f4a5b",
+    "provider": "netsuite",
+    "realm_id": "1234567_SB1",
+    "sync_status": "idle",
+    "is_active": true,
+    "created_at": "2026-09-01T10:42:17Z"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The connection's id — use it with [Disconnect Accounting Integration](/api-reference/accounting/disconnect) |
+| `tenant_id` | string (uuid) | The owning workspace |
+| `provider` | string | `netsuite` or `tally` |
+| `realm_id` | string | The NetSuite account id; omitted for `tally` |
+| `token_expires_at` | string (date-time) | Omitted — token-based connections carry no expiry |
+| `last_sync_at` | string (date-time) | When the last sync ran; omitted until the first sync |
+| `sync_status` | string | `idle` right after connecting |
+| `last_error` | string | Last sync error; omitted when clear |
+| `is_active` | boolean | `true` after connecting |
+| `created_at` | string (date-time) | When the connection was first created (unchanged on refresh) |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `provider` is not `netsuite` or `tally` (`provider does not support token-based connection`) | Use [Initiate Accounting OAuth](/api-reference/accounting/connect) for QuickBooks and Xero |
+| `400` | `validation_failed` | `provider` is `netsuite` and `account_id` or `access_token` is blank | Send both fields |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | The connection could not be saved | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

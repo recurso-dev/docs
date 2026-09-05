@@ -1,0 +1,82 @@
+---
+title: "Mark Invoice Uncollectible"
+openapi: "POST /v1/collections/invoices/{id}/mark-uncollectible"
+description: "Operator-initiated write-off: flip a still-collectible invoice to uncollectible and post the write-off reversal so the books stop carrying money that will never arrive."
+keywords: ["collections", "write off", "uncollectible", "bad debt", "past due"]
+---
+
+Writes off an invoice by hand. The invoice's status becomes `uncollectible`, any
+scheduled retry is cleared, and the write-off reversal is posted to the ledger
+so AR no longer overstates what is owed. It is the manual counterpart of the
+write-off the dunning engine performs automatically.
+
+The reversal credits Accounts Receivable for the full invoice total, split by
+what has already happened to the revenue:
+
+- **Still-deferred portion** (a subscription invoice's pre-tax amount not yet
+  recognized): debit Deferred Revenue, credit AR. Under the cash model this is
+  the whole pre-tax amount.
+- **Already-recognized portion** (accrual-model revenue recognized before
+  payment, or all of a one-off invoice's pre-tax amount): recognized revenue
+  cannot be un-deferred, so it is expensed — debit Bad Debt Expense, credit AR.
+- **Tax**: debit Tax Payable, credit AR, since tax on money that will never be
+  collected is not owed.
+
+A partially-recognized invoice therefore shows all three legs in
+[Invoice Journal Entries](/api-reference/invoices/journal-entries).
+
+Only an `open` or `past_due` invoice can be written off — the call cannot
+resurrect a paid, voided or already-uncollectible invoice, so it is safe to
+repeat: a second call returns `404`. The invoice stays on the
+[collections queue](/api-reference/collections/queue) with
+`status: uncollectible` while a balance is still owing, and counts toward the
+`uncollectible` bucket of the
+[collections funnel](/api-reference/analytics/collections-funnel). To see the
+posted legs, use [Invoice Journal Entries](/api-reference/invoices/journal-entries).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The invoice's id. |
+
+No request body.
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/v1/collections/invoices/06c151de-8d3a-4b21-9c77-2f0e5a9b4d12/mark-uncollectible" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "status": "uncollectible"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always `uncollectible` — the invoice's new status |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the invoice's UUID |
+| `404` | `not_found` | Invoice doesn't exist, belongs to another tenant (existence is never confirmed across tenants), or is not `open` or `past_due` (already paid, voided or written off) | Check the ID and status from the [collections queue](/api-reference/collections/queue) |
+
+<Note>
+  The status change is committed before the ledger reversal is posted. If the
+  posting fails the invoice stays `uncollectible`, the failure is logged, and
+  the un-reversed write-off remains visible in the tie-out's unscheduled bucket
+  until it is reconciled — the write-off is never silently lost.
+</Note>
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

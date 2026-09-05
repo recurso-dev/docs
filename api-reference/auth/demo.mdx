@@ -1,0 +1,57 @@
+---
+title: "Start a Demo Session"
+openapi: "POST /auth/demo"
+description: "Open a session in the shared demo sandbox and return the demo user's email and API key."
+keywords: ["demo", "sandbox", "session", "try"]
+---
+
+Opens a dashboard session as the seeded demo user in the shared sandbox and
+returns the demo account's email and API key. The session cookie
+(`recurso_session`) is the same one a password [login](/api-reference/auth/login)
+issues, so everything downstream — the dashboard, roles, audit actors — behaves
+as it would for a real user. The sandbox is reset on a schedule; anything you
+create in it is temporary.
+
+The route exists only on deployments started with `DEMO_MODE` enabled. On
+every other deployment the route is not registered and the server answers
+`404`. No credentials or request body are required.
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/auth/demo \
+  -c cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "data": {
+    "demo": true,
+    "email": "demo@demo.recurso.dev",
+    "api_key": "sk_test_12345"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `demo` | boolean | Always `true`; marks the session as a sandbox session. |
+| `email` | string | The demo user's email address. |
+| `api_key` | string | A test-mode API key for the demo tenant, for calling `/v1` endpoints with `Authorization: Bearer` — see [Authentication](/api-reference/authentication). |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `404` | — | The server is not running in `DEMO_MODE`; the route does not exist. | Use the hosted demo, or start your own deployment with `DEMO_MODE=true`. |
+| `500` | `internal_error` | The demo user exists but a session could not be opened. | Retry; if it persists, contact support. |
+| `503` | `internal_error` | The sandbox is still bootstrapping its demo tenant and user. | Wait a few seconds and retry. |
+
+The `500` and `503` errors use the standard envelope — see
+[Errors](/api-reference/errors). The `404` does not: outside `DEMO_MODE` the
+route is never registered, so the router answers with its plain-text
+`404 page not found` and no JSON body or error code.

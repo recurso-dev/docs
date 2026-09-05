@@ -1,0 +1,49 @@
+---
+title: "Delete SSO Connection"
+openapi: "DELETE /v1/sso/connection"
+description: "Remove the tenant's SAML SSO connection so the public SP endpoints stop answering."
+keywords: ["saml", "sso", "connection", "idp", "delete", "single sign-on"]
+---
+
+Removes the tenant's SAML SSO connection entirely. The public
+[metadata](/api-reference/auth/saml-metadata),
+[login](/api-reference/auth/saml-login) and
+[ACS](/api-reference/auth/saml-acs) endpoints return `404` for the tenant
+from this point on, and a subsequent
+[`GET /v1/sso/connection`](/api-reference/sso/get) returns `404` until a new
+connection is created with
+[`PUT /v1/sso/connection`](/api-reference/sso/update).
+
+Existing dashboard sessions opened through SSO are not revoked by this call;
+users can still sign in with their password afterwards. To pause SSO without
+discarding the IdP configuration, update the connection with
+`enabled: false` instead.
+
+Only owners and admins can call this endpoint from a dashboard session;
+members receive `403`. API-key callers act with full tenant access.
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/sso/connection \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "status": "removed"
+}
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | No API key or session cookie was sent, or the credential is invalid. | Send `Authorization: Bearer <api_key>` or sign in to the dashboard. |
+| `403` | `forbidden` | The dashboard session belongs to a member, not an owner or admin. | Ask an owner or admin to remove the connection, or use an API key. |
+| `404` | `not_found` | The tenant has no SSO connection to remove. | Nothing to do — the tenant is already without SSO. |
+| `500` | `internal_error` | The connection could not be deleted. | Retry; if it persists, contact support. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

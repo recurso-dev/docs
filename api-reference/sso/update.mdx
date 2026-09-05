@@ -1,0 +1,93 @@
+---
+title: "Create or Update SSO Connection"
+openapi: "PUT /v1/sso/connection"
+description: "Create or replace the tenant's SAML identity provider configuration and toggle whether SSO login is enabled."
+keywords: ["saml", "sso", "connection", "idp", "upsert", "single sign-on"]
+---
+
+Creates the tenant's SAML SSO connection, or replaces it if one already
+exists. Each tenant has exactly one connection, so a `PUT` is idempotent: send
+the full IdP configuration every time, not a partial patch. Configure the
+identity provider either by pasting its full metadata document in
+`idp_metadata_xml`, or by supplying all three discrete fields —
+`idp_entity_id`, `idp_sso_url` and `idp_certificate`. When both are present,
+the metadata XML wins.
+
+Set `enabled: true` to switch on the public
+[login](/api-reference/auth/saml-login) and
+[ACS](/api-reference/auth/saml-acs) endpoints for the tenant. Enabling a
+connection that is not fully configured is rejected, so you can save a
+draft with `enabled: false` and flip it on once the IdP side is done. The
+response includes the SP URLs to register with the IdP; read them back later
+with [`GET /v1/sso/connection`](/api-reference/sso/get).
+
+Only owners and admins can call this endpoint from a dashboard session;
+members receive `403`. API-key callers act with full tenant access.
+
+## Request Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `idp_metadata_xml` | string | No | The IdP's full SAML metadata document. Sufficient on its own; takes precedence over the discrete fields below. |
+| `idp_entity_id` | string | No | The IdP's SAML entity id (issuer). Required, together with `idp_sso_url` and `idp_certificate`, when `idp_metadata_xml` is omitted. |
+| `idp_sso_url` | string | No | The IdP's HTTP-Redirect SingleSignOnService URL. |
+| `idp_certificate` | string | No | The IdP's base64/PEM X.509 signing certificate. |
+| `enabled` | boolean | No | Whether SSO login is live for the tenant. Defaults to `false`. Can only be `true` when the connection is configured. |
+
+Whitespace around every string field is trimmed before it is stored.
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/sso/connection \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idp_entity_id": "http://www.okta.com/exk1a2b3c4d5e6f7g8h9",
+    "idp_sso_url": "https://acme.okta.com/app/acme_recurso_1/exk1a2b3c4d5e6f7g8h9/sso/saml",
+    "idp_certificate": "-----BEGIN CERTIFICATE-----\nMIIDpDCCAoygAwIBAgIGAYt...\n-----END CERTIFICATE-----",
+    "enabled": true
+  }'
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "tenant_id": "d4c3b2a1-0f9e-4765-8321-abcdef012345",
+    "idp_entity_id": "http://www.okta.com/exk1a2b3c4d5e6f7g8h9",
+    "idp_sso_url": "https://acme.okta.com/app/acme_recurso_1/exk1a2b3c4d5e6f7g8h9/sso/saml",
+    "idp_certificate": "-----BEGIN CERTIFICATE-----\nMIIDpDCCAoygAwIBAgIGAYt...\n-----END CERTIFICATE-----",
+    "idp_metadata_xml": "",
+    "enabled": true,
+    "configured": true,
+    "sp_metadata_url": "https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/metadata",
+    "sp_acs_url": "https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/acs"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenant_id` | string (uuid) | The tenant that owns the connection. |
+| `idp_entity_id` | string | The stored IdP entity id, or empty when only `idp_metadata_xml` was submitted. |
+| `idp_sso_url` | string | The stored IdP SingleSignOnService URL. |
+| `idp_certificate` | string | The stored IdP signing certificate. |
+| `idp_metadata_xml` | string | The stored IdP metadata document, or empty when only the discrete fields were submitted. Fields are stored as sent (trimmed); nothing is blanked when both forms are present. |
+| `enabled` | boolean | Whether the public SP endpoints answer for this tenant. |
+| `configured` | boolean | Whether the stored detail is enough to attempt a login. |
+| `sp_metadata_url` | string | Public URL of the tenant's [SP metadata](/api-reference/auth/saml-metadata). Register it with the IdP. |
+| `sp_acs_url` | string | Public URL the IdP posts assertions to. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | The body is not valid JSON, or `enabled` is `true` but the connection is not configured (no `idp_metadata_xml` and at least one of the three discrete fields missing). The same code is returned if the connection could not be saved. | Send a well-formed body; provide `idp_metadata_xml` or all of `idp_entity_id`, `idp_sso_url` and `idp_certificate` before enabling. |
+| `401` | `unauthorized` | No API key or session cookie was sent, or the credential is invalid. | Send `Authorization: Bearer <api_key>` or sign in to the dashboard. |
+| `403` | `forbidden` | The dashboard session belongs to a member, not an owner or admin. | Ask an owner or admin to configure SSO, or use an API key. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

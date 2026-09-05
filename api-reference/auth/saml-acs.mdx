@@ -1,0 +1,67 @@
+---
+title: "Consume a SAML Assertion"
+openapi: "POST /auth/saml/{tenantID}/acs"
+description: "Assertion Consumer Service: the identity provider posts the SAMLResponse here to open a dashboard session."
+keywords: ["saml", "sso", "acs", "assertion", "idp"]
+---
+
+The Assertion Consumer Service (ACS). After the user authenticates at the
+identity provider — typically following
+[`GET /auth/saml/{tenantID}/login`](/api-reference/auth/saml-login) — the IdP
+posts a form-encoded `SAMLResponse` to this URL. The server validates the
+signature against the tenant's stored IdP certificate, extracts the email, and
+maps it to an **existing** user in the tenant. There is no just-in-time
+provisioning: an email that no tenant user owns is rejected, so invite the
+user first.
+
+On success the server sets the `recurso_session` cookie — the same session a
+password [login](/api-reference/auth/login) issues — and `302`s to the
+dashboard root. The IdP submits this request from the user's browser; you do
+not call it yourself. Its URL is published in the
+[SP metadata](/api-reference/auth/saml-metadata).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tenantID` | string (uuid) | Yes | The tenant the assertion belongs to. Its SSO connection must exist and be enabled. |
+
+## Body Parameters
+
+The body is `application/x-www-form-urlencoded`, as sent by the HTTP-POST
+binding.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `SAMLResponse` | string | Yes | The base64-encoded SAML response from the IdP, signed with the certificate stored on the tenant's connection. |
+| `RelayState` | string | No | Part of the HTTP-POST binding, accepted for compatibility. Recurso's `AuthnRequest` sets no relay state and this endpoint ignores the field: the post-login redirect is always the dashboard root. |
+
+## Example Request
+
+```bash
+curl -i -X POST https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/acs \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "SAMLResponse=PHNhbWxwOlJlc3BvbnNlIHhtbG5zOnNhbWxwPSJ1cm46b2FzaXM6..."
+```
+
+## Example Response
+
+There is no response body. A successful login answers `302 Found` with the
+session cookie:
+
+```http
+HTTP/1.1 302 Found
+Location: https://app.recurso.dev/
+Set-Cookie: recurso_session=...; Path=/; HttpOnly; Secure; SameSite=Lax
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | The `SAMLResponse` failed validation — bad signature, wrong audience, expired, or replayed. | Confirm the IdP certificate on the tenant's connection matches the IdP's current signing certificate and that the IdP targets this tenant's ACS URL. |
+| `403` | `forbidden` | The assertion is valid but no user in the tenant has the asserted email. | Have a tenant admin invite the user with that email, then retry the login. |
+| `404` | `not_found` | `tenantID` is not a valid UUID, or the tenant's SSO connection is missing or disabled. | Enable the tenant's SAML connection in the dashboard. |
+| `500` | `internal_error` | The assertion could not be processed or the session could not be opened. | Retry; if it persists, contact support. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

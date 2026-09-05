@@ -1,0 +1,122 @@
+---
+title: "Cancel Gift"
+openapi: "POST /v1/gifts/{id}/cancel"
+description: "Cancel a purchased-but-unredeemed gift, crediting the buyer if they paid or voiding the open purchase invoice if they did not."
+keywords: ["gift", "cancel", "credit note", "void invoice", "account credit"]
+---
+
+Cancels a gift that was [purchased](/api-reference/gifts/purchase) but not
+yet redeemed, and settles the buyer's money according to the state of the
+purchase invoice after the cancel:
+
+- **Invoice paid** — a spendable adjustment credit note for the purchase
+  amount is issued to the buyer through the normal credit-note path, so
+  approval governance and ledger postings apply. The note is returned as
+  `credit_note` and can be tracked with
+  [Get Credit Note](/api-reference/credit-notes/get).
+- **Invoice still open** — nothing was collected, so the invoice is voided
+  instead and `invoice_voided` is `true`. No credit is issued.
+- **Invoice already void or canceled** (for example, voided by hand earlier)
+  — nothing is owed, so nothing is credited or voided: `credit_note` is
+  omitted and `invoice_voided` is `false`. This is a normal `200`, not an
+  error.
+
+The gift moves to `status: "canceled"` and its code can no longer be
+redeemed. The transition from `purchased` to `canceled` is atomic and happens
+exactly once: a redeemed gift cannot be canceled, and a second cancel is
+refused, so the buyer credit can never issue twice. Gifts purchased before
+invoice linking existed carry no `invoice_id`; cancelling one changes the
+status but neither credits nor voids anything.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Gift ID (path). Must belong to your tenant — see [List Gifts](/api-reference/gifts/list) |
+
+No request body.
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/gifts/6f1c2a9e-8b4d-4e7f-a3c5-9d0e1f2a3b4c/cancel \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+A paid gift returns the canceled gift and the buyer's credit note. For an
+open (unpaid) gift `credit_note` is omitted and `invoice_voided` is `true`.
+When the purchase invoice was already void or canceled, or the gift has no
+`invoice_id`, both are absent/`false` and only `gift` carries information.
+
+```json
+{
+  "data": {
+    "gift": {
+      "id": "6f1c2a9e-8b4d-4e7f-a3c5-9d0e1f2a3b4c",
+      "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+      "code": "GIFT-QN7XL3MTKW",
+      "plan_id": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+      "buyer_customer_id": "a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d",
+      "recipient_email": "priya.sharma@example.com",
+      "status": "canceled",
+      "redeemed_by_customer_id": null,
+      "redeemed_at": null,
+      "invoice_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60",
+      "duration_months": 12,
+      "created_at": "2026-06-20T09:15:00Z",
+      "updated_at": "2026-09-04T11:42:07Z"
+    },
+    "credit_note": {
+      "id": "c7d8e9f0-a1b2-4c3d-8e4f-5a6b7c8d9e01",
+      "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+      "customer_id": "a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d",
+      "invoice_id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f60",
+      "amount": 5880000,
+      "balance": 5880000,
+      "currency": "INR",
+      "status": "issued",
+      "reason": "Gift GIFT-QN7XL3MTKW canceled — purchase credited",
+      "type": "adjustment",
+      "refund_status": "none",
+      "created_at": "2026-09-04T11:42:07Z",
+      "updated_at": "2026-09-04T11:42:07Z"
+    },
+    "invoice_voided": false
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gift` | object | The gift after cancellation |
+| `gift.id` | string (UUID) | Gift ID |
+| `gift.tenant_id` | string (UUID) | Owning tenant |
+| `gift.code` | string | Redemption code; no longer redeemable |
+| `gift.plan_id` | string (UUID) | The plan the gift would have activated |
+| `gift.buyer_customer_id` | string (UUID) | The customer who bought the gift and receives the credit |
+| `gift.recipient_email` | string | Intended recipient |
+| `gift.status` | string | Always `canceled` after this call. Other gift states are `purchased` and `redeemed` |
+| `gift.redeemed_by_customer_id` / `gift.redeemed_at` | string, null | Always `null` — only unredeemed gifts can be canceled |
+| `gift.invoice_id` | string (UUID) | The buyer's purchase invoice the credit or void was applied against; omitted for gifts purchased before invoice linking |
+| `gift.duration_months` | integer | Length of the gifted subscription |
+| `gift.created_at` / `gift.updated_at` | string (RFC 3339) | Timestamps |
+| `credit_note` | object | The spendable adjustment credit issued to the buyer when the purchase invoice was paid. Omitted otherwise. Same shape as [Get Credit Note](/api-reference/credit-notes/get): `amount` and `balance` in minor units, `status` may be `pending_approval` when credit-note approval governance is on |
+| `invoice_voided` | boolean | `true` when the purchase invoice was still open and was voided instead of credited. `false` when a credit note was issued, when the invoice was already void or canceled, or when the gift has no linked invoice |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a valid UUID | Pass the gift's UUID |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | No gift with that ID in your tenant | Check the ID against [List Gifts](/api-reference/gifts/list) |
+| `409` | `conflict` | The gift is already redeemed, or already canceled | Nothing to do — a redeemed gift stays with its recipient; a canceled gift has already been settled |
+| `424` | `internal_error` | The gift was canceled but issuing the buyer's credit failed | Issue a manual credit note to the buyer for the purchase amount — the cancel has taken effect and will not be retried |
+| `500` | `internal_error` | Loading the gift, flipping its status, or resolving its purchase invoice after the flip failed. The body is always the fixed message `internal error` — it does not say whether the status flip took effect; the detail is only in the API logs | Re-read the gift via [List Gifts](/api-reference/gifts/list): if it is still `purchased`, retry; if it is already `canceled`, the cancel took effect but the purchase invoice may still be open or paid — void or credit it manually |
+| `503` | `internal_error` | Credit issuance is not wired on this deployment, so a paid gift cannot be canceled | Enable the credit-note service on the API |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -1,0 +1,93 @@
+---
+title: "List Usage Events"
+openapi: "GET /v1/usage/events"
+description: "Newest-first stream of raw usage events, for checking that metering ingestion landed."
+keywords: ["usage events", "metering", "debugging", "ingestion"]
+---
+
+Returns the raw events your services reported through
+[Record Usage Event](/api-reference/usage/record-event) and
+[Record Usage Events (Batch)](/api-reference/usage/batch), newest first.
+This is the "did my events actually land?" view for debugging metering — it
+is not aggregated. For billing-shaped numbers use
+[Query Usage](/api-reference/usage/query) (time buckets) or
+[Get Subscription Usage](/api-reference/subscriptions/usage) (current-period
+totals with entitlement headroom).
+
+The stream is tenant-scoped through the subscription: only events on
+subscriptions that belong to the authenticated tenant are returned.
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `customer_id` | string (UUID) | No | Only events for this customer |
+| `dimension` | string | No | Only events for this dimension (exact match, e.g. `api_calls`) |
+| `limit` | integer | No | Page size. Default `50`, capped at `200` |
+| `offset` | integer | No | Rows to skip. Default `0` |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/usage/events?customer_id=d5b7c1de-8a34-4a37-8f0e-b1a9f3f6f001&dimension=api_calls&limit=2" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "id": "7c1de5b7-1f6d-4a37-8f0e-b1a9f3f6f002",
+      "subscription_id": "9a1f0f9e-52f1-4c11-a1b0-1f6d3f1c2a7e",
+      "customer_id": "d5b7c1de-8a34-4a37-8f0e-b1a9f3f6f001",
+      "dimension": "api_calls",
+      "quantity": 150,
+      "timestamp": "2026-07-06T23:58:01Z",
+      "properties": { "region": "ap-south-1" },
+      "transaction_id": "req_01J1Z8K3Q4"
+    },
+    {
+      "id": "3f9a2b7c-8d1e-4f60-a5b4-c2d3e4f5a603",
+      "subscription_id": "9a1f0f9e-52f1-4c11-a1b0-1f6d3f1c2a7e",
+      "customer_id": "d5b7c1de-8a34-4a37-8f0e-b1a9f3f6f001",
+      "dimension": "api_calls",
+      "quantity": 42,
+      "timestamp": "2026-07-06T23:57:12Z"
+    }
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (UUID) | Event ID (the `event_id` returned at ingestion) |
+| `subscription_id` | string (UUID) | Subscription the usage was recorded against |
+| `customer_id` | string (UUID) | The subscription's customer |
+| `dimension` | string | Usage dimension / meter name |
+| `quantity` | integer | Quantity recorded on the event |
+| `timestamp` | string (RFC 3339) | Ingestion time, set server-side |
+| `properties` | object | Free-form string attributes sent with the event; omitted when none |
+| `transaction_id` | string | Caller-supplied idempotency key; omitted when none was sent |
+
+The list is ordered by `timestamp` descending and carries no `has_more`
+flag — page with `offset` until a page comes back shorter than `limit`.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `customer_id` is not a valid UUID | Pass the customer's UUID, or drop the filter |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Reading the event stream failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).
+
+<Note>
+Non-numeric or negative `limit` / `offset` values are not rejected: `limit`
+falls back to the default of `50` (and anything above `200` is clamped to
+`200`), and a negative `offset` is treated as `0`.
+</Note>

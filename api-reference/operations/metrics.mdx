@@ -1,0 +1,123 @@
+---
+title: "Get Prometheus Metrics"
+openapi: "GET /metrics"
+description: "Scrape HTTP request counters, latency histograms, business-event counters and runtime gauges in Prometheus text exposition format."
+keywords: ["prometheus", "metrics", "scrape", "observability", "histogram", "METRICS_TOKEN"]
+---
+
+The Prometheus scrape endpoint. It emits request counts and latency
+histograms per method, route and status; a counter of business events by
+type (the number to watch for "did billing run tonight"); database
+connection-pool gauges; and Go runtime gauges. The body is
+`text/plain; version=0.0.4` — Prometheus text format, not JSON.
+
+Access is controlled by the `METRICS_TOKEN` environment variable. When it is
+set, the request must carry it as a bearer token; when it is unset the
+endpoint is open, on the assumption that you scrape from a trusted network.
+This is a deployment token, not a tenant API key — an API key is not
+accepted here. For a JSON health probe use
+[Get Health](/api-reference/operations/health); for the founder-only
+cross-tenant funnel use [Get Platform Metrics](/api-reference/operations/platform-metrics).
+
+<Note>
+The spec entry for this operation does not declare `security: []`, so the
+playground on this page inherits the document-level `bearerAuth` scheme and
+shows a tenant-API-key box. Ignore it: the handler compares the header
+against `METRICS_TOKEN` only, and a tenant API key is rejected with `401`.
+</Note>
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/metrics \
+  -H "Authorization: Bearer $METRICS_TOKEN"
+```
+
+Omit the header when `METRICS_TOKEN` is not configured.
+
+## Response
+
+Prometheus text exposition format. The `route` label is the gin route
+template as registered, with colon-style parameters, so every
+`/v1/customers/<uuid>` request lands on the one series
+`route="/v1/customers/:id"` regardless of the ID. Requests that match no
+registered route (404s from typos, scanners) are labelled
+`route="<unmatched>"`. The scrape of `/metrics` itself is not measured.
+
+Every histogram series carries all eleven configured buckets (`0.005`,
+`0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`, `10`) plus
+`+Inf`; the sample below is what one series looks like in full.
+
+```text
+# HELP http_requests_total Total HTTP requests processed.
+# TYPE http_requests_total counter
+http_requests_total{method="GET",route="/health",status="200"} 4213
+http_requests_total{method="GET",route="/v1/customers/:id",status="200"} 1207
+http_requests_total{method="GET",route="<unmatched>",status="404"} 17
+http_requests_total{method="POST",route="/v1/invoices",status="201"} 318
+# HELP http_request_duration_seconds HTTP request latency.
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="0.005"} 12
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="0.01"} 97
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="0.025"} 188
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="0.05"} 251
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="0.1"} 289
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="0.25"} 306
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="0.5"} 313
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="1"} 316
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="2.5"} 318
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="5"} 318
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="10"} 318
+http_request_duration_seconds_bucket{method="POST",route="/v1/invoices",le="+Inf"} 318
+http_request_duration_seconds_sum{method="POST",route="/v1/invoices"} 4.812
+http_request_duration_seconds_count{method="POST",route="/v1/invoices"} 318
+# HELP recurso_events_total Business events published, by type.
+# TYPE recurso_events_total counter
+recurso_events_total{type="invoice.created"} 318
+recurso_events_total{type="invoice.paid"} 291
+# HELP db_pool_open_connections Open connections (in use + idle).
+# TYPE db_pool_open_connections gauge
+db_pool_open_connections 6
+# HELP db_pool_wait_count_total Times a request waited for a connection.
+# TYPE db_pool_wait_count_total counter
+db_pool_wait_count_total 0
+# HELP go_goroutines Number of goroutines.
+# TYPE go_goroutines gauge
+go_goroutines 42
+# HELP process_uptime_seconds Seconds since the process started.
+# TYPE process_uptime_seconds gauge
+process_uptime_seconds 86412.5
+```
+
+## Metric Families
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `http_requests_total` | counter | `method`, `route`, `status` | Requests processed, by gin route template (`/v1/customers/:id`, or `<unmatched>`) and response status. |
+| `http_request_duration_seconds` | histogram | `method`, `route`, `le` | Request latency; eleven buckets from `0.005` to `10` seconds plus `+Inf`, with `_sum` and `_count`. |
+| `recurso_events_total` | counter | `type` | Business events published, by event type (for example `invoice.created`). A flat rate on the first of the month is the alert. |
+| `db_pool_max_open_connections` | gauge | — | Pool ceiling (`MaxOpenConns`). |
+| `db_pool_open_connections` | gauge | — | Open connections, in use plus idle. |
+| `db_pool_in_use_connections` | gauge | — | Connections currently serving a query. |
+| `db_pool_idle_connections` | gauge | — | Idle connections. |
+| `db_pool_wait_count_total` | counter | — | Times a request waited for a connection. Climbing means the pool, not Postgres, is the bottleneck. |
+| `db_pool_wait_duration_seconds_total` | counter | — | Total time spent waiting for a connection. |
+| `db_pool_max_idle_closed_total` | counter | — | Connections closed by `MaxIdleConns`. |
+| `db_pool_max_lifetime_closed_total` | counter | — | Connections closed by `ConnMaxLifetime`. |
+| `go_goroutines` | gauge | — | Live goroutines. |
+| `go_memstats_alloc_bytes` | gauge | — | Heap bytes allocated and in use. |
+| `go_memstats_sys_bytes` | gauge | — | Total bytes obtained from the OS. |
+| `go_gc_cycles_total` | gauge | — | Completed GC cycles. |
+| `process_uptime_seconds` | gauge | — | Seconds since the process started. |
+
+The `http_*` and `recurso_events_total` families only list series that have
+been observed since the process started; the pool and runtime gauges are
+always present.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | — | `METRICS_TOKEN` is set and the `Authorization` header does not equal `Bearer <token>`. The response has an empty body — no error envelope. | Send `Authorization: Bearer $METRICS_TOKEN` with the deployment's token; a tenant API key does not work here. |
+
+This endpoint does not use the error envelope.

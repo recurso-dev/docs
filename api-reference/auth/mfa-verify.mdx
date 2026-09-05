@@ -1,0 +1,71 @@
+---
+title: "Verify MFA"
+openapi: "POST /v1/auth/mfa/verify"
+description: "Confirm a TOTP code against the pending secret, enable MFA, and receive one-time backup codes."
+keywords: ["mfa", "2fa", "totp", "backup codes", "security"]
+---
+
+Validates a TOTP code against the secret issued by
+[Begin MFA Setup](/api-reference/auth/mfa-setup), enables MFA for the
+logged-in user, and returns a fresh set of ten one-time backup codes. The
+backup codes are shown exactly once — only their hashes are stored — so
+display them to the user immediately. Any backup codes from a previous
+enrollment are replaced. After this call, logins complete via
+[Complete an MFA Login](/api-reference/auth/login-mfa).
+
+Requires a logged-in user session; API-key callers receive `401`.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code` | string | Yes | The current 6-digit TOTP code from the authenticator app. |
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/auth/mfa/verify \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "code": "482913"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "mfa_enabled": true,
+  "backup_codes": [
+    "K7Q2M-3XR4T",
+    "P3ZH5-W6NDC",
+    "A5YJ4-L2VB7",
+    "T2RM6-Q3XKF",
+    "G4WN2-H7PZD",
+    "C6BV7-J5TAM",
+    "X2LK6-N4RQW",
+    "M5DF3-Z7HYB",
+    "R5PT4-V2KCJ",
+    "H3NX6-B2QLW"
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mfa_enabled` | boolean | Always `true` on success. |
+| `backup_codes` | array of string | Ten one-time recovery codes, formatted `XXXXX-XXXXX`. Each can be used once in place of a TOTP code; they are not retrievable after this response. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `code` is missing, or it does not match the pending secret (`invalid code`). | Send the current code from the authenticator; check the device clock. |
+| 401 | `unauthorized` | No live session cookie, or the caller authenticated with an API key rather than a user session. | Sign in via [`/auth/login`](/api-reference/auth/login) and send the `recurso_session` cookie. |
+| 409 | `conflict` | MFA is already enabled, or setup has not been started (no pending secret). | Call [Begin MFA Setup](/api-reference/auth/mfa-setup) first; if already enabled, no action is needed. |
+| 500 | `internal_error` | MFA could not be enabled or the backup codes could not be stored. | Retry; contact support if it persists. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

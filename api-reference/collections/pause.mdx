@@ -1,0 +1,62 @@
+---
+title: "Pause Dunning"
+openapi: "POST /v1/collections/invoices/{id}/pause"
+description: "Pause or resume automated dunning on a single invoice."
+keywords: ["collections", "pause dunning", "resume dunning", "retry", "past due"]
+---
+
+Sets the `dunning_paused` flag on an invoice. While paused, automated retries
+and [Retry Now](/api-reference/collections/retry-now) are refused for that
+invoice; send `{"paused": false}` to resume. Nothing else about the invoice
+changes and no ledger legs are posted.
+
+Only an invoice that is still in play — `open`, `past_due` or `uncollectible` —
+can be paused or resumed; a paid or voided invoice returns `404`. The current
+flag is visible as `dunning_paused` on the
+[collections queue](/api-reference/collections/queue).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The invoice's id. |
+
+## Request Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `paused` | boolean | Yes | `true` to pause automated dunning on the invoice, `false` to resume it. |
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/v1/collections/invoices/06c151de-8d3a-4b21-9c77-2f0e5a9b4d12/pause" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"paused": true}'
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "dunning_paused": true
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dunning_paused` | boolean | The flag as now stored — echoes the `paused` value you sent |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID, or the body is not `{"paused": <bool>}` | Use the invoice's UUID and send a JSON body with a boolean `paused` |
+| `404` | `not_found` | Invoice doesn't exist, belongs to another tenant (existence is never confirmed across tenants), or is not `open`, `past_due` or `uncollectible` | Check the ID and status from the [collections queue](/api-reference/collections/queue) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

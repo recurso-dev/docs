@@ -1,0 +1,105 @@
+---
+title: "List Cloud Plans"
+openapi: "GET /v1/billing/plans"
+description: "List the Recurso Cloud plan catalog the calling tenant can be on, mirroring recurso.dev/pricing."
+keywords: ["pricing", "plan tier", "managed cloud", "self-hosted", "enterprise"]
+---
+
+Returns the catalog of plans Recurso itself offers — Self-Hosted, Cloud and
+Enterprise — as shown on recurso.dev/pricing. This is Recurso's own pricing
+for your tenant, not the [plans](/api-reference/plans/list) you sell to your
+customers. The catalog is static data served from the API so the dashboard
+and the marketing site never disagree; prices are display strings, not
+minor-unit amounts, because Cloud is metered as a percentage of tracked
+volume rather than a fixed charge. Pair it with
+[Get Billing Status](/api-reference/billing/get-status) to show which tier
+the tenant is on.
+
+## Parameters
+
+This endpoint takes no parameters.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/billing/plans \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+The catalog is returned under a `plans` key (no `data` envelope).
+
+```json
+{
+  "plans": [
+    {
+      "tier": "self_hosted",
+      "name": "Self-Hosted",
+      "price": "Free",
+      "period": "forever",
+      "free_note": "Unlimited — run it yourself",
+      "features": [
+        "Every feature, no paywalled add-ons",
+        "All gateways + GST/EU/US tax",
+        "Community support",
+        "MIT licensed"
+      ],
+      "cta": "Get started on GitHub",
+      "recommended": false
+    },
+    {
+      "tier": "cloud",
+      "name": "Cloud",
+      "price": "0.4% of volume",
+      "period": "usage-based",
+      "free_note": "Free to $10k tracked revenue / mo",
+      "features": [
+        "Managed hosting + auto-scaling",
+        "Daily backups",
+        "99.9% uptime SLA",
+        "Email support"
+      ],
+      "cta": "Start free",
+      "recommended": true
+    },
+    {
+      "tier": "enterprise",
+      "name": "Enterprise",
+      "price": "Custom",
+      "period": "",
+      "free_note": "Volume pricing + SOC 2",
+      "features": [
+        "Priority support + SLA",
+        "99.99% uptime",
+        "SOC 2",
+        "On-prem option"
+      ],
+      "cta": "Talk to us",
+      "recommended": false
+    }
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `plans[]` | array | One entry per plan, in display order |
+| `plans[].tier` | string | Catalog key: `self_hosted`, `cloud` or `enterprise`. This is a display key only — tenants are not yet assigned to paid tiers, so it does not currently appear as `plan_tier` on [Get Billing Status](/api-reference/billing/get-status), which today is only `trial` or `free` |
+| `plans[].name` | string | Display name |
+| `plans[].price` | string | Display price, e.g. `"Free"`, `"0.4% of volume"`, `"Custom"`. A string, not a minor-unit amount |
+| `plans[].period` | string | Display period qualifier, e.g. `"forever"`, `"usage-based"`; empty when none applies |
+| `plans[].free_note` | string | The free-usage allowance or headline note |
+| `plans[].features[]` | array of string | Feature bullets |
+| `plans[].cta` | string | Call-to-action label |
+| `plans[].recommended` | boolean | Whether the plan is highlighted as the default choice |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -1,0 +1,52 @@
+---
+title: "Start a SAML Login"
+openapi: "GET /auth/saml/{tenantID}/login"
+description: "Begin an SP-initiated SAML login by redirecting the browser to the tenant's identity provider."
+keywords: ["saml", "sso", "login", "authnrequest", "idp"]
+---
+
+Begins an SP-initiated SAML login. When the tenant's SSO connection is enabled,
+the server builds a SAML `AuthnRequest` and `302`-redirects the browser to the
+identity provider's SSO URL. After the user authenticates, the IdP posts the
+assertion to
+[`POST /auth/saml/{tenantID}/acs`](/api-reference/auth/saml-acs), which opens
+the dashboard session.
+
+Navigate a browser to this URL rather than calling it from a server. The SP
+details the IdP needs are published at
+[`GET /auth/saml/{tenantID}/metadata`](/api-reference/auth/saml-metadata).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tenantID` | string (uuid) | Yes | The tenant to log in to. Its SSO connection must exist and be enabled. |
+
+## Example Request
+
+```bash
+curl -i https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/login
+```
+
+## Example Response
+
+There is no response body. A successful call answers `302 Found` with the IdP
+redirect in `Location`:
+
+```http
+HTTP/1.1 302 Found
+Location: https://idp.acme.com/sso/saml?SAMLRequest=rJLNbtswEIRfReBdf9SPIyIS4MYoaiBtjdjtobc1uaoJiKTKXbXJ2xd2UjS5%2BFD0Su5HzszOLYGbZrVe...
+```
+
+`SAMLRequest` is the deflated, base64- and URL-encoded `AuthnRequest`
+(HTTP-Redirect binding). No `RelayState` is sent: Recurso starts the request
+with an empty relay state, and the redirect carries only `SAMLRequest`.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `404` | `not_found` | `tenantID` is not a valid UUID, or the tenant's SSO connection is missing or disabled. | Enable the tenant's SAML connection in the dashboard, then retry. |
+| `500` | `internal_error` | The AuthnRequest could not be built from the stored connection. | Re-check the IdP SSO URL and certificate on the connection; if it persists, contact support. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

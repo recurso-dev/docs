@@ -1,0 +1,134 @@
+---
+title: "Get GSTR-3B Return"
+openapi: "GET /v1/india/gstr3b"
+description: "Assemble the GSTR-3B self-declared summary for a tax period from the same invoices and credit notes as GSTR-1, in readable form and in GSTN upload JSON."
+keywords: ["GSTR-3B", "GST return", "Table 3.1", "Table 3.2", "ITC", "India"]
+---
+
+Builds the GSTR-3B summary return for one calendar month from the same period
+inputs as [GSTR-1](/api-reference/gst/gstr1) — finalized invoices and refund
+credit notes — so the two returns agree by construction. Table 3.1(a)
+outward taxable supplies are reported **net of the period's credit notes**
+(GSTR-3B reports net supplies; GSTR-1 lists notes separately), and Table 3.2
+lists inter-state supplies to unregistered persons per place of supply.
+
+The billing engine holds no purchase-side data, so the inward reverse-charge
+row (3.1d) and the input-tax-credit table are emitted with zeros for schema
+completeness. Zero-rated (3.1b), nil/exempt (3.1c) and non-GST (3.1e) rows are
+also zero — the engine bills taxable supplies only. The taxpayer or their CA
+completes those sections before filing.
+
+As with GSTR-1 the response carries `data` (readable names, **paise**) and
+`gov_schema` (GSTN GSTR-3B JSON, rupees). The seller GSTIN comes from your
+[GST configuration](/api-reference/gst/get-config). See the
+[GST returns guide](/compliance/gst-returns) for the filing workflow.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `month` | integer | Yes | Calendar month of the tax period, `1`–`12` (query) |
+| `year` | integer | Yes | Year of the tax period, `2017`–`2100` (query) |
+| `entity_id` | string (UUID) | No | File for one legal entity's GSTIN (Multi-Entity Books). Omit to include all invoices under the tenant's primary / default GST configuration (query). See [List Entities](/api-reference/entities/list) |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/india/gstr3b?month=6&year=2026" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+The example is the same June 2026 period as the GSTR-1 page: gross outward
+taxable value ₹12,500 less one ₹1,000 credit note gives net ₹11,500 in
+3.1(a).
+
+```json
+{
+  "data": {
+    "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+    "month": 6,
+    "year": 2026,
+    "outward_taxable": {
+      "taxable_value": 1150000,
+      "igst": 45000,
+      "cgst": 81000,
+      "sgst": 81000
+    },
+    "zero_rated": { "taxable_value": 0, "igst": 0, "cgst": 0, "sgst": 0 },
+    "nil_exempt": { "taxable_value": 0, "igst": 0, "cgst": 0, "sgst": 0 },
+    "inward_reverse_charge": { "taxable_value": 0, "igst": 0, "cgst": 0, "sgst": 0 },
+    "non_gst": { "taxable_value": 0, "igst": 0, "cgst": 0, "sgst": 0 },
+    "inter_state_unregistered": [
+      { "place_of_supply": "27", "taxable_value": 250000, "igst": 45000 }
+    ],
+    "invoice_count": 2,
+    "credit_note_count": 1
+  },
+  "gov_schema": {
+    "gstin": "29AABCT1332L1ZM",
+    "ret_period": "062026",
+    "sup_details": {
+      "osup_det": { "txval": 11500, "iamt": 450, "camt": 810, "samt": 810, "csamt": 0 },
+      "osup_zero": { "txval": 0, "iamt": 0, "camt": 0, "samt": 0, "csamt": 0 },
+      "osup_nil_exmp": { "txval": 0, "iamt": 0, "camt": 0, "samt": 0, "csamt": 0 },
+      "isup_rev": { "txval": 0, "iamt": 0, "camt": 0, "samt": 0, "csamt": 0 },
+      "osup_nongst": { "txval": 0, "iamt": 0, "camt": 0, "samt": 0, "csamt": 0 }
+    },
+    "inter_sup": {
+      "unreg_details": [
+        { "pos": "27", "txval": 2500, "iamt": 450 }
+      ],
+      "comp_details": [],
+      "uin_details": []
+    },
+    "itc_elg": {
+      "itc_net": { "iamt": 0, "camt": 0, "samt": 0, "csamt": 0 }
+    }
+  }
+}
+```
+
+## Fields
+
+### `data` — readable return (minor units)
+
+Each Table 3.1 row is a values object with `taxable_value`, `igst`, `cgst`,
+`sgst` in paise.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenant_id` | string (UUID) | Owning tenant |
+| `month` / `year` | integer | The tax period |
+| `outward_taxable` | object | Table 3.1(a): outward taxable supplies, net of the period's credit notes |
+| `zero_rated` | object | Table 3.1(b): zero-rated exports / SEZ. Always zero — not modelled on invoices |
+| `nil_exempt` | object | Table 3.1(c): nil-rated and exempt supplies. Always zero |
+| `inward_reverse_charge` | object | Table 3.1(d): inward supplies liable to reverse charge. Always zero — no purchase data |
+| `non_gst` | object | Table 3.1(e): non-GST outward supplies. Always zero |
+| `inter_state_unregistered[]` | array | Table 3.2: inter-state supplies to unregistered persons, one row per `place_of_supply` with `taxable_value` and `igst`. A subset of 3.1(a) |
+| `invoice_count` | integer | Finalized invoices the summary was built from |
+| `credit_note_count` | integer | Credit notes netted into 3.1(a) |
+
+### `gov_schema` — GSTN GSTR-3B upload JSON (rupees)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gstin` | string | Seller GSTIN from the GST configuration for the requested entity; empty when none is configured |
+| `ret_period` | string | Return period as `MMYYYY` |
+| `sup_details` | object | Table 3.1 rows `osup_det`, `osup_zero`, `osup_nil_exmp`, `isup_rev`, `osup_nongst`, each with `txval`, `iamt`, `camt`, `samt`, `csamt` |
+| `inter_sup` | object | Table 3.2: `unreg_details[]` (`pos`, `txval`, `iamt`); `comp_details[]` and `uin_details[]` are always empty arrays — the engine bills regular customers only |
+| `itc_elg` | object | Table 4: `itc_net` with `iamt`, `camt`, `samt`, `csamt`, all `0` — ITC is completed by the filer |
+
+Cess (`csamt`) is not modelled and is always `0`.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `month` is missing or outside `1`–`12`, `year` is missing or outside `2017`–`2100`, or `entity_id` is not a valid UUID | Pass both period parameters as integers and a valid entity UUID |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Building the summary from the period's invoices failed | Retry; contact support if it persists |
+| `503` | `internal_error` | GSTR-3B export is not configured on this deployment | Enable the GSTR service on the API |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

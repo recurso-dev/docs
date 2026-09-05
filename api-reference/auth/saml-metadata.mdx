@@ -1,0 +1,81 @@
+---
+title: "Get SAML SP Metadata"
+openapi: "GET /auth/saml/{tenantID}/metadata"
+description: "Return the Service Provider metadata XML for a tenant's SAML SSO connection."
+keywords: ["saml", "sso", "metadata", "service provider", "idp"]
+---
+
+Returns the Service Provider (SP) metadata document for a tenant, as
+`application/samlmetadata+xml`. Hand this document to the tenant's identity
+provider when configuring the connection: it carries the SP entity id, the
+Assertion Consumer Service URLs
+([`POST /auth/saml/{tenantID}/acs`](/api-reference/auth/saml-acs)), the SP
+certificate (published for `encryption` use), and the SP's requirements:
+`WantAssertionsSigned="true"` and `AuthnRequestsSigned="false"` — Recurso does
+not sign its AuthnRequests, so the document carries no signing key.
+
+The endpoint is public and unauthenticated so an IdP can fetch it directly,
+but it only answers for tenants that have an SSO connection row. The row does
+not need to be enabled or fully configured yet — you can hand the metadata to
+the IdP before the IdP details are stored — but users cannot start an
+SP-initiated login with
+[`GET /auth/saml/{tenantID}/login`](/api-reference/auth/saml-login) until the
+connection is both configured and enabled.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tenantID` | string (uuid) | Yes | The tenant whose SP metadata to return. |
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/metadata
+```
+
+## Example Response
+
+The body is XML, not JSON:
+
+```xml
+<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
+  validUntil="2026-09-06T10:15:00Z"
+  entityID="https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/metadata">
+  <SPSSODescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
+    validUntil="2026-09-06T10:15:00Z"
+    protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"
+    AuthnRequestsSigned="false" WantAssertionsSigned="true">
+    <KeyDescriptor use="encryption">
+      <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <X509Data xmlns="http://www.w3.org/2000/09/xmldsig#">
+          <X509Certificate xmlns="http://www.w3.org/2000/09/xmldsig#">MIIC5TCCAc2gAwIBAgIQ...</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+      <EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"></EncryptionMethod>
+      <EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes192-cbc"></EncryptionMethod>
+      <EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes256-cbc"></EncryptionMethod>
+      <EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"></EncryptionMethod>
+    </KeyDescriptor>
+    <NameIDFormat></NameIDFormat>
+    <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/acs" index="1"></AssertionConsumerService>
+    <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://api.recurso.dev/auth/saml/d4c3b2a1-0f9e-4765-8321-abcdef012345/acs" index="2"></AssertionConsumerService>
+  </SPSSODescriptor>
+</EntityDescriptor>
+```
+
+The `validUntil` attributes are set 48 hours from the time of the request, so
+an IdP that caches metadata should re-fetch it periodically. The
+`NameIDFormat` element is present but empty — the SP does not require a
+particular NameID format; it reads the user's email from the assertion. Only
+the HTTP-POST ACS (index 1) is used by Recurso's login flow; the HTTP-Artifact
+entry is emitted by the SAML library and is not backed by an artifact
+resolution step.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `404` | `not_found` | `tenantID` is not a valid UUID, or the tenant has no SSO connection row at all. | Create the tenant's SAML connection in the dashboard first (it does not need to be enabled yet), then fetch the metadata. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

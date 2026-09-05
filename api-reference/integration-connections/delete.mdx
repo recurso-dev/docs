@@ -1,0 +1,47 @@
+---
+title: "Disconnect an Integration"
+openapi: "DELETE /v1/integration-connections/{category}/{provider}"
+description: "Soft-disconnect the workspace's active tax, CRM, or storage integration; the provider falls back to platform defaults."
+keywords: ["disconnect integration", "remove credentials", "taxjar", "hubspot", "s3"]
+---
+
+Deactivates the workspace's active connection for a `(category, provider)`.
+The record is kept (soft-disconnect) but its credentials stop being used —
+the feature that relied on it falls back to the platform's own configuration,
+if any. Owner/admin only. To rotate credentials instead, call
+[Connect an Integration](/api-reference/integration-connections/create) again;
+it replaces the active connection in place.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `category` | string (path) | Yes | `tax`, `crm`, or `storage` |
+| `provider` | string (path) | Yes | The provider within that category — `taxjar`, `avalara`, `ziptax`, `hubspot`, or `s3` |
+
+## Example Request
+
+```bash
+curl -X DELETE "https://api.recurso.dev/v1/integration-connections/crm/hubspot" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+The response is a bare status object, not a `{data}` envelope.
+
+```json
+{
+  "status": "disconnected"
+}
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `(category, provider)` in the path is not a supported pair | Use a pair shown by [List Integration Connections](/api-reference/integration-connections/list) |
+| `403` | `forbidden` | The session user is not an owner or admin | Ask an owner/admin to disconnect |
+| `404` | `not_found` | No active connection exists for that pair | Nothing to disconnect — check [List Integration Connections](/api-reference/integration-connections/list) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

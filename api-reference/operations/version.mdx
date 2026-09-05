@@ -1,0 +1,49 @@
+---
+title: "Get Version"
+openapi: "GET /version"
+description: "Return the running build version and whether the configured payment gateways use test or live keys."
+keywords: ["version", "build", "revision", "gateway mode", "test mode", "live mode"]
+---
+
+Returns the build identifier of the running API and the gateway mode it was
+booted with. No authentication is required, and it touches no dependencies,
+so it is also the cheapest request for a smoke test or a load-test baseline.
+Use it to confirm which build a deploy landed and to check whether an
+instance is in test or live mode before you create real charges (see
+[Testing](/testing)). For dependency health, use
+[Get Health](/api-reference/operations/health).
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/version
+```
+
+## Response
+
+Returned bare — no `data` envelope.
+
+```json
+{
+  "version": "v0.14.0",
+  "gateway_mode": "live"
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | string | The build version stamped at compile time (for example `v0.14.0`). Unstamped builds report the Cloud Run revision name when one is available, otherwise `dev`. |
+| `gateway_mode` | string | `test` when any configured gateway key is a test key (`sk_test…` / `rzp_test…`), `live` when all configured keys are live, `none` when no real gateway is configured and the mock gateway is in use. |
+
+<Note>
+`gateway_mode` is what the dashboard's "Test mode" chip reads. It also
+decides which API keys the instance accepts: live keys require a `live`
+server, test keys require a non-live one — a mismatch is rejected with
+`key_mode_mismatch` on every authenticated route.
+</Note>
+
+## Errors
+
+This endpoint has no failure modes of its own and always returns `200`.

@@ -1,0 +1,73 @@
+---
+title: "Get OpenAPI YAML"
+openapi: "GET /openapi.yaml"
+description: "Download the OpenAPI 3.1 specification for this API, as authored, in YAML."
+keywords: ["openapi", "specification", "swagger", "yaml", "codegen", "sdk"]
+---
+
+Serves the OpenAPI 3.1 document that describes every route on this
+instance, exactly as authored. The spec is embedded into the binary at build
+time, so what you download always matches the code that is running — it is
+the same file this reference is generated from and the source the SDKs are
+kept in sync with. No authentication is required. For the same document as
+JSON, use [Get OpenAPI JSON](/api-reference/operations/openapi-json); to
+confirm which build you are reading, pair it with
+[Get Version](/api-reference/operations/version).
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/openapi.yaml -o recurso-openapi.yaml
+```
+
+## Response
+
+`Content-Type: application/yaml`. The body is the specification document
+itself, byte-for-byte as authored, not a JSON envelope. The excerpt below
+is abridged — `# …` comments mark where the real document continues — but
+every line shown is verbatim.
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Recurso API
+  version: 1.0.0
+  # … description and license
+servers:
+  - url: https://billing.example.com
+    description: Example deployment — substitute the base URL of your own Recurso deployment.
+
+security:
+  - bearerAuth: []
+
+# … tags
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [System]
+      summary: Health check
+      description: Reports overall service health plus per-component status (Postgres, Redis, TigerBeetle).
+      security: []
+      responses:
+        '200':
+          description: Service is healthy (or degraded but serving).
+          # … content, and the '503' response
+  # … every other path
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+      description: Tenant API key obtained from `POST /auth/register` or `POST /v1/developer/keys`.
+    # … portalSession and sessionCookie
+  # … parameters, responses and schemas
+```
+
+## Errors
+
+This endpoint has no failure modes of its own and always returns `200`. A
+build whose embedded spec fails to parse does not start, so a running
+instance always has a valid document to serve.
