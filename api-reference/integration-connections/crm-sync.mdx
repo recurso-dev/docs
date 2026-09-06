@@ -53,7 +53,7 @@ curl -X POST "https://api.recurso.dev/v1/crm/sync" \
 |--------|------|------|-----|
 | `400` | `validation_failed` | No CRM is connected for this workspace | Connect HubSpot with [Connect an Integration](/api-reference/integration-connections/create) first |
 | `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
-| `424` | `internal_error` | No contact could be upserted and the provider returned an error, or the property bootstrap failed; the message carries the provider's error (`CRM sync failed: ...`) | Fix the token or scopes in HubSpot and reconnect |
+| `424` | `internal_error` | No contact could be upserted: the provider rejected them, the property bootstrap failed, or the customer list could not be read; the message carries the underlying error (`CRM sync failed: ...`) | Fix the token or scopes in HubSpot and reconnect |
 | `503` | `internal_error` | CRM sync is not enabled on this server (the CRM worker is not running) | Self-hosted: enable the CRM sync worker |
 
 Errors use the standard envelope — see [Errors](/api-reference/errors).

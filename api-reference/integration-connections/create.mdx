@@ -97,6 +97,7 @@ same provider.
 | `400` | `validation_failed` | An `endpoint`/`api_url`/`base_url` is not an `http(s)` URL; on the hosted deployment also when it is not `https`, does not resolve, or resolves to a private or reserved address | Use the provider's public HTTPS endpoint |
 | `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
 | `403` | `forbidden` | The session user is not an owner or admin | Integration credentials are workspace config — ask an owner/admin |
+| `500` | `internal_error` | Persisting or sealing the connection failed | Retry; contact support if it persists |
 | `503` | `internal_error` | Credential vault unavailable (`GATEWAY_ENCRYPTION_KEY` not configured on the API) | Self-hosted: set `GATEWAY_ENCRYPTION_KEY` and restart |
 
 Errors use the standard envelope — see [Errors](/api-reference/errors).

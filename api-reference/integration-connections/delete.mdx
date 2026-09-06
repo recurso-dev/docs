@@ -45,5 +45,6 @@ The response is a bare status object, not a `{data}` envelope.
 | `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
 | `403` | `forbidden` | The session user is not an owner or admin | Ask an owner/admin to disconnect |
 | `404` | `not_found` | No active connection exists for that pair | Nothing to disconnect — check [List Integration Connections](/api-reference/integration-connections/list) |
+| `500` | `internal_error` | Deactivating the connection failed | Retry; contact support if it persists |
 
 Errors use the standard envelope — see [Errors](/api-reference/errors).
