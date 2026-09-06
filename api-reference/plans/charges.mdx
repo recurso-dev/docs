@@ -1,0 +1,132 @@
+---
+title: "List Plan Charges"
+openapi: "GET /v1/plans/{id}/charges"
+description: "List the usage charges attached to a plan, with each charge's billable metric joined in."
+keywords: ["metering", "usage charges", "charge model", "billable metric"]
+---
+
+Returns every usage charge configured on a plan — one per billable metric —
+with the metric embedded so a consumer can render pricing without a second
+lookup. Charges are the usage-priced half of a plan; flat recurring prices
+stay on the plan itself (see [Get a Plan](/api-reference/plans/get)). To
+replace the set use [Set Plan Charges](/api-reference/billing/set-charges);
+to preview what a charge set would bill against sample usage use
+[Simulate Charges](/api-reference/billing/simulate-charges).
+
+Usage is billed in arrears at period close unless a charge sets
+`pay_in_advance`, in which case each event is rated at ingestion and
+captured as an unbilled charge for the next invoice.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Plan ID (path). Must belong to your tenant |
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/plans/3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14/charges \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+An empty plan returns `{"data": []}`.
+
+```json
+{
+  "data": [
+    {
+      "id": "b4c8d1e2-6f3a-4b9c-8d7e-1a2f3c4d5e60",
+      "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+      "plan_id": "3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14",
+      "metric_id": "7d2e9f10-3c4b-4a5d-9e8f-0b1c2d3e4f51",
+      "charge_model": "graduated",
+      "amounts": {
+        "INR": {
+          "tiers": [
+            { "up_to": 100000, "unit_amount": "0.0050" },
+            { "up_to": null, "unit_amount": "0.0035" }
+          ]
+        }
+      },
+      "created_at": "2026-05-12T10:30:00Z",
+      "updated_at": "2026-05-12T10:30:00Z",
+      "metric": {
+        "id": "7d2e9f10-3c4b-4a5d-9e8f-0b1c2d3e4f51",
+        "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+        "name": "API calls",
+        "code": "api_calls",
+        "aggregation_type": "sum",
+        "created_at": "2026-05-01T08:00:00Z",
+        "updated_at": "2026-05-01T08:00:00Z"
+      }
+    },
+    {
+      "id": "c5d9e2f3-7a4b-4c0d-9e8f-2b3a4c5d6e71",
+      "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+      "plan_id": "3e7a9c52-1b4d-4f8e-a6c3-2d5b8e9f0a14",
+      "metric_id": "8e3fa021-4d5c-4b6e-8f9a-1c2d3e4f5a62",
+      "charge_model": "per_unit",
+      "amounts": {
+        "INR": { "unit_amount": "0.2500" }
+      },
+      "pay_in_advance": true,
+      "hsn_code": "998314",
+      "created_at": "2026-05-12T10:30:00Z",
+      "updated_at": "2026-06-02T14:05:00Z",
+      "metric": {
+        "id": "8e3fa021-4d5c-4b6e-8f9a-1c2d3e4f5a62",
+        "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+        "name": "Outbound emails",
+        "code": "emails_sent",
+        "aggregation_type": "count",
+        "created_at": "2026-05-01T08:05:00Z",
+        "updated_at": "2026-05-01T08:05:00Z"
+      }
+    }
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (UUID) | Charge ID |
+| `tenant_id` | string (UUID) | Owning tenant |
+| `plan_id` | string (UUID) | The plan the charge is attached to |
+| `metric_id` | string (UUID) | The billable metric this charge prices |
+| `charge_model` | string | `per_unit`, `graduated`, `volume`, `package`, `percentage`, `graduated_percentage`, or `dynamic` |
+| `amounts` | object | Pricing keyed by ISO currency code; the invoice currency selects the entry at rating time. Which keys are present depends on `charge_model` (see below) |
+| `filter_key` | string | Event property this charge prices dimensionally; omitted when unfiltered |
+| `filters[]` | array | One `{value, amounts}` band per priced property value; events matching none use `amounts` |
+| `pay_in_advance` | boolean | Rate per event at ingestion instead of at period close; omitted when `false`. Only `per_unit`, `percentage` and `dynamic` charges may set it |
+| `hsn_code` | string | HSN/SAC code for the charge's invoice lines; omitted when it falls back to the plan's code, then the tenant's |
+| `created_at` / `updated_at` | string (RFC 3339) | Timestamps |
+| `metric` | object | The joined billable metric: `id`, `tenant_id`, `name`, `code` (equals the event `dimension` it aggregates), `aggregation_type`, optional `field_name` / `expression`, timestamps |
+
+### `amounts` by charge model
+
+| Key | Type | Used by | Description |
+|-----|------|---------|-------------|
+| `unit_amount` | string | `per_unit` | Per-unit rate as a decimal string in **major** currency units (e.g. `"0.0035"`), so sub-minor-unit rates are exact |
+| `package_amount` | integer | `package` | Price per bundle, minor units |
+| `package_size` | integer | `package` | Units per bundle; partial bundles round up |
+| `tiers[]` | array | `graduated`, `volume`, `graduated_percentage` | Price bands: `up_to` (inclusive upper bound, `null` = unbounded last tier), `unit_amount` (decimal string, major units), `rate` (percent string, `graduated_percentage` only), `flat_amount` (minor units, added once when any unit lands in the tier) |
+| `rate` | string | `percentage` | Percent applied to the monetary base, decimal string (e.g. `"2.5"`) |
+| `fixed_amount` | integer | `percentage` | Flat fee in minor units added after the percentage |
+| `free_units` | integer | `percentage` | Base units exempt from the percentage, deducted first |
+| `min_amount` / `max_amount` | integer | `percentage` | Floor / cap on the line in minor units; `0` = none |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a valid UUID | Pass the plan's UUID |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | No plan with that ID in your tenant | Check the ID against [List Plans](/api-reference/plans/list) |
+| `500` | `internal_error` | Loading the charges failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

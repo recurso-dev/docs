@@ -1,0 +1,44 @@
+---
+title: "Remove Subscription Add-on"
+openapi: "DELETE /v1/subscriptions/{id}/addons/{addonId}"
+description: "Detach an add-on from a subscription; the change takes effect from the next recurring invoice."
+keywords: ["remove add-on", "detach addon", "subscription add-on"]
+---
+
+Detaches an add-on from a subscription. The add-on stops appearing as a line
+from the **next** recurring invoice; invoices already issued are untouched and
+no credit is posted for the current period. Find the `addonId` with
+[List Subscription Add-ons](/api-reference/subscriptions/addons-list); attach
+one again with
+[Add Subscription Add-on](/api-reference/subscriptions/addons-add).
+
+The add-on must belong to the subscription in the path — a valid add-on ID from
+another subscription returns `404`.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The subscription ID. |
+| `addonId` | string (uuid) | Yes | The add-on ID (the `id` field of the add-on object). |
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/subscriptions/b9071c55-0e14-4720-80f3-665613ceb7de/addons/d3a7f1c2-5b8e-4c90-a6d1-2e3f4a5b6c7d \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+Returns `204 No Content` with an empty body.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` or `addonId` is not a valid UUID. | Pass the subscription's UUID and the add-on's UUID. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 404 | `not_found` | The subscription does not exist in your tenant, or the add-on does not exist or is attached to a different subscription. | List the subscription's add-ons with `GET /v1/subscriptions/{id}/addons` and use one of the returned `id` values. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

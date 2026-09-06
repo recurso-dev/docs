@@ -1,0 +1,62 @@
+---
+title: "Retry Invoice Now"
+openapi: "POST /v1/collections/invoices/{id}/retry-now"
+description: "Requeue a past-due invoice for an immediate smart-retry attempt, subject to the same safety checks the automated engine applies."
+keywords: ["collections", "retry now", "past due", "smart retry", "dunning"]
+---
+
+Requeues a past-due invoice so the retry worker picks it up on its next pass
+instead of waiting for `next_retry_at`. The worker then runs the normal settle
+path — this endpoint charges nothing itself and posts no ledger legs.
+
+The request is refused with a `409` unless the invoice is tenant-owned,
+`past_due`, not paused, not collected by a mandate, and has no payment attempt
+still in flight — the same envelope the automated engine honors, so a manual
+retry can never stack a second charge on a settling one. Find candidates on the
+[collections queue](/api-reference/collections/queue); if the invoice is
+paused, resume it with [Pause Dunning](/api-reference/collections/pause) first.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The invoice's id. |
+
+No request body.
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/v1/collections/invoices/06c151de-8d3a-4b21-9c77-2f0e5a9b4d12/retry-now" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "status": "requeued"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always `requeued`. The invoice's `next_retry_at` is now and its `managed_by` is `worker`. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID | Use the invoice's UUID |
+| `404` | `not_found` | Invoice doesn't exist, or belongs to another tenant (existence is never confirmed across tenants) | Check the ID from the [collections queue](/api-reference/collections/queue) |
+| `409` | `conflict` | The invoice is not `past_due`; dunning is paused on it; it is collected by a mandate auto-debit; or a payment attempt is already in flight. The message names which. | Resolve the stated condition — resume dunning, or wait for the in-flight attempt to settle or fail |
+
+The `409` is also returned when the invoice's state changed between the check
+and the requeue (for example it settled a moment earlier) — the response is
+never a false success.
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -1,0 +1,61 @@
+---
+title: "Update Coupon"
+openapi: "PUT /v1/coupons/{id}"
+description: "Deactivate or reactivate a coupon's redemption gate."
+keywords: ["coupon", "deactivate", "discount"]
+---
+
+Flips whether a coupon can still be redeemed. `active: false` stops new
+subscriptions from applying the code; subscriptions that already carry the
+discount keep it — nothing already booked changes. `active: true` restores
+redeemability. The coupon's code, discount and duration are immutable after
+[creation](/api-reference/coupons/create); read the current state with
+[Get Coupon](/api-reference/coupons/get).
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Coupon ID (path) |
+
+## Request Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `active` | boolean | Yes | `false` to deactivate, `true` to reactivate |
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/coupons/6f3c2a91-4b7e-4d0a-9c1e-8a2f5b7d3e10 \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "active": false
+  }'
+```
+
+## Response
+
+The response is an action shape, not the coupon object:
+
+```json
+{
+  "status": "deactivated"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `deactivated` when `active` was `false`, `activated` when it was `true` |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a valid UUID, or the body is malformed / missing the required `active` field | Pass the coupon's UUID and a body with a boolean `active` |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | No coupon with that ID in your tenant | Check the ID against [List Coupons](/api-reference/coupons/list) |
+| `500` | `internal_error` | Persisting the change failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

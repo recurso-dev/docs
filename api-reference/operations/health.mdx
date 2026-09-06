@@ -1,0 +1,84 @@
+---
+title: "Get Health"
+openapi: "GET /health"
+description: "Report overall service health plus per-component status for Postgres, Redis and TigerBeetle."
+keywords: ["health check", "liveness", "readiness", "uptime", "degraded", "postgres", "redis", "tigerbeetle"]
+---
+
+The liveness and readiness probe for a Recurso instance. It pings Postgres,
+pings Redis when the process connected to one at boot, and reports the
+boot-time TigerBeetle connection state, then rolls the two pings up into a
+single `status`. No
+authentication is required, and the response never includes the underlying
+error — component failures are logged server-side only, so a public probe
+cannot leak connection details. Point your uptime monitor at this endpoint
+(see [Monitoring and Alerting](/going-to-production#7-monitoring-and-alerting-checklist)).
+For the build identifier alone, use [Get Version](/api-reference/operations/version);
+for scrape-style telemetry, use [Get Prometheus Metrics](/api-reference/operations/metrics).
+
+<Note>
+The HTTP status follows the system of record. Postgres down returns `503`
+with `status: "degraded"`. Redis down (locking and rate-limit degrade, money
+paths still work) returns `200` with `status: "degraded"`. A disconnected
+TigerBeetle (the Postgres ledger is authoritative; TigerBeetle is an
+optional accelerator) does not touch `status` at all — with Postgres and
+Redis up you get `200` and `status: "ok"` alongside
+`components.tigerbeetle.status: "disconnected"`. Read `components` for the
+detail.
+</Note>
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/health
+```
+
+## Response
+
+Returned bare — no `data` envelope.
+
+```json
+{
+  "status": "ok",
+  "version": "v0.14.0",
+  "components": {
+    "postgres": { "status": "up" },
+    "redis": { "status": "up" },
+    "tigerbeetle": { "status": "connected" }
+  }
+}
+```
+
+When Postgres is unreachable the same shape comes back with HTTP `503`:
+
+```json
+{
+  "status": "degraded",
+  "version": "v0.14.0",
+  "components": {
+    "postgres": { "status": "down" },
+    "redis": { "status": "up" },
+    "tigerbeetle": { "status": "disconnected" }
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `ok` unless the Postgres or Redis ping fails, in which case `degraded`. TigerBeetle never affects this value — a disconnected TigerBeetle is reported only under `components`. |
+| `version` | string | The running build version — the same value [Get Version](/api-reference/operations/version) returns. |
+| `components` | object | Per-component status, keyed by component name. |
+| `components.postgres.status` | string | `up` or `down`. Down is critical: the response is `503`. |
+| `components.redis.status` | string | `up` or `down`. Present only when Redis was connected at boot — `REDIS_URL` parsed and the boot-time ping succeeded. If `REDIS_URL` is set but unusable and `REQUIRE_REDIS` is not, the process falls back to in-memory and this key is absent. Down is degraded but serving. |
+| `components.tigerbeetle.status` | string | `connected` or `disconnected` — the boot-time client state. Disconnected means PG-only ledger mode. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `503` | — | Postgres ping failed. The body is the health payload above with `status: "degraded"`, not an error envelope. | Check the database and `DATABASE_URL`; the process keeps serving so the probe can report recovery. |
+
+This endpoint does not use the error envelope — every response, including
+`503`, is the health payload above.

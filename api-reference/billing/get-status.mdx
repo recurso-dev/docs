@@ -1,0 +1,62 @@
+---
+title: "Get Billing Status"
+openapi: "GET /v1/billing/status"
+description: "Read the calling tenant's Recurso Cloud billing lifecycle: status, plan tier and trial window."
+keywords: ["trial", "plan tier", "managed cloud", "billing status", "account"]
+---
+
+Returns where the calling tenant stands with Recurso Cloud itself — not your
+customers' billing, but your own account with Recurso: whether you are
+trialing, active, past due or canceled, which plan tier you are on, when the
+trial ends and how many whole days remain. The dashboard uses it to show the
+trial banner. It is read-only; there is no self-serve upgrade endpoint yet.
+For the tenant record itself see [Get Account](/api-reference/account/get);
+for the plans you can move to see
+[List Cloud Plans](/api-reference/billing/list-plans).
+
+Self-hosted deployments still answer, with whatever `billing_status` and
+`plan_tier` the tenant row carries.
+
+## Parameters
+
+This endpoint takes no parameters.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/billing/status \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+The object is returned bare (no `data` envelope).
+
+```json
+{
+  "billing_status": "trialing",
+  "plan_tier": "trial",
+  "trial_ends_at": "2026-09-18T00:00:00Z",
+  "trial_days_left": 14,
+  "trial_expired": false
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `billing_status` | string | `trialing`, `active`, `past_due` or `canceled` |
+| `plan_tier` | string | `trial` (set at sign-up) or `free` (the column default). Paid tiers are not yet assigned to tenants; the `cloud` / `enterprise` keys from [List Cloud Plans](/api-reference/billing/list-plans) are catalog entries, not values this field takes today |
+| `trial_ends_at` | string (RFC 3339) | End of the trial window. Omitted when the tenant is not on a trial |
+| `trial_days_left` | integer | Whole days until `trial_ends_at`, rounding a partial day up. `0` when there is no trial or it has ended |
+| `trial_expired` | boolean | `true` only when `billing_status` is `trialing` and `trial_ends_at` is in the past |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Loading the tenant account failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -1,0 +1,105 @@
+---
+title: "Get Collections Queue"
+openapi: "GET /v1/collections/queue"
+description: "The operator's worklist of currently-failing invoices — past due or written off with a balance owing — each with its amount remaining, days overdue, retry state, last failure code and owning recovery engine."
+keywords: ["collections", "past due", "uncollectible", "dunning queue", "failed payments", "recovery"]
+---
+
+Returns the tenant's collections worklist: every invoice in a recovery state
+(`past_due`, or `uncollectible` with a balance still owing), paginated, with the
+customer, the amount remaining in minor units, days overdue, the retry count,
+the raw failure code from the last attempt, the next scheduled retry, which
+recovery engine owns the invoice, and the status of its latest payment attempt.
+Read-only — it changes nothing.
+
+Each row is the starting point for the operator actions on this resource:
+[Retry Now](/api-reference/collections/retry-now),
+[Pause Dunning](/api-reference/collections/pause) and
+[Mark Uncollectible](/api-reference/collections/mark-uncollectible). For the
+aggregate view of the same population see
+[Get Collections Funnel](/api-reference/analytics/collections-funnel) and
+[Get Collections Failures](/api-reference/analytics/collections-failures); for
+the per-attempt history behind `last_payment_error` see
+[List Payment Attempts](/api-reference/payment-attempts/list).
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | string | No | Narrow to one recovery status: `past_due` or `uncollectible`. Any other value is ignored and the full worklist is returned. |
+| `managed_by` | string | No | Narrow to invoices owned by one recovery engine: `scheduler`, `worker` or `campaign`. Any other value is ignored. |
+| `page` | integer | No | Page number, from `1`. Default `1`. |
+| `per_page` | integer | No | Rows per page. Default `50`, capped at `250`. |
+| `limit` | integer | No | Alias for `per_page` (same default and cap). |
+| `offset` | integer | No | Rows to skip. Overrides the offset derived from `page`. |
+
+## Example Request
+
+```bash
+curl -G https://api.recurso.dev/v1/collections/queue \
+  -H "Authorization: Bearer $API_KEY" \
+  -d status=past_due \
+  -d per_page=25
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+      "customer_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+      "customer_name": "Northwind Traders",
+      "customer_email": "ap@northwind.example",
+      "invoice_number": "REC/2026/0042",
+      "status": "past_due",
+      "currency": "USD",
+      "amount_remaining": 118000,
+      "due_date": "2026-08-20T00:00:00Z",
+      "days_overdue": 15,
+      "retry_count": 3,
+      "last_payment_error": "insufficient_funds",
+      "next_retry_at": "2026-09-05T09:00:00Z",
+      "managed_by": "worker",
+      "attempt_status": "failed",
+      "dunning_paused": false
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 25,
+    "total": 1
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The invoice's id — fetch it with [Get Invoice](/api-reference/invoices/get) |
+| `customer_id` | string (uuid) | The customer the invoice bills |
+| `customer_name` / `customer_email` | string | The customer's name and email, so the row reads without a second lookup |
+| `invoice_number` | string | The invoice's human-readable number |
+| `status` | string | `past_due` (still being chased) or `uncollectible` (written off, balance still owing) |
+| `currency` | string | The invoice's currency |
+| `amount_remaining` | integer (int64) | Total minus amount paid, in minor units |
+| `due_date` | string (date-time) | When the invoice fell due |
+| `days_overdue` | integer | Whole days since `due_date` |
+| `retry_count` | integer | Automated retries attempted so far |
+| `last_payment_error` | string | Raw gateway or ACH failure code from the last attempt; empty when none |
+| `next_retry_at` | string (date-time) | When the next automated retry is scheduled; omitted when nothing is scheduled |
+| `managed_by` | string | The engine that owns recovery for this invoice: `scheduler`, `worker` or `campaign` |
+| `attempt_status` | string | Status of the latest payment attempt (`initiated`, `processing`, `succeeded`, `failed` or `returned`); omitted when the invoice has no attempts |
+| `dunning_paused` | boolean | `true` when an operator has paused automated dunning on the invoice |
+
+`meta.total` is the count of rows matching the filters across all pages.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `401` | `unauthorized` | Missing or invalid API key | Send a valid key in the `Authorization` header |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

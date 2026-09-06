@@ -1,0 +1,221 @@
+---
+title: "Get GSTR-1 Return"
+openapi: "GET /v1/india/gstr1"
+description: "Assemble the GSTR-1 outward-supply return for a tax period from finalized invoices and credit notes, in readable form and in GSTN upload JSON."
+keywords: ["GSTR-1", "GST return", "B2B", "B2CS", "CDNR", "HSN summary", "India"]
+---
+
+Builds the GSTR-1 return for one calendar month from the tenant's finalized
+invoices and refund credit notes: B2B supplies to registered buyers
+invoice-by-invoice, B2CS supplies to unregistered buyers summarised rate-wise
+per place of supply, CDNR credit notes issued to registered buyers, an HSN
+rollup, and control totals. Nothing is recomputed — every figure is the value
+already on the invoice or credit note, so the return reconciles to what was
+billed and to the ledger.
+
+The response carries the same return twice: `data` in readable field names
+with amounts in **minor units (paise)**, and `gov_schema` in the GSTN GSTR-1
+JSON shape (official field names, amounts in rupees) ready to validate against
+the Returns Offline Tool before filing. The seller GSTIN in `gov_schema` comes
+from your [GST configuration](/api-reference/gst/get-config). For the
+companion summary return see [Get GSTR-3B Return](/api-reference/gst/gstr3b);
+for the filing workflow see the [GST returns guide](/compliance/gst-returns).
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `month` | integer | Yes | Calendar month of the tax period, `1`–`12` (query) |
+| `year` | integer | Yes | Year of the tax period, `2017`–`2100` (query) |
+| `entity_id` | string (UUID) | No | File for one legal entity's GSTIN (Multi-Entity Books). Omit to include all invoices under the tenant's primary / default GST configuration (query). See [List Entities](/api-reference/entities/list) |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/india/gstr1?month=6&year=2026" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+`data` holds the readable sections in paise; `gov_schema` holds the same
+period in rupees. A period with no finalized invoices returns empty sections
+and zero totals. In the example the seller is registered in Karnataka (`29`):
+the B2B buyer's place of supply is also `29`, so its invoice splits into
+CGST/SGST, while the B2CS supply to Maharashtra (`27`) attracts IGST.
+
+```json
+{
+  "data": {
+    "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+    "month": 6,
+    "year": 2026,
+    "b2b": [
+      {
+        "gstin": "29AAACR5055K1Z5",
+        "invoices": [
+          {
+            "invoice_number": "INV-2026-000412",
+            "date": "2026-06-05T00:00:00Z",
+            "place_of_supply": "29",
+            "taxable_value": 1000000,
+            "igst": 0,
+            "cgst": 90000,
+            "sgst": 90000,
+            "rate": 18
+          }
+        ]
+      }
+    ],
+    "b2cs": [
+      {
+        "place_of_supply": "27",
+        "rate": 18,
+        "taxable_value": 250000,
+        "igst": 45000,
+        "cgst": 0,
+        "sgst": 0
+      }
+    ],
+    "cdnr": [
+      {
+        "gstin": "29AAACR5055K1Z5",
+        "notes": [
+          {
+            "note_number": "CN-2026-000031",
+            "date": "2026-06-18T00:00:00Z",
+            "original_invoice_number": "INV-2026-000412",
+            "place_of_supply": "29",
+            "taxable_value": 100000,
+            "igst": 0,
+            "cgst": 9000,
+            "sgst": 9000,
+            "rate": 18
+          }
+        ]
+      }
+    ],
+    "hsn_summary": [
+      {
+        "hsn_code": "998314",
+        "taxable_value": 1250000,
+        "igst": 45000,
+        "cgst": 90000,
+        "sgst": 90000,
+        "invoice_count": 2
+      }
+    ],
+    "total_taxable_value": 1250000,
+    "total_igst": 45000,
+    "total_cgst": 90000,
+    "total_sgst": 90000,
+    "invoice_count": 2,
+    "total_credit_taxable_value": 100000,
+    "total_credit_igst": 0,
+    "total_credit_cgst": 9000,
+    "total_credit_sgst": 9000,
+    "credit_note_count": 1
+  },
+  "gov_schema": {
+    "gstin": "29AABCT1332L1ZM",
+    "fp": "062026",
+    "b2b": [
+      {
+        "ctin": "29AAACR5055K1Z5",
+        "inv": [
+          {
+            "inum": "INV-2026-000412",
+            "idt": "05-06-2026",
+            "val": 11800,
+            "pos": "29",
+            "rchrg": "N",
+            "inv_typ": "R",
+            "itms": [
+              {
+                "num": 1,
+                "itm_det": { "rt": 18, "txval": 10000, "iamt": 0, "camt": 900, "samt": 900, "csamt": 0 }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "b2cs": [
+      { "sply_ty": "INTER", "pos": "27", "typ": "OE", "rt": 18, "txval": 2500, "iamt": 450, "camt": 0, "samt": 0, "csamt": 0 }
+    ],
+    "cdnr": [
+      {
+        "ctin": "29AAACR5055K1Z5",
+        "nt": [
+          {
+            "ntty": "C",
+            "nt_num": "CN-2026-000031",
+            "nt_dt": "18-06-2026",
+            "val": 1180,
+            "pos": "29",
+            "rchrg": "N",
+            "inv_typ": "R",
+            "itms": [
+              {
+                "num": 1,
+                "itm_det": { "rt": 18, "txval": 1000, "iamt": 0, "camt": 90, "samt": 90, "csamt": 0 }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "hsn": {
+      "data": [
+        { "num": 1, "hsn_sc": "998314", "desc": "", "uqc": "OTH", "qty": 0, "txval": 12500, "iamt": 450, "camt": 900, "samt": 900, "csamt": 0 }
+      ]
+    }
+  }
+}
+```
+
+## Fields
+
+### `data` — readable return (minor units)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenant_id` | string (UUID) | Owning tenant |
+| `month` / `year` | integer | The tax period |
+| `b2b[]` | array | Supplies to registered buyers, grouped by buyer GSTIN: `gstin`, `invoices[]` |
+| `b2b[].invoices[]` | array | One row per finalized invoice: `invoice_number`, `date` (RFC 3339), `place_of_supply` (the customer's own place-of-supply state code, taken from the customer record — not derived from the GSTIN prefix), `taxable_value`, `igst`, `cgst`, `sgst` (paise), `rate` (combined GST %, e.g. `18`) |
+| `b2cs[]` | array | Supplies to unregistered buyers, summarised per `place_of_supply` and `rate`: `taxable_value`, `igst`, `cgst`, `sgst` |
+| `cdnr[]` | array | Credit notes issued to registered buyers, grouped by buyer GSTIN: `gstin`, `notes[]` |
+| `cdnr[].notes[]` | array | One row per credit note: `note_number`, `date`, `original_invoice_number`, `place_of_supply`, `taxable_value`, `igst`, `cgst`, `sgst`, `rate` |
+| `hsn_summary[]` | array | Per-HSN/SAC rollup of outward supplies: `hsn_code`, `taxable_value`, `igst`, `cgst`, `sgst`, `invoice_count` |
+| `total_taxable_value` | integer | Gross outward taxable value across all invoices, paise. Not net of credit notes — GSTR-1 reports notes in their own section |
+| `total_igst` / `total_cgst` / `total_sgst` | integer | Gross outward tax by head, paise |
+| `invoice_count` | integer | Finalized invoices in the period |
+| `total_credit_taxable_value` | integer | Taxable value reversed by CDNR notes, paise |
+| `total_credit_igst` / `total_credit_cgst` / `total_credit_sgst` | integer | Tax reversed by CDNR notes, paise |
+| `credit_note_count` | integer | Credit notes in the period |
+
+### `gov_schema` — GSTN GSTR-1 upload JSON (rupees)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gstin` | string | Seller GSTIN from the GST configuration for the requested entity. Empty when none is configured — an obviously invalid filing, by design |
+| `fp` | string | Filing period as `MMYYYY` |
+| `b2b[]` | array | `ctin` (buyer GSTIN) and `inv[]`: `inum`, `idt` (`DD-MM-YYYY`), `val` (invoice value incl. tax), `pos`, `rchrg` (always `"N"`), `inv_typ` (always `"R"`), `itms[]` with `num` and `itm_det` (`rt`, `txval`, `iamt`, `camt`, `samt`, `csamt`). Omitted when empty |
+| `b2cs[]` | array | Rate-wise unregistered supplies: `sply_ty` (`INTER` when IGST applies, else `INTRA`), `pos`, `typ` (always `"OE"`), `rt`, `txval`, `iamt`, `camt`, `samt`, `csamt`. Omitted when empty |
+| `cdnr[]` | array | `ctin` and `nt[]`: `ntty` (always `"C"`), `nt_num`, `nt_dt`, `val`, `pos`, `rchrg`, `inv_typ`, `itms[]`. Omitted when empty |
+| `hsn` | object | `data[]` rows: `num`, `hsn_sc`, `desc`, `uqc` (always `"OTH"`), `qty`, `txval`, `iamt`, `camt`, `samt`, `csamt`. Omitted when there are no invoices |
+
+Cess (`csamt`) and reverse charge are not modelled, so they are always `0`
+and `"N"`.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `month` is missing or outside `1`–`12`, `year` is missing or outside `2017`–`2100`, or `entity_id` is not a valid UUID | Pass both period parameters as integers and a valid entity UUID |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `500` | `internal_error` | Building the return from the period's invoices failed | Retry; contact support if it persists |
+| `503` | `internal_error` | GSTR-1 export is not configured on this deployment | Enable the GSTR service on the API |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

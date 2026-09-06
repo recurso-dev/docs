@@ -1,0 +1,235 @@
+---
+title: "Get Month-End Close Pack"
+openapi: "GET /v1/finance/close-pack"
+description: "One read-only artifact for a calendar month — trial balance, reconciliation, the deferred-revenue rollforward and tie-out, a pointer to the GL export, and a ready-to-close verdict."
+keywords: ["month-end close", "close pack", "trial balance", "reconciliation", "deferred revenue", "tie-out"]
+---
+
+Builds the month-end close pack for one calendar month in a single call. It
+composes the same read-only services that back the individual finance
+endpoints:
+
+- the [trial balance](/api-reference/ledger/trial-balance), tenant-wide
+  across every legal entity — proves the books balance;
+- an on-demand [reconciliation report](/api-reference/finance/reconciliation)
+  — proves billing records tie to the ledger;
+- the [Deferred Revenue rollforward](/api-reference/ledger/deferred-rollforward)
+  for the month and, when revenue recognition is wired, the schedule-sourced
+  [recognition report](/api-reference/revrec/report) with a tie-out between
+  the two;
+- a link to the [GL export](/api-reference/ledger/export) for the same
+  month, rather than embedding every posting.
+
+`ready_to_close` is `true` only when the trial balance is in balance **and**
+reconciliation finds zero discrepancies; otherwise `blockers` lists why. The
+deferred-revenue tie-out is surfaced but never gates the verdict. Nothing is
+persisted — closing the period stays a human decision. To leave an audit
+trail of the check, record a
+[reconciliation run](/api-reference/finance/reconciliation-runs) alongside it.
+
+## Query Parameters
+
+| Parameter | Type    | Required | Description                     |
+|-----------|---------|----------|---------------------------------|
+| `month`   | integer | **Yes**  | Calendar month, `1`–`12`.       |
+| `year`    | integer | **Yes**  | Calendar year, `2000` or later. |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/finance/close-pack?month=8&year=2026" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "tenant_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+    "period": {
+      "month": 8,
+      "year": 2026,
+      "start": "2026-08-01T00:00:00Z",
+      "end": "2026-09-01T00:00:00Z"
+    },
+    "generated_at": "2026-09-04T10:15:00Z",
+    "ready_to_close": true,
+    "blockers": [],
+    "trial_balance": {
+      "tenant_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+      "lines": [
+        {
+          "account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+          "code": 1000,
+          "name": "Cash",
+          "type": 1,
+          "debits": 9440000,
+          "credits": 0,
+          "balance": 9440000,
+          "abnormal": false,
+          "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+          "entity_name": "Recurso India Pvt Ltd"
+        },
+        {
+          "account_id": "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+          "code": 1100,
+          "name": "Accounts Receivable",
+          "type": 1,
+          "debits": 11800000,
+          "credits": 9440000,
+          "balance": 2360000,
+          "abnormal": false,
+          "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+          "entity_name": "Recurso India Pvt Ltd"
+        },
+        {
+          "account_id": "1f4a7c2e-9d3b-4a6f-8e5c-0b2d4f6a8c13",
+          "code": 2100,
+          "name": "Deferred Revenue",
+          "type": 2,
+          "debits": 6500000,
+          "credits": 10000000,
+          "balance": 3500000,
+          "abnormal": false,
+          "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+          "entity_name": "Recurso India Pvt Ltd"
+        },
+        {
+          "account_id": "7a3c5e9f-1b4d-4c8a-9e2f-6d0b8a4c2e15",
+          "code": 2200,
+          "name": "Tax Payable",
+          "type": 2,
+          "debits": 0,
+          "credits": 1800000,
+          "balance": 1800000,
+          "abnormal": false,
+          "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+          "entity_name": "Recurso India Pvt Ltd"
+        },
+        {
+          "account_id": "c6e2a8d4-3f1b-4e7c-a9d5-8b0f2c4e6a19",
+          "code": 4100,
+          "name": "Recognized Revenue",
+          "type": 4,
+          "debits": 0,
+          "credits": 6500000,
+          "balance": 6500000,
+          "abnormal": false,
+          "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+          "entity_name": "Recurso India Pvt Ltd"
+        }
+      ],
+      "total_debits": 27740000,
+      "total_credits": 27740000,
+      "balanced": true,
+      "as_of": "2026-09-04T10:15:00Z",
+      "reporting_currency": "INR"
+    },
+    "reconciliation": {
+      "tenant_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+      "started_at": "2026-09-04T10:15:00Z",
+      "finished_at": "2026-09-04T10:15:01Z",
+      "invoices_checked": 1184,
+      "paid_invoices_checked": 947,
+      "total_discrepancies": 0,
+      "discrepancies": [],
+      "truncated": false,
+      "tb_compared": true,
+      "tb_accounts_checked": 10,
+      "tb_transfers_checked": 3552,
+      "reporting_currency": "INR"
+    },
+    "deferred_revenue": {
+      "rollforward": {
+        "tenant_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+        "period_start": "2026-08-01T00:00:00Z",
+        "period_end": "2026-09-01T00:00:00Z",
+        "opening": 2900000,
+        "added": 1400000,
+        "released": 800000,
+        "closing": 3500000,
+        "reporting_currency": "INR"
+      },
+      "recognition": {
+        "month": 8,
+        "year": 2026,
+        "recognized_amount": 800000,
+        "deferred_balance": 1500000,
+        "upcoming": [
+          { "month": 9, "year": 2026, "amount": 750000 },
+          { "month": 10, "year": 2026, "amount": 500000 },
+          { "month": 11, "year": 2026, "amount": 250000 }
+        ],
+        "by_currency": [
+          { "currency": "INR", "deferred": 1500000 }
+        ]
+      },
+      "awaiting_payment": 2000000,
+      "unexplained_delta": 0,
+      "ties": true
+    },
+    "general_ledger": {
+      "format": "csv",
+      "export_url": "/v1/ledger/export?month=8&year=2026"
+    },
+    "reporting_currency": "INR"
+  }
+}
+```
+
+## Fields
+
+| Field                | Type               | Description                                                                                                    |
+|----------------------|--------------------|----------------------------------------------------------------------------------------------------------------|
+| `tenant_id`          | string (uuid)      | The tenant the pack belongs to                                                                                 |
+| `period`             | object             | The calendar month covered: `month`, `year`, and `start`/`end` instants (`end` is exclusive)                     |
+| `generated_at`       | string (date-time) | When the pack was computed                                                                                     |
+| `ready_to_close`     | boolean            | `true` when `blockers` is empty — trial balance in balance and zero reconciliation discrepancies               |
+| `blockers`           | array of string    | Human-readable reasons the period cannot close; always present, `[]` when clean                                |
+| `trial_balance`      | object             | Tenant-wide [trial balance](/api-reference/ledger/trial-balance#fields) across every entity                      |
+| `reconciliation`     | object             | Fresh [reconciliation report](/api-reference/finance/reconciliation#report-fields)                              |
+| `deferred_revenue`   | object             | The two views of deferred revenue and whether they tie — see below                                             |
+| `general_ledger`     | object             | `format` (`csv`) and `export_url`, the relative path of the [GL export](/api-reference/ledger/export) for the same month |
+| `reporting_currency` | string             | The tenant's base currency (from the trial balance); use its exponent to format every minor-unit amount        |
+
+### `deferred_revenue`
+
+| Field               | Type    | Description                                                                                                           |
+|---------------------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| `rollforward`       | object  | Ledger-sourced [Deferred Revenue rollforward](/api-reference/ledger/deferred-rollforward#fields) for the month           |
+| `recognition`       | object  | Schedule-sourced [recognition report](/api-reference/revrec/report) for the month. Omitted when revenue recognition is not wired |
+| `awaiting_payment`  | integer | Pre-tax deferral funded by unpaid subscription invoices, minor units — carried in the ledger but not yet covered by a schedule, because schedules are created on payment. `0` when `recognition` is omitted |
+| `unexplained_delta` | integer | `rollforward.closing − (recognition.deferred_balance + awaiting_payment)`, minor units. `0` when the books tie — and also `0` when no tie-out ran (see `ties`) |
+| `ties`              | boolean | `true` only when `recognition` is present **and** `unexplained_delta` is `0`. When revenue recognition is not wired, `recognition` is omitted, no tie-out runs, and the pack returns `unexplained_delta: 0` with `ties: false` — do not read that pair as a tie. Divergence is surfaced here but does not affect `ready_to_close` |
+
+### Blockers
+
+`blockers` carries one string per failed check, in this form:
+
+- `trial balance out of balance: debits 27740000 != credits 27739000`
+- `2 reconciliation discrepancies` (or `1 reconciliation discrepancy`)
+
+The detail behind each is in the pack itself — `trial_balance.lines` (look for
+`abnormal: true`) and `reconciliation.discrepancies`. See the
+[reconciliation page](/api-reference/finance/reconciliation#discrepancy-types)
+for what each discrepancy type means.
+
+<Info>
+The pack is computed on demand from live data and is not cached. The
+individual trial-balance, rollforward and recognition endpoints are cached for
+five minutes, so a pack fetched immediately after a posting can be ahead of
+them.
+</Info>
+
+## Errors
+
+| Status | Code                | When                                            | Fix                                     |
+|--------|---------------------|-------------------------------------------------|-----------------------------------------|
+| `400`  | `validation_failed` | `month` missing or outside `1`–`12`             | Pass `month=1`…`12`                     |
+| `400`  | `validation_failed` | `year` missing, not an integer, or before 2000  | Pass a four-digit year, `2000` or later |
+| `401`  | `unauthorized`      | No `Authorization` bearer token (and no session cookie) was sent | Send `Authorization: Bearer $API_KEY`   |
+| `401`  | `invalid_api_key`   | A bearer token was sent but is not a valid key | Check the key in [Developer keys](/api-reference/developer/list-keys) |
+| `401`  | `key_mode_mismatch` | The key's live/test mode does not match this API host | Use a key for the right mode — see [Authentication](/api-reference/authentication) |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

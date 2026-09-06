@@ -1,0 +1,77 @@
+---
+title: "List Disputes"
+openapi: "GET /v1/disputes"
+description: "List the tenant's customer-raised invoice disputes, optionally filtered by status."
+keywords: ["invoice dispute", "disputes list", "customer query", "open disputes"]
+---
+
+Returns the disputes customers have raised against the tenant's invoices,
+optionally narrowed to one status. A dispute is a customer's query against one
+of their invoices, raised from the
+[customer portal](/api-reference/portal/raise-dispute); it stays `open` until
+an operator closes it with [Resolve Dispute](/api-reference/disputes/resolve).
+Fetch a single one with [Get Dispute](/api-reference/disputes/get).
+
+There is no admin dashboard for disputes yet — this API is the current surface.
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | string | No | Filter to one status: `open`, `resolved` or `rejected`. Omit for all. |
+| `limit` | integer | No | Maximum rows returned. Default `1000`, capped at `1000`. |
+| `offset` | integer | No | Rows to skip, for paging past the cap. Default `0`. |
+
+## Example Request
+
+```bash
+curl -G https://api.recurso.dev/v1/disputes \
+  -H "Authorization: Bearer $API_KEY" \
+  -d status=open
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "id": "e4f5a6b7-c8d9-4e0f-a1b2-c3d4e5f6a7b8",
+      "tenant_id": "1f2e3d4c-5b6a-4798-8a9b-0c1d2e3f4a5b",
+      "invoice_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+      "customer_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+      "reason": "Charged for seats we removed in July",
+      "status": "open",
+      "note": null,
+      "created_at": "2026-08-05T11:20:00Z",
+      "resolved_at": null
+    }
+  ]
+}
+```
+
+The response carries no pagination metadata; page with `limit`/`offset` and
+stop when a page comes back short.
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The dispute's id |
+| `tenant_id` | string (uuid) | The tenant that owns the disputed invoice |
+| `invoice_id` | string (uuid) | The disputed invoice — fetch it with [Get Invoice](/api-reference/invoices/get) |
+| `customer_id` | string (uuid) | The customer who raised it |
+| `reason` | string | The customer's stated reason |
+| `status` | string | `open`, `resolved` (closed in the customer's favor) or `rejected` (reviewed and declined) |
+| `note` | string, nullable | Operator's resolution note; `null` while open |
+| `created_at` | string (date-time) | When the dispute was raised |
+| `resolved_at` | string (date-time), nullable | When it was closed; `null` while open |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `status` is not `open`, `resolved` or `rejected` | Use one of the three statuses, or omit the filter |
+| `401` | `unauthorized` | Missing or invalid API key | Send a valid key in the `Authorization` header |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

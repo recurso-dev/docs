@@ -1,0 +1,70 @@
+---
+title: "Get Coupon"
+openapi: "GET /v1/coupons/{id}"
+description: "Fetch a single coupon by ID, including its redemption gate."
+keywords: ["coupon", "discount", "promo code"]
+---
+
+Returns one coupon as an addressable object — the record behind the
+dashboard's coupon page. Coupons are tenant-scoped: an ID that belongs to
+another tenant returns `404`, the same as a missing one. To browse the
+catalog use [List Coupons](/api-reference/coupons/list); to flip the
+redemption gate use [Update Coupon](/api-reference/coupons/update).
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Coupon ID (path) |
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/coupons/6f3c2a91-4b7e-4d0a-9c1e-8a2f5b7d3e10 \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "id": "6f3c2a91-4b7e-4d0a-9c1e-8a2f5b7d3e10",
+    "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+    "code": "SUMMER25",
+    "discount_type": "percent",
+    "discount_value": 25,
+    "duration": "repeating",
+    "duration_months": 3,
+    "active": true,
+    "created_at": "2026-04-01T09:00:00Z",
+    "updated_at": "2026-04-01T09:00:00Z"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (UUID) | Coupon ID |
+| `tenant_id` | string (UUID) | Owning tenant |
+| `code` | string | The redeemable code, unique per tenant |
+| `discount_type` | string | `percent` or `amount` |
+| `discount_value` | integer | Percent (for `percent`) or the discount in minor currency units (for `amount`) |
+| `duration` | string | `once`, `repeating`, or `forever` |
+| `duration_months` | integer | Months the discount applies; only present for `repeating` |
+| `active` | boolean | Whether new subscriptions may redeem the code. Deactivated coupons are rejected at subscription creation; existing subscriptions keep their applied discount |
+| `created_at` | string (RFC 3339) | Creation timestamp |
+| `updated_at` | string (RFC 3339) | Last modification timestamp |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a valid UUID | Pass the coupon's UUID |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | No coupon with that ID in your tenant (cross-tenant IDs are never leaked) | Check the ID against [List Coupons](/api-reference/coupons/list) |
+| `500` | `internal_error` | Loading the coupon failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

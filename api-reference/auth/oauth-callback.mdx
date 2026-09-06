@@ -1,0 +1,74 @@
+---
+title: "Complete an OAuth Login"
+openapi: "GET /auth/oauth/{provider}/callback"
+description: "The redirect target the OAuth provider sends the browser back to; validates state, exchanges the code, and opens a dashboard session."
+keywords: ["oauth", "callback", "social login", "google", "github"]
+---
+
+The provider redirects the browser here after the user consents. The server
+validates the returned `state` against the `recurso_oauth_state` cookie set by
+[`GET /auth/oauth/{provider}/start`](/api-reference/auth/oauth-start)
+(constant-time compare), exchanges `code` for a token using the bound PKCE
+verifier, fetches the user's profile, and requires a verified email (Google:
+`email_verified` is true; GitHub: a primary, verified email).
+
+It then finds or creates the account:
+
+1. An existing linked identity logs in.
+2. An existing user with the same verified email is linked to the new identity and logged in.
+3. A brand-new email creates a tenant and its owner user, the same as [`POST /auth/register`](/api-reference/auth/register).
+
+On success the server sets the `recurso_session` cookie — identical to a
+password [login](/api-reference/auth/login) — and `302`s to the dashboard root.
+On any failure other than a state mismatch it `302`s to
+`{DASHBOARD_URL}/login?error=oauth`; the redirect target is always the
+configured dashboard URL, never a caller-supplied one. The state cookie is
+cleared whichever way the attempt ends, so each start is single-use.
+
+You do not call this endpoint yourself — register it as the provider's
+redirect URI (`https://api.recurso.dev/auth/oauth/{provider}/callback`).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | string | Yes | The provider completing the login: `google` or `github`. Must match the provider bound into the state cookie. |
+
+## Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code` | string | No | The authorization code issued by the provider. Missing code redirects to the login error page. |
+| `state` | string | No | The CSRF state echoed by the provider. Must equal the value bound into the state cookie. |
+
+## Example Request
+
+```bash
+curl -i "https://api.recurso.dev/auth/oauth/google/callback?code=4%2F0AbCdEf...&state=Kx9v...Qm" \
+  -b "recurso_oauth_state=eyJwIjoiZ29vZ2xlIi...aWQ.7hQ...Lw"
+```
+
+## Example Response
+
+There is no response body. A successful login answers `302 Found` with the
+session cookie:
+
+```http
+HTTP/1.1 302 Found
+Location: https://app.recurso.dev/
+Set-Cookie: recurso_session=...; Path=/; HttpOnly; Secure; SameSite=Lax
+Set-Cookie: recurso_oauth_state=; Path=/auth/oauth; Max-Age=0; HttpOnly; Secure; SameSite=Lax
+```
+
+A failed exchange, an unverified email, an expired (older than 10 minutes) or
+missing state cookie, or a login error all answer
+`302 Found` with `Location: https://app.recurso.dev/login?error=oauth`.
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `403` | `forbidden` | The `state` query value does not match the state bound in the cookie. | Start the flow again from [`GET /auth/oauth/{provider}/start`](/api-reference/auth/oauth-start); do not reuse an old authorize URL. |
+| `404` | `not_found` | `provider` is unknown or not configured. | Only route callbacks for providers listed as `enabled` by [`GET /auth/oauth/providers`](/api-reference/auth/oauth-providers). |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

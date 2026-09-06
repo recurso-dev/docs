@@ -1,0 +1,49 @@
+---
+title: "Begin MFA Setup"
+openapi: "POST /v1/auth/mfa/setup"
+description: "Generate a pending TOTP secret and the otpauth URI for enrolling an authenticator app."
+keywords: ["mfa", "2fa", "totp", "authenticator", "security"]
+---
+
+Generates a TOTP secret for the logged-in user and returns the `otpauth://`
+URI (render it as a QR code) plus the raw secret (for manual entry). MFA is
+**not** enabled until a code from the authenticator is confirmed with
+[Verify MFA](/api-reference/auth/mfa-verify). Calling setup again before
+verifying replaces the pending secret. Once MFA is enabled, logins require a
+second step via [Complete an MFA Login](/api-reference/auth/login-mfa), and it
+can be switched off with [Disable MFA](/api-reference/auth/mfa-disable).
+
+Requires a logged-in user session; API-key callers receive `401`.
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/auth/mfa/setup \
+  -b cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "secret": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
+  "otpauth_url": "otpauth://totp/Recurso:admin@acme.com?algorithm=SHA1&digits=6&issuer=Recurso&period=30&secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `secret` | string | The base32 TOTP secret, for manual entry into an authenticator app. |
+| `otpauth_url` | string | The `otpauth://totp/...` provisioning URI (issuer `Recurso`, account = the user's email). Encode it as a QR code. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 401 | `unauthorized` | No live session cookie, or the caller authenticated with an API key rather than a user session. | Sign in via [`/auth/login`](/api-reference/auth/login) and send the `recurso_session` cookie. |
+| 409 | `conflict` | MFA is already enabled for this user. | Disable it first with [Disable MFA](/api-reference/auth/mfa-disable) if you need to re-enroll. |
+| 500 | `internal_error` | The secret could not be generated or stored. | Retry; contact support if it persists. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

@@ -1,0 +1,55 @@
+---
+title: "Disable MFA"
+openapi: "POST /v1/auth/mfa/disable"
+description: "Verify a TOTP or unused backup code, then disable MFA and wipe the secret and backup codes."
+keywords: ["mfa", "2fa", "totp", "security"]
+---
+
+Turns off MFA for the logged-in user after verifying a current TOTP code or an
+unused backup code. The stored secret and all backup codes are deleted; to
+re-enable, start again with [Begin MFA Setup](/api-reference/auth/mfa-setup)
+and [Verify MFA](/api-reference/auth/mfa-verify).
+
+Requires a logged-in user session; API-key callers receive `401`.
+
+## Body Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code` | string | Yes | A current TOTP code or an unused backup code (`XXXXX-XXXXX`; case and separator are ignored). |
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/auth/mfa/disable \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "code": "482913"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "mfa_enabled": false
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mfa_enabled` | boolean | Always `false` on success. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `code` is missing, or it is neither a valid TOTP code nor an unused backup code (`invalid code`). | Send a current authenticator code or an unused backup code. |
+| 401 | `unauthorized` | No live session cookie, or the caller authenticated with an API key rather than a user session. | Sign in via [`/auth/login`](/api-reference/auth/login) and send the `recurso_session` cookie. |
+| 409 | `conflict` | MFA is not enabled for this user. | Nothing to disable. |
+| 500 | `internal_error` | MFA state could not be updated. | Retry; contact support if it persists. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

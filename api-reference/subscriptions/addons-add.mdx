@@ -1,0 +1,88 @@
+---
+title: "Add Subscription Add-on"
+openapi: "POST /v1/subscriptions/{id}/addons"
+description: "Attach an existing plan to a subscription as a priced add-on with a quantity, billed from the next recurring invoice."
+keywords: ["add-on", "addon", "attach plan", "multi-product", "subscription add-on"]
+---
+
+Attaches an existing [plan](/api-reference/plans/get) to a subscription as an
+add-on. The subscription's base plan is unchanged; the add-on is billed as an
+extra line — add-on plan price × `quantity`, taxed independently — starting
+from the **next** recurring invoice. Nothing is charged now and no mid-cycle
+proration is applied in v1.
+
+The add-on plan's currency must match the subscription's base-plan currency.
+List what is attached with
+[List Subscription Add-ons](/api-reference/subscriptions/addons-list) and
+detach with
+[Remove Subscription Add-on](/api-reference/subscriptions/addons-remove).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The subscription ID. |
+
+## Request Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `plan_id` | string (uuid) | Yes | The plan to attach as an add-on. Must have a price in the subscription's currency. |
+| `quantity` | integer | Yes | Units billed each period. Minimum `1`. |
+
+## Example Request
+
+```bash
+curl -X POST https://api.recurso.dev/v1/subscriptions/b9071c55-0e14-4720-80f3-665613ceb7de/addons \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "plan_id": "4e5f6a7b-8c9d-4e0f-a1b2-c3d4e5f6a7b8",
+    "quantity": 3
+  }'
+```
+
+## Response
+
+Returns `201 Created` with the new add-on.
+
+```json
+{
+  "data": {
+    "id": "d3a7f1c2-5b8e-4c90-a6d1-2e3f4a5b6c7d",
+    "tenant_id": "0f9e8d7c-6b5a-4f3e-9d2c-1b0a9f8e7d6c",
+    "subscription_id": "b9071c55-0e14-4720-80f3-665613ceb7de",
+    "plan_id": "4e5f6a7b-8c9d-4e0f-a1b2-c3d4e5f6a7b8",
+    "quantity": 3,
+    "created_at": "2026-08-20T09:15:00Z"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | The add-on ID — pass it as `addonId` to remove the add-on |
+| `tenant_id` | string (uuid) | Owning tenant |
+| `subscription_id` | string (uuid) | The subscription the add-on is attached to |
+| `plan_id` | string (uuid) | The plan billed as an add-on |
+| `quantity` | integer | Number of add-on units billed each period |
+| `created_at` | string (date-time) | When the add-on was attached |
+
+<Note>
+  The first invoice carrying the add-on line is the next renewal. To bill an
+  add-on for the remainder of the current period, change the plan instead —
+  preview the proration with
+  [Preview Plan Change](/api-reference/subscriptions/preview-change).
+</Note>
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 400 | `validation_failed` | `id` is not a valid UUID, the body fails binding (`plan_id` missing or not a UUID, `quantity` missing or below `1`), or the add-on plan's currency does not match the subscription's currency. | Send a valid UUID and a `quantity` of at least `1`; pick a plan priced in the subscription's currency. |
+| 401 | `unauthorized` | API key missing or invalid (`invalid_api_key`), or a live/test mode mismatch (`key_mode_mismatch`). | Send `Authorization: Bearer <api_key>` with a key for the right mode. |
+| 404 | `not_found` | The subscription does not exist in your tenant, or `plan_id` does not resolve to a plan with at least one price. | Verify the subscription with `GET /v1/subscriptions/{id}` and the plan with `GET /v1/plans/{id}`. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

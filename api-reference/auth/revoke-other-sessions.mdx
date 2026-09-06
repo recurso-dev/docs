@@ -1,0 +1,37 @@
+---
+title: "Revoke Other Sessions"
+openapi: "DELETE /v1/auth/sessions"
+description: "Revoke every session belonging to the logged-in user except the current one."
+keywords: ["sessions", "security", "log out everywhere"]
+---
+
+Deletes all of the logged-in user's sessions except the one making the request
+("log out everywhere else"). The current session is identified by the
+`recurso_session` cookie, so this endpoint only works with a live cookie — an
+API key cannot say which session to keep. To sign out of a specific device
+instead, use [Revoke Session](/api-reference/auth/revoke-session); to see what
+is active, use [List Sessions](/api-reference/auth/list-sessions).
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/auth/sessions \
+  -b cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "message": "other sessions revoked"
+}
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 401 | `unauthorized` | No `recurso_session` cookie was sent, or the caller authenticated with an API key rather than a user session. | Sign in via [`/auth/login`](/api-reference/auth/login) and send the session cookie. |
+| 500 | `internal_error` | The sessions could not be deleted. | Retry; contact support if it persists. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

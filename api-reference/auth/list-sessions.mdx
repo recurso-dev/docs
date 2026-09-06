@@ -1,0 +1,65 @@
+---
+title: "List Sessions"
+openapi: "GET /v1/auth/sessions"
+description: "List the logged-in user's unexpired dashboard sessions, flagging the current one."
+keywords: ["sessions", "security", "devices", "logout everywhere"]
+---
+
+Lists every unexpired dashboard session belonging to the logged-in user, with
+`current: true` on the session that made the request. Use it to power a
+"where you're signed in" view, then revoke a single session with
+[Revoke Session](/api-reference/auth/revoke-session) or everything except the
+current one with [Revoke Other Sessions](/api-reference/auth/revoke-other-sessions).
+
+Requires a logged-in user session (the `recurso_session` cookie set by
+[`/auth/login`](/api-reference/auth/login)). API-key callers have no user
+identity and receive `401`.
+
+## Example Request
+
+```bash
+curl https://api.recurso.dev/v1/auth/sessions \
+  -b cookies.txt
+```
+
+## Example Response
+
+```json
+{
+  "data": [
+    {
+      "id": "a1f4c9d2-7b3e-4e58-9c6a-2d8f0b1e5a73",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 Chrome/126.0 Safari/537.36",
+      "created_at": "2026-09-01T08:15:22Z",
+      "expires_at": "2026-09-08T08:15:22Z",
+      "current": true
+    },
+    {
+      "id": "5c0e2b17-93da-4f61-b8a4-7e1f6d3c9b20",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) Safari/604.1",
+      "created_at": "2026-08-28T19:42:07Z",
+      "expires_at": "2026-09-04T19:42:07Z",
+      "current": false
+    }
+  ]
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (uuid) | Session identifier. Pass it to [Revoke Session](/api-reference/auth/revoke-session). |
+| `user_agent` | string | The `User-Agent` header recorded when the session was created. |
+| `created_at` | string (date-time) | When the session was created. |
+| `expires_at` | string (date-time) | When the session expires; expired sessions are not listed. |
+| `current` | boolean | `true` for the session that made this request. |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| 401 | `unauthorized` | No live session cookie, or the caller authenticated with an API key rather than a user session. | Sign in via [`/auth/login`](/api-reference/auth/login) and send the `recurso_session` cookie. |
+| 500 | `internal_error` | The sessions could not be loaded. | Retry; contact support if it persists. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

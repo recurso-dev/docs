@@ -1,0 +1,108 @@
+---
+title: "Resolve Dispute"
+openapi: "POST /v1/disputes/{id}/resolve"
+description: "Close an open invoice dispute with an operator decision — accept it (optionally issuing an adjustment credit note against the invoice) or reject it — and a note."
+keywords: ["invoice dispute", "resolve dispute", "reject dispute", "dispute credit note", "customer query"]
+---
+
+Records the operator's decision on an open dispute and closes it. Accepting
+(the default) moves the dispute to `resolved`; rejecting moves it to
+`rejected`. Either way the optional `note` is stored on the dispute and
+`resolved_at` is set. Only an `open` dispute can be resolved — a dispute that
+is already closed returns `404`.
+
+On accept you may also issue an adjustment credit note against the disputed
+invoice with `issue_credit: true`. The credit goes through the ordinary
+[credit-note create path](/api-reference/credit-notes/create) — fully ledgered,
+reason `dispute_resolution`, type `adjustment` — and is issued *before* the
+dispute is closed: if the credit fails, the dispute stays `open` for a clean
+retry, never a resolved dispute with no promised credit. Maker-checker applies:
+a credit issued by a non-admin user lands in `pending_approval`; API keys and
+admin/owner users issue directly.
+
+Find open disputes with [List Disputes](/api-reference/disputes/list) and read
+one with [Get Dispute](/api-reference/disputes/get).
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The dispute's id. |
+
+## Request Body
+
+The body is optional; an empty body accepts the dispute with no note and no credit.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `outcome` | string | No | `accept` (default) closes the dispute in the customer's favor; `reject` declines it. |
+| `note` | string | No | Operator's resolution note, stored on the dispute. |
+| `issue_credit` | boolean | No | Accept only. When `true`, issues an adjustment credit note against the disputed invoice. Ignored on reject. |
+| `credit_amount` | integer (int64) | No | Credit amount in minor units. `0` (or omitted) means the invoice's amount still due, falling back to its total. Must not exceed the invoice total. |
+
+## Example Request
+
+```bash
+curl -X POST "https://api.recurso.dev/v1/disputes/e4f5a6b7-c8d9-4e0f-a1b2-c3d4e5f6a7b8/resolve" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "outcome": "accept",
+    "note": "Seats were removed on 12 July; crediting the two extra seats.",
+    "issue_credit": true,
+    "credit_amount": 4800
+  }'
+```
+
+## Response
+
+The response is a bare object — not wrapped in `data`. `status` is `resolved`
+on accept and `rejected` on reject. `credit_note` is present only when a
+credit was issued.
+
+```json
+{
+  "status": "resolved",
+  "credit_note": {
+    "id": "9c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+    "tenant_id": "1f2e3d4c-5b6a-4798-8a9b-0c1d2e3f4a5b",
+    "customer_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+    "invoice_id": "06c151de-8d3a-4b21-9c77-2f0e5a9b4d12",
+    "reference": "CN-1757001600",
+    "amount": 4800,
+    "balance": 4800,
+    "currency": "USD",
+    "status": "issued",
+    "reason": "dispute_resolution",
+    "type": "adjustment",
+    "refund_status": "none",
+    "created_at": "2026-09-04T16:00:00Z",
+    "updated_at": "2026-09-04T16:00:00Z"
+  }
+}
+```
+
+A rejection, or an accept without a credit, returns just the status:
+
+```json
+{
+  "status": "rejected"
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `resolved` (accepted) or `rejected` — the dispute's new status |
+| `credit_note` | object | The credit note issued, when `issue_credit` was `true` on accept. Same shape as [Get Credit Note](/api-reference/credit-notes/get); `amount` and `balance` are minor units, `status` is `issued` or `pending_approval` |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` in the path is not a UUID; the body is not valid JSON; `outcome` is not `accept` or `reject`; or `credit_amount` is negative | Fix the offending field |
+| `404` | `not_found` | Dispute doesn't exist, belongs to another tenant (existence is never confirmed across tenants), or is no longer `open` | Check the dispute via [List Disputes](/api-reference/disputes/list) with `status=open` |
+| `500` | `internal_error` | Credit issuance was refused — `credit_amount` exceeds the invoice total, the disputed invoice could not be loaded, or credit issuance is not enabled on this deployment. The dispute stays `open`. | Retry with a `credit_amount` at or below the invoice total, or resolve without `issue_credit` |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

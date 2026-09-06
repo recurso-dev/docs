@@ -1,0 +1,173 @@
+---
+title: "Get Trial Balance"
+openapi: "GET /v1/ledger/trial-balance"
+description: "Every ledger account with its posted debit and credit totals, its normal-side balance, and the debits == credits invariant. Read-only."
+keywords: ["trial balance", "double entry", "chart of accounts", "month-end close", "multi-entity"]
+---
+
+Returns the tenant's chart of accounts with posted totals — the canonical
+artifact for proving the books balance. Each line is one account's total
+debits, total credits, and its balance expressed on the account's normal side
+(debit for assets and expenses, credit for liabilities, equity and revenue).
+`balanced` is the double-entry invariant: `total_debits == total_credits`
+across every account. Read-only; nothing is persisted.
+
+The trial balance is one of the three checks the
+[month-end close pack](/api-reference/finance/close-pack) bundles. To see the
+postings behind a line, use [List Ledger Entries](/api-reference/ledger/entries)
+with the line's `account_id`; to take the whole journal offline, use the
+[GL export](/api-reference/ledger/export).
+
+## Query Parameters
+
+| Parameter      | Type          | Required | Description                                                                                             |
+|----------------|---------------|----------|---------------------------------------------------------------------------------------------------------|
+| `entity_id`    | string (uuid) | No       | Scope the trial balance to one legal entity's ledger (Multi-Entity Books). Omit for every entity's accounts. |
+| `consolidated` | boolean       | No       | `true` rolls every entity's accounts up by account code into one tenant-wide line per code. Ignored when `entity_id` is set. |
+
+## Example Request
+
+```bash
+curl "https://api.recurso.dev/v1/ledger/trial-balance" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Consolidated across entities:
+
+```bash
+curl "https://api.recurso.dev/v1/ledger/trial-balance?consolidated=true" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "tenant_id": "0b7a3f7e-4a2b-4c1d-9e8f-1a2b3c4d5e6f",
+    "lines": [
+      {
+        "account_id": "b3a1c9e7-2f4d-4a8b-9c6e-1d5f7a2b8c30",
+        "code": 1000,
+        "name": "Cash",
+        "type": 1,
+        "debits": 9440000,
+        "credits": 0,
+        "balance": 9440000,
+        "abnormal": false,
+        "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+        "entity_name": "Recurso India Pvt Ltd"
+      },
+      {
+        "account_id": "e8f2d6b4-9a1c-4e7f-b3d5-6c8a0e2f4b19",
+        "code": 1100,
+        "name": "Accounts Receivable",
+        "type": 1,
+        "debits": 11800000,
+        "credits": 9440000,
+        "balance": 2360000,
+        "abnormal": false,
+        "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+        "entity_name": "Recurso India Pvt Ltd"
+      },
+      {
+        "account_id": "1f4a7c2e-9d3b-4a6f-8e5c-0b2d4f6a8c13",
+        "code": 2100,
+        "name": "Deferred Revenue",
+        "type": 2,
+        "debits": 6500000,
+        "credits": 10000000,
+        "balance": 3500000,
+        "abnormal": false,
+        "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+        "entity_name": "Recurso India Pvt Ltd"
+      },
+      {
+        "account_id": "7a3c5e9f-1b4d-4c8a-9e2f-6d0b8a4c2e15",
+        "code": 2200,
+        "name": "Tax Payable",
+        "type": 2,
+        "debits": 0,
+        "credits": 1800000,
+        "balance": 1800000,
+        "abnormal": false,
+        "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+        "entity_name": "Recurso India Pvt Ltd"
+      },
+      {
+        "account_id": "c6e2a8d4-3f1b-4e7c-a9d5-8b0f2c4e6a19",
+        "code": 4100,
+        "name": "Recognized Revenue",
+        "type": 4,
+        "debits": 0,
+        "credits": 6500000,
+        "balance": 6500000,
+        "abnormal": false,
+        "entity_id": "5d1e8c2a-7b3f-4e9d-a6c4-2f8b0d3e6a17",
+        "entity_name": "Recurso India Pvt Ltd"
+      }
+    ],
+    "total_debits": 27740000,
+    "total_credits": 27740000,
+    "balanced": true,
+    "as_of": "2026-09-04T10:15:00Z",
+    "reporting_currency": "INR"
+  }
+}
+```
+
+## Fields
+
+| Field                | Type              | Description                                                                                       |
+|----------------------|-------------------|---------------------------------------------------------------------------------------------------|
+| `tenant_id`          | string (uuid)     | The tenant the trial balance belongs to                                                           |
+| `lines`              | array             | One line per account (or per account code when `consolidated=true`) — see below                   |
+| `total_debits`       | integer           | Sum of every line's `debits`, minor units                                                         |
+| `total_credits`      | integer           | Sum of every line's `credits`, minor units                                                        |
+| `balanced`           | boolean           | `total_debits == total_credits` — the double-entry invariant. `false` blocks a month-end close    |
+| `as_of`              | string (date-time)| When the trial balance was computed                                                               |
+| `reporting_currency` | string            | The tenant's base currency; use its exponent to format the minor-unit totals                      |
+
+### Line Fields
+
+| Field         | Type          | Description                                                                                          |
+|---------------|---------------|------------------------------------------------------------------------------------------------------|
+| `account_id`  | string (uuid) | The ledger account. All-zero on a consolidated line, which sums several entities' accounts           |
+| `code`        | integer       | Chart-of-accounts code (`1000` Cash, `1100` Accounts Receivable, `2100` Deferred Revenue, `2200` Tax Payable, `4100` Recognized Revenue, …) |
+| `name`        | string        | Account name                                                                                         |
+| `type`        | integer       | Account type: `1` asset, `2` liability, `3` equity, `4` revenue, `5` expense                          |
+| `debits`      | integer       | Minor units posted to the debit side                                                                 |
+| `credits`     | integer       | Minor units posted to the credit side                                                                |
+| `balance`     | integer       | Signed balance on the account's normal side — debits − credits for assets/expenses, credits − debits otherwise |
+| `abnormal`    | boolean       | `true` when `balance` is negative, i.e. the account carries the wrong sign for its type (a liability with a net debit). Signals a posting bug |
+| `entity_id`   | string (uuid) | The legal entity whose ledger the account sits on (Multi-Entity Books). Omitted on consolidated lines |
+| `entity_name` | string        | The legal entity's name. Omitted on consolidated lines                                               |
+
+Without `entity_id` or `consolidated`, a multi-entity tenant sees the same
+account code once per entity, each tagged with its entity. With
+`consolidated=true` the codes are summed across entities into one line each,
+and the entity tags are dropped.
+
+<Info>
+Responses are cached per tenant and URL for five minutes; the `X-Cache`
+header reports `HIT` or `MISS`. A posting made moments ago may not show until
+the cache expires.
+</Info>
+
+## Errors
+
+| Status | Code                | When                                    | Fix                                        |
+|--------|---------------------|-----------------------------------------|--------------------------------------------|
+| `400`  | `validation_failed` | `entity_id` is not a UUID               | Pass the entity's UUID from [List Entities](/api-reference/entities/list) |
+| `401`  | `unauthorized`      | No `Authorization` bearer token (and no session cookie) was sent | Send `Authorization: Bearer $API_KEY`   |
+| `401`  | `invalid_api_key`   | A bearer token was sent but is not a valid key | Check the key in [Developer keys](/api-reference/developer/list-keys) |
+| `401`  | `key_mode_mismatch` | The key's live/test mode does not match this API host | Use a key for the right mode — see [Authentication](/api-reference/authentication) |
+
+<Note>
+The spec entry for this operation declares only `200` and `401`, so the
+playground on this page does not list the `400`. The handler does return
+`400 validation_failed` for a malformed `entity_id`; the row above documents
+runtime behaviour.
+</Note>
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

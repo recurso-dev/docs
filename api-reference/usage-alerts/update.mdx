@@ -1,0 +1,86 @@
+---
+title: "Update Usage Alert"
+openapi: "PUT /v1/usage-alerts/{id}"
+description: "Re-aim an existing usage alert at a new threshold type and value."
+keywords: ["usage alert", "threshold", "metering"]
+---
+
+Changes the threshold an alert fires at. The subscription and metric are
+the alert's identity — to point an alert at a different subscription or
+metric, [delete it](/api-reference/usage-alerts/delete) and
+[create a new one](/api-reference/usage-alerts/create). Updating clears the
+alert's per-period "already fired" marker (`last_fired_period_start`), so
+the new threshold can fire in the current billing period even if the old
+one already did.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Usage alert ID (path). Must belong to your tenant |
+
+## Request Body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `threshold_type` | string | Yes | `quantity` (an absolute metered quantity) or `percent_of_limit` (a percentage of the subscription's entitlement limit) |
+| `threshold` | integer | Yes | Must be greater than `0`. For `percent_of_limit` at most `1000`; values above `100` alert on overage |
+
+## Example Request
+
+```bash
+curl -X PUT https://api.recurso.dev/v1/usage-alerts/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "threshold_type": "percent_of_limit",
+    "threshold": 90
+  }'
+```
+
+## Response
+
+The response echoes the alert's `id` and the new threshold. The handler
+does not re-read the row after the update, so `subscription_id`,
+`metric_code`, `created_at` and `updated_at` come back zero-valued here —
+use [List Usage Alerts](/api-reference/usage-alerts/list) to read the full
+object.
+
+```json
+{
+  "data": {
+    "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "tenant_id": "2b9e1c44-7d3a-4f6b-8e21-5c0d9a7f1b33",
+    "subscription_id": "00000000-0000-0000-0000-000000000000",
+    "metric_code": "",
+    "threshold_type": "percent_of_limit",
+    "threshold": 90,
+    "created_at": "0001-01-01T00:00:00Z",
+    "updated_at": "0001-01-01T00:00:00Z"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string (UUID) | The alert that was updated |
+| `tenant_id` | string (UUID) | Owning tenant |
+| `threshold_type` | string | The new `quantity` or `percent_of_limit` |
+| `threshold` | integer | The new threshold value |
+| `subscription_id`, `metric_code`, `created_at`, `updated_at` | — | Not populated by this endpoint (see above); `last_fired_period_start` is omitted because the update resets it to `null` |
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a valid UUID, or the body is malformed / missing `threshold_type` or `threshold` | Pass the alert's UUID and both required fields |
+| `400` | `validation_failed` | `threshold_type` is not `quantity` or `percent_of_limit` | Use one of the two values |
+| `400` | `validation_failed` | `threshold` is not positive, or a `percent_of_limit` threshold exceeds `1000` | Send a positive integer (percent thresholds at most `1000`) |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | No usage alert with that ID in your tenant | Check the ID against [List Usage Alerts](/api-reference/usage-alerts/list) |
+| `409` | `conflict` | Another alert on the same subscription and metric already has this exact threshold | Edit or delete the duplicate instead |
+| `500` | `internal_error` | Persisting the update failed | Retry; contact support if it persists |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).

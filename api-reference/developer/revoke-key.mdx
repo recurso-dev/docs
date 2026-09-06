@@ -1,0 +1,56 @@
+---
+title: "Revoke API Key"
+openapi: "DELETE /v1/developer/keys/{id}"
+description: "Deactivate an API key. Revocation is persisted immediately and cannot be undone; a key that was recently in use may keep authenticating for up to five minutes while the verification cache expires."
+keywords: ["api key", "revoke", "developer", "credentials"]
+---
+
+Revokes an API key. The key is soft-deactivated rather than deleted: the
+revocation is written before the `200` is returned, and the key stays in your
+records with its history. Authentication filters on the active flag, but the
+API caches keys that have already passed verification for five minutes and
+does not clear that cache on revoke — so a key that was used in the last few
+minutes may continue to authenticate on that API instance for up to five
+minutes after this call returns. A key that has not been used recently is
+rejected on its next request. A revoked key cannot be restored —
+[create a new key](/api-reference/developer/create-key) and rotate your
+integration to it instead. Find key IDs with
+[`GET /v1/developer/keys`](/api-reference/developer/list-keys).
+
+A key may revoke itself. Make sure the caller is not the last active key
+for an environment you still depend on. Only owners and admins can call this
+endpoint from a dashboard session; members receive `403`. API-key callers act
+with full tenant access.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (uuid) | Yes | The API key's ID, as returned by list or create. Not the key value itself. |
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.recurso.dev/v1/developer/keys/7f2c1a9e-4b3d-4e6f-9a8b-0c1d2e3f4a5b \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+## Response
+
+```json
+{
+  "status": "revoked"
+}
+```
+
+## Errors
+
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a valid UUID. | Pass the key's `id` (a UUID) from the list or create response — not the key's display prefix, and not the secret key value. |
+| `401` | `unauthorized` | No API key or session cookie was sent. An invalid API key returns `invalid_api_key`; a key for the wrong mode (live vs test) returns `key_mode_mismatch`. | Send `Authorization: Bearer <api_key>` with a key for the right mode, or sign in to the dashboard. |
+| `403` | `forbidden` | The dashboard session belongs to a member, not an owner or admin. | Ask an owner or admin to revoke the key, or use an API key. |
+| `404` | `not_found` | No active key with that ID exists in your tenant, or it was already revoked. | Check the ID against the list endpoint; a key that is already revoked needs no further action. |
+| `500` | `internal_error` | The revocation could not be persisted. | Retry; if it persists, contact support. |
+
+Errors use the standard envelope — see [Errors](/api-reference/errors).
