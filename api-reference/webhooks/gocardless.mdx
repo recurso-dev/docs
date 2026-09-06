@@ -9,8 +9,8 @@ This endpoint receives webhook deliveries from GoCardless for the platform's
 own GoCardless account. Unlike the [Razorpay](/api-reference/webhooks/razorpay)
 and [Stripe](/api-reference/webhooks/stripe) receivers, each GoCardless delivery
 batches many events; Recurso verifies the whole body once and then processes
-(and deduplicates) each event individually. Tenants who connected their own
-GoCardless account use the
+(and deduplicates) each event individually. Workspaces that connected their
+own GoCardless account use the
 [per-connection receiver](/api-reference/webhooks/gocardless-connection) instead.
 
 <Note>

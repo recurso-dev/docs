@@ -53,7 +53,7 @@ curl "https://api.recurso.dev/v1/finance/revrec/waterfall" \
 | Field                | Type          | Description                                                                                  |
 |----------------------|---------------|----------------------------------------------------------------------------------------------|
 | `tenant_id`          | string (uuid) | The tenant the waterfall belongs to                                                          |
-| `buckets`            | array         | One entry per calendar month that has at least one `recognized` or `pending` recognition event, oldest first; months without events are omitted — see below |
+| `buckets`            | array or null | One entry per calendar month that has at least one `recognized` or `pending` recognition event, oldest first; months without events are omitted — see below. When the tenant has no such events at all the field is `null`, not `[]` |
 | `total_recognized`   | integer       | Sum of every bucket's `recognized`, minor units                                              |
 | `total_scheduled`    | integer       | Sum of every bucket's `scheduled`, minor units — the still-deferred balance across all schedules |
 | `reporting_currency` | string        | The tenant's base currency, resolved from the ledger after the sums are taken. A label only — amounts are not converted into it (see below) |
@@ -66,6 +66,12 @@ curl "https://api.recurso.dev/v1/finance/revrec/waterfall" \
 | `month`      | integer | Calendar month, `1`–`12`                                                 |
 | `recognized` | integer | Sum of recognition events with status `recognized` whose recognition date falls in that month, minor units |
 | `scheduled`  | integer | Sum of recognition events with status `pending` whose recognition date falls in that month, minor units |
+
+<Note>
+A tenant with no `recognized` or `pending` recognition events gets
+`"buckets": null` (with both totals `0`), not an empty array. Guard for
+`null` before iterating.
+</Note>
 
 The statuses above are recognition-event statuses, not schedule statuses
 (`active`, `canceled`). Only `recognized` and `pending` events are summed;

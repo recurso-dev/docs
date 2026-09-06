@@ -51,7 +51,14 @@ curl -X POST "https://api.recurso.dev/v1/accounting/connect-token/netsuite" \
 
 Returns `201 Created` for a new connection, or `200 OK` when an existing
 connection for the provider was refreshed. Tokens are never serialized;
-`token_expires_at`, `last_sync_at`, and `last_error` are omitted while unset.
+`token_expires_at`, `realm_id`, `last_sync_at`, and `last_error` are omitted
+while unset. The `AccountingConnection` schema the playground renders was
+written for the OAuth providers: it lists `provider` as `quickbooks`/`xero`,
+describes `realm_id` as a QuickBooks company or Xero organisation id, and
+types `token_expires_at`/`last_sync_at` as nullable. This endpoint returns
+`netsuite` or `tally`, stores the NetSuite account id in `realm_id`, and
+omits unset fields rather than sending `null` — the shape below is what the
+API actually sends.
 
 ```json
 {

@@ -1,15 +1,20 @@
 ---
 title: "Connect an Integration"
 openapi: "POST /v1/integration-connections"
-description: "Store the workspace's own credentials for a tax, CRM, or storage provider, sealed at rest; replaces any existing connection for that provider."
+description: "Store the workspace's own credentials for a tax, CRM, or storage provider, sealed at rest; becomes the category's single active connection."
 keywords: ["connect integration", "taxjar", "avalara", "ziptax", "hubspot", "s3", "minio", "credential vault"]
 ---
 
 Stores the workspace's own credentials for one tax, CRM, or storage provider.
 The config is sealed as a single encrypted blob; secrets are write-only and
-never returned. Connecting a `(category, provider)` that already has an active
-connection replaces it in place. Owner/admin only — API-key callers are not
-role-gated. Check `vault_ready` on
+never returned. Each call inserts a new connection row with a fresh `id` and
+deactivates every active connection in the same `category` first — not only
+the same provider. A workspace therefore has at most one active provider per
+category: connecting `ziptax` disconnects an active `taxjar` or `avalara`, and
+reconnecting the same provider to rotate credentials returns a new `id` with
+`created_at` equal to `updated_at`. Do not persist a connection `id` and expect
+it to survive a reconnect; the deactivated rows are kept but never listed.
+Owner/admin only — API-key callers are not role-gated. Check `vault_ready` on
 [List Integration Connections](/api-reference/integration-connections/list)
 first; once a HubSpot connection exists, verify it with
 [Sync CRM Now](/api-reference/integration-connections/crm-sync).
@@ -49,6 +54,9 @@ curl -X POST "https://api.recurso.dev/v1/integration-connections" \
 ## Response
 
 Returns `201 Created` with the secret-free projection of the new connection.
+Because a connect always inserts a new row, `created_at` and `updated_at` are
+the same instant and the `id` differs from any previous connection for the
+same provider.
 
 ```json
 {
@@ -71,13 +79,13 @@ Returns `201 Created` with the secret-free projection of the new connection.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string (uuid) | The connection's id |
+| `id` | string (uuid) | The connection's id — new on every connect, including a credential rotation for the same provider |
 | `category` | string | `tax`, `crm`, or `storage` |
 | `provider` | string | The provider that was connected |
 | `config` | object | Non-secret config only (`api_url`, `base_url`, `endpoint`, `region`, `bucket`, `prefix`, `company_code`) |
 | `has_secrets` | boolean | `true` when at least one secret value was stored |
-| `created_at` | string (date-time) | When the connection was created |
-| `updated_at` | string (date-time) | When its config was last replaced |
+| `created_at` | string (date-time) | When this connection row was created |
+| `updated_at` | string (date-time) | Same as `created_at` on the response — the row is new; it only moves later when the row is deactivated |
 
 ## Errors
 
@@ -87,6 +95,7 @@ Returns `201 Created` with the secret-free projection of the new connection.
 | `400` | `validation_failed` | `(category, provider)` is not a supported pair | Use one of the pairs listed under Request Body |
 | `400` | `validation_failed` | A required config key for the provider is empty (message names it, e.g. `hubspot: access_token is required`) | Add the missing key |
 | `400` | `validation_failed` | An `endpoint`/`api_url`/`base_url` is not an `http(s)` URL; on the hosted deployment also when it is not `https`, does not resolve, or resolves to a private or reserved address | Use the provider's public HTTPS endpoint |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
 | `403` | `forbidden` | The session user is not an owner or admin | Integration credentials are workspace config — ask an owner/admin |
 | `503` | `internal_error` | Credential vault unavailable (`GATEWAY_ENCRYPTION_KEY` not configured on the API) | Self-hosted: set `GATEWAY_ENCRYPTION_KEY` and restart |
 

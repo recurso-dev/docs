@@ -14,8 +14,9 @@ is enabled, and the two public Service Provider (SP) URLs the IdP needs — the
 has at most one connection, so there is no ID to pass.
 
 Any authenticated member of the tenant can read the connection; only owners
-and admins can change it. The IdP certificate and metadata XML are echoed back
-exactly as submitted — nothing beyond what the admin entered is exposed.
+and admins can change it. The IdP certificate and metadata XML are returned
+as stored — what the admin submitted, with surrounding whitespace trimmed —
+and nothing beyond what the admin entered is exposed.
 Remove the connection with
 [`DELETE /v1/sso/connection`](/api-reference/sso/delete).
 
@@ -65,7 +66,7 @@ a bearer token.
 
 | Status | Code | When | Fix |
 |--------|------|------|-----|
-| `401` | `unauthorized` | No API key or session cookie was sent, or the credential is invalid. | Send `Authorization: Bearer <api_key>` or sign in to the dashboard. |
+| `401` | `unauthorized` | No API key or session cookie was sent. An invalid API key returns `invalid_api_key`; a key for the wrong mode (live vs test) returns `key_mode_mismatch`. | Send `Authorization: Bearer <api_key>` with a key for the right mode, or sign in to the dashboard. |
 | `404` | `not_found` | The tenant has no SSO connection configured yet. | Create one with [`PUT /v1/sso/connection`](/api-reference/sso/update). |
 | `500` | `internal_error` | The connection could not be read. | Retry; if it persists, contact support. |
 

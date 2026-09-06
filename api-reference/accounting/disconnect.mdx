@@ -1,40 +1,55 @@
 ---
 title: "Disconnect Accounting Integration"
 openapi: "DELETE /v1/accounting/connections/{id}"
-description: "Disconnect an accounting integration and stop all data syncing."
+description: "Deactivate an accounting connection so syncs stop; the row is kept and a later connect refreshes it in place."
+keywords: ["disconnect accounting", "quickbooks", "xero", "netsuite", "tally", "accounting connection"]
 ---
+
+Deactivates one accounting connection. This is a soft-disconnect: the row
+stays in place with `is_active` set to `false` and still appears in
+[List Accounting Connections](/api-reference/accounting/connections) with
+`is_active: false`; only active connections take part in the sync sweep.
+Nothing already posted to the accounting provider is touched. Reconnecting
+the same provider later — through
+[Initiate Accounting OAuth](/api-reference/accounting/connect) for QuickBooks
+and Xero, or
+[Connect Token-Based Accounting Provider](/api-reference/accounting/connect-token)
+for NetSuite and Tally — finds this row, refreshes its credentials, resets
+`sync_status` to `idle`, clears `last_error`, and reactivates it, so the
+connection `id` is stable across a disconnect/reconnect. The connection must
+belong to the calling workspace; a connection owned by another workspace is
+reported as not found rather than forbidden.
 
 ## Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string | Yes | The unique identifier of the accounting connection (e.g. `aconn_3pRs6tUv9wXy`). |
-
-<Warning>
-Disconnecting an accounting integration is permanent. All sync configuration will be removed and data will stop flowing to the provider. You will need to re-authorize via OAuth to reconnect.
-</Warning>
+| `id` | string (uuid, path) | Yes | The connection's `id`, as returned by [List Accounting Connections](/api-reference/accounting/connections) |
 
 ## Example Request
 
 ```bash
-curl -X DELETE "https://api.recurso.dev/v1/accounting/connections/aconn_3pRs6tUv9wXy" \
-  -H "Authorization: Bearer rsk_live_9f8a7b6c5d4e3f2a1b0c"
+curl -X DELETE "https://api.recurso.dev/v1/accounting/connections/5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9" \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ## Response
 
+The response is a bare status object, not a `{data}` envelope.
+
 ```json
 {
-  "message": "Connection disconnected successfully"
+  "status": "disconnected"
 }
 ```
 
-## Notes
+## Errors
 
-- Any in-progress sync jobs for this connection will be canceled.
-- Historical data that was already synced to the accounting provider is not deleted.
-- To reconnect the same provider, use the [Initiate Accounting OAuth](/api-reference/accounting/connect) endpoint.
+| Status | Code | When | Fix |
+|--------|------|------|-----|
+| `400` | `validation_failed` | `id` is not a UUID (`invalid connection id`) | Use the `id` from [List Accounting Connections](/api-reference/accounting/connections) |
+| `401` | `unauthorized` | Missing or invalid API key / session | Send `Authorization: Bearer $API_KEY` |
+| `404` | `not_found` | No connection with that `id`, or it belongs to another workspace | Check the id against [List Accounting Connections](/api-reference/accounting/connections) |
+| `500` | `internal_error` | The connection could not be updated | Retry; contact support if it persists |
 
-<Tip>
-Before disconnecting, check the current sync status using the [List Accounting Connections](/api-reference/accounting/connections) endpoint to ensure no critical sync is in progress.
-</Tip>
+Errors use the standard envelope — see [Errors](/api-reference/errors).

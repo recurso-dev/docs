@@ -13,9 +13,13 @@ one call is capped at 25 contacts. Anything left over is reported in
 `contacts_remaining` and finished by the daily sweep. When the provider
 rejects every contact (bad token, missing scopes) — or rejects the custom
 property bootstrap that runs first — the call fails with a `424` carrying the
-provider's own error. When at least one contact was upserted, the call
-returns `200` and any individual contacts the provider rejected are logged
-server-side only; they are counted in neither `contacts_synced` nor
+provider's own error. The operation description shown above says `502`
+for that case; the API deliberately answers `424` instead — the edge proxy in
+front of the hosted API replaces origin `502` responses with its own HTML
+error page, which would swallow the provider's message — and the spec's
+response list already declares `424`. When at least one contact was upserted,
+the call returns `200` and any individual contacts the provider rejected are
+logged server-side only; they are counted in neither `contacts_synced` nor
 `contacts_remaining`, and the daily sweep retries them.
 
 ## Example Request

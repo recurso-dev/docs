@@ -41,7 +41,7 @@ curl -X DELETE https://api.recurso.dev/v1/sso/connection \
 
 | Status | Code | When | Fix |
 |--------|------|------|-----|
-| `401` | `unauthorized` | No API key or session cookie was sent, or the credential is invalid. | Send `Authorization: Bearer <api_key>` or sign in to the dashboard. |
+| `401` | `unauthorized` | No API key or session cookie was sent. An invalid API key returns `invalid_api_key`; a key for the wrong mode (live vs test) returns `key_mode_mismatch`. | Send `Authorization: Bearer <api_key>` with a key for the right mode, or sign in to the dashboard. |
 | `403` | `forbidden` | The dashboard session belongs to a member, not an owner or admin. | Ask an owner or admin to remove the connection, or use an API key. |
 | `404` | `not_found` | The tenant has no SSO connection to remove. | Nothing to do — the tenant is already without SSO. |
 | `500` | `internal_error` | The connection could not be deleted. | Retry; if it persists, contact support. |

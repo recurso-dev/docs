@@ -19,8 +19,9 @@ Each connection has its own URL. Read `webhook_path` from
 `/webhooks/gocardless/{connID}`), append it to `https://api.recurso.dev`, and
 register that URL in the GoCardless Dashboard under
 **Developers > Webhook endpoints** using the `webhook_secret` you supplied when
-connecting. A connection without a webhook secret cannot verify deliveries and
-rejects them.
+connecting, or set later with
+[Set Gateway Webhook Secret](/api-reference/gateways/webhook-secret). A
+connection without a webhook secret cannot verify deliveries and rejects them.
 </Note>
 
 ## Parameters
@@ -121,6 +122,6 @@ is processed twice.
 | `400` | `validation_failed` | Request body could not be read, or is not valid JSON | Check the delivery in the GoCardless Dashboard; Recurso expects the raw events payload |
 | `401` | `unauthorized` | `Webhook-Signature` does not match the HMAC-SHA256 of the raw body under this connection's secret | Make sure the secret registered in GoCardless matches the connection's `webhook_secret` |
 | `404` | `not_found` | No active GoCardless connection has this id (a missing, disconnected, or non-GoCardless connection all return 404) | Reconnect the gateway and register the new `webhook_path` |
-| `503` | `internal_error` | The connection has no webhook secret (the receiver fails closed), per-connection webhooks are not configured on the API, or the inbound-webhook dedup store is unavailable | Reconnect the gateway with a `webhook_secret`; otherwise let GoCardless retry |
+| `503` | `internal_error` | The connection has no webhook secret (the receiver fails closed), per-connection webhooks are not configured on the API, or the inbound-webhook dedup store is unavailable | Store the secret with [Set Gateway Webhook Secret](/api-reference/gateways/webhook-secret) (the connection id and `webhook_path` stay the same); otherwise let GoCardless retry |
 
 Errors use the standard envelope — see [Errors](/api-reference/errors).
