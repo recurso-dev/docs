@@ -101,8 +101,8 @@ A rejection, or an accept without a credit, returns just the status:
 
 | Status | Code | When | Fix |
 |--------|------|------|-----|
-| `400` | `validation_failed` | `id` in the path is not a UUID; the body is not valid JSON; `outcome` is not `accept` or `reject`; or `credit_amount` is negative | Fix the offending field |
+| `400` | `validation_failed` | `id` in the path is not a UUID; the body is not valid JSON; `outcome` is not `accept` or `reject`; `credit_amount` is negative; or `credit_amount` exceeds the invoice total (the dispute stays `open`) | Fix the offending field |
 | `404` | `not_found` | Dispute doesn't exist, belongs to another tenant (existence is never confirmed across tenants), or is no longer `open` | Check the dispute via [List Disputes](/api-reference/disputes/list) with `status=open` |
-| `500` | `internal_error` | Credit issuance was refused — `credit_amount` exceeds the invoice total, the disputed invoice could not be loaded, or credit issuance is not enabled on this deployment. The dispute stays `open`. | Retry with a `credit_amount` at or below the invoice total, or resolve without `issue_credit` |
+| `500` | `internal_error` | Credit issuance failed — the disputed invoice could not be loaded, or credit issuance is not enabled on this deployment. The dispute stays `open`. | Retry, or resolve without `issue_credit` |
 
 Errors use the standard envelope — see [Errors](/api-reference/errors).
