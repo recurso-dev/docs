@@ -10,6 +10,13 @@ Portal endpoints authenticate via the `portal_session` cookie issued by [magic-l
 
 Returns every dispute the authenticated customer has raised against their own invoices, open or resolved.
 
+## Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | integer | Max results (default: 1000, capped at 1000) |
+| `offset` | integer | Pagination offset (default: 0) |
+
 ## Example Request
 
 ```bash
