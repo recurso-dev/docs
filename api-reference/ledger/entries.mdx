@@ -10,8 +10,8 @@ description: "Retrieve the postings that touch one ledger account, filtered by p
 |--------------|--------|----------|---------------------------------------------------------------------|
 | `account_id` | string (uuid) | **Yes** | The ledger account whose postings to list — rows where it is either the debit or the credit side. |
 | `code`       | int    | No       | Filter to one posting code (e.g. `1` invoice, `3` payment, `6` tax reclass). |
-| `limit`      | int    | No       | Maximum number of entries to return. Defaults to `50`.              |
-| `offset`     | int    | No       | Number of entries to skip for pagination. Defaults to `0`.          |
+| `limit`      | int    | No       | Maximum number of entries to return. Defaults to `50`, capped at `250`. `per_page` is accepted as an alias (`limit` wins when both are sent). |
+| `offset`     | int    | No       | Number of entries to skip for pagination. Defaults to `0`. `page` (1-based) is accepted as an alternative and is ignored when `offset` is given. |
 
 Each row is exactly one balanced transfer — a single debit account, a single
 credit account, and one amount in minor currency units. A business event that

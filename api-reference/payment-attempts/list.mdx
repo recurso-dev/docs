@@ -22,8 +22,9 @@ how attempts relate to invoices and the ledger.
 |-----------|------|----------|-------------|
 | `status` | string | No | Filter to one status: `initiated`, `processing`, `succeeded`, `failed`, or `returned`. |
 | `q` | string | No | Case-insensitive substring search on the attempt's `invoice_number` or gateway payment reference (tenant-scoped), newest first. Backs the command-palette payment lookup; the `status` filter is ignored on the search path. |
-| `page` | integer | No | Page number. |
-| `per_page` | integer | No | Rows per page. |
+| `page` | integer | No | Page number (default `1`). Ignored when `offset` is given. |
+| `per_page` | integer | No | Rows per page (default `50`, capped at `250`). `limit` is accepted as an alias and wins when both are sent. |
+| `offset` | integer | No | Row offset (default `0`). Overrides the offset computed from `page`. |
 
 ## Example Request
 

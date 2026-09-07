@@ -8,16 +8,14 @@ description: "Retrieve historical dunning retry data with per-attempt outcomes."
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `start_date` | string | No | ISO 8601 date. Filters results from this date onward. Defaults to 30 days ago. |
-| `end_date` | string | No | ISO 8601 date. Filters results up to this date. Defaults to today. |
-| `invoice_id` | string | No | Filter dunning history for a specific invoice. |
-| `limit` | integer | No | Maximum number of records to return. Default `20`, max `100`. |
-| `offset` | integer | No | Number of records to skip for pagination. Default `0`. |
+| `limit` | integer | No | Maximum number of records to return, newest first. Default `50`, capped at `500`; a non-positive value falls back to the default. |
+
+There is no date-range, invoice or offset filter: the endpoint is a recent-activity log, and the response is cached for up to 5 minutes.
 
 ## Example Request
 
 ```bash
-curl -X GET "https://api.recurso.dev/v1/analytics/dunning/history?start_date=2026-05-01&end_date=2026-06-01&limit=10" \
+curl -X GET "https://api.recurso.dev/v1/analytics/dunning/history?limit=10" \
   -H "Authorization: Bearer rsk_live_7f3a9b2c1d4e8f0a"
 ```
 
@@ -27,43 +25,45 @@ curl -X GET "https://api.recurso.dev/v1/analytics/dunning/history?start_date=202
 {
   "data": [
     {
-      "id": "dh_8xKp3mNv2qRs",
-      "invoice_id": "inv_4a7b9c2d1e",
+      "id": "8e4b2d17-5a9c-4f3e-b6d0-1c7a4e9f2b58",
+      "tenant_id": "f2a8c4e6-9b1d-4a3c-8e5f-7d0b2c4a6e91",
+      "invoice_id": "3c9e1f57-2b8a-4d6c-9f0e-5a7b3d1c8e42",
       "context_key": "past_due_3d",
       "action_id": "retry_payment",
-      "retry_interval": 72,
+      "retry_interval": 259200,
       "outcome": "success",
       "reward": 1.0,
       "created_at": "2026-05-18T14:30:00Z"
     },
     {
-      "id": "dh_2wLt6rPx9sFq",
-      "invoice_id": "inv_9e3f1a8b5c",
+      "id": "b1d7f3a9-8c2e-4b5d-a0f6-4e9c1a7d3b26",
+      "tenant_id": "f2a8c4e6-9b1d-4a3c-8e5f-7d0b2c4a6e91",
+      "invoice_id": "6a2d8c40-1e7f-4b9a-8d3c-2f5e0a9b7c14",
       "context_key": "past_due_7d",
       "action_id": "send_reminder_email",
-      "retry_interval": 168,
+      "retry_interval": 604800,
       "outcome": "failure",
-      "reward": -0.5,
+      "reward": 0.0,
       "created_at": "2026-05-20T09:15:00Z"
     }
-  ],
-  "total": 843,
-  "limit": 10,
-  "offset": 0
+  ]
 }
 ```
+
+The response is the `data` array only — there is no `total`, `limit` or `offset` envelope.
 
 ## Response Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique identifier for the dunning history entry. |
-| `invoice_id` | string | The invoice this dunning attempt was made against. |
+| `id` | string (uuid) | Unique identifier for the dunning history entry. |
+| `tenant_id` | string (uuid) | The tenant the attempt belongs to. |
+| `invoice_id` | string (uuid) | The invoice this dunning attempt was made against. |
 | `context_key` | string | The dunning context state (e.g. `past_due_3d`, `past_due_7d`). |
 | `action_id` | string | The dunning action that was taken (e.g. `retry_payment`, `send_reminder_email`). |
-| `retry_interval` | integer | Hours between the failed payment and this retry attempt. |
+| `retry_interval` | integer | Seconds between the failed payment and this retry attempt. |
 | `outcome` | string | Result of the attempt: `success` or `failure`. |
-| `reward` | number | The reinforcement learning reward signal assigned to this outcome. |
+| `reward` | number | The reinforcement-learning reward assigned to this outcome: `1.0` for success, `0.0` for failure. |
 | `created_at` | string | ISO 8601 timestamp of when the attempt occurred. |
 
 <Tip>
